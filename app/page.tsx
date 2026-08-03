@@ -208,7 +208,7 @@ export default function LibraryPage() {
             {filtered.map((label) => {
               const age = daysSince(label.roastDate);
               return (
-                <article key={label.id} className="panel overflow-hidden">
+                <article key={label.id} className="panel relative overflow-hidden">
                   <button
                     type="button"
                     className="block w-full cursor-zoom-in bg-paper p-4 text-left"
@@ -221,6 +221,16 @@ export default function LibraryPage() {
                       qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
                     />
                   </button>
+
+                  {/* sibling of the thumbnail button — a button cannot nest in a button */}
+                  <Link
+                    href={`/print/${label.id}`}
+                    title="Print stickers"
+                    aria-label={`Print ${labelTitle(label)}`}
+                    className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-card text-muted shadow-sm transition hover:border-brand hover:text-brand"
+                  >
+                    <PrinterIcon />
+                  </Link>
                   <div className="border-t border-line px-4 py-3">
                     <h3 className="truncate font-serif text-base font-semibold">
                       <button
@@ -239,18 +249,9 @@ export default function LibraryPage() {
                       {label.roastDate ? formatDate(label.roastDate) : "No roast date"}
                       {age !== null && age >= 0 && ` · ${age}d ago`}
                     </p>
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      <button
-                        className="btn btn-ghost"
-                        onClick={() => setViewing(label)}
-                      >
-                        View
-                      </button>
+                    <div className="mt-3 flex items-center gap-1">
                       <Link href={`/editor/${label.id}`} className="btn btn-ghost">
                         Edit
-                      </Link>
-                      <Link href={`/print/${label.id}`} className="btn btn-ghost">
-                        Print
                       </Link>
                       <button
                         className="btn btn-ghost"
@@ -305,6 +306,26 @@ function StorageBadge({ mode }: { mode: StorageMode | null }) {
       />
       {cloud ? "Database" : "This browser"}
     </span>
+  );
+}
+
+function PrinterIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6 9V3h12v6" />
+      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+      <rect x="6" y="14" width="12" height="8" rx="1" />
+    </svg>
   );
 }
 
