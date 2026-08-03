@@ -32,6 +32,10 @@ export default function LibraryPage() {
   const [active, setActive] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [viewing, setViewing] = useState<CoffeeLabel | null>(null);
+  /** open "move to group" popover, anchored to the card's tag button */
+  const [menu, setMenu] = useState<{ label: CoffeeLabel; x: number; y: number } | null>(
+    null,
+  );
   const origin = useOrigin();
 
   const refresh = useCallback(
@@ -51,6 +55,15 @@ export default function LibraryPage() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!menu) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenu(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menu]);
 
   const groupOf = useCallback(
     (l: CoffeeLabel) => l.groupId || UNGROUPED,
@@ -101,6 +114,18 @@ export default function LibraryPage() {
     setBusy(true);
     try {
       await store.saveGroup(emptyGroup(name, groups.length));
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function moveToGroup(label: CoffeeLabel, groupId: string) {
+    setMenu(null);
+    if (label.groupId === groupId) return;
+    setBusy(true);
+    try {
+      await store.saveLabel({ ...label, groupId });
       await refresh();
     } finally {
       setBusy(false);
@@ -317,6 +342,23 @@ export default function LibraryPage() {
                   >
                     <PencilIcon />
                   </Link>
+                  {(() => {
+                    const g = groups.find((x) => x.id === label.groupId);
+                    return (
+                      <button
+                        title={g ? `Group: ${g.name}` : "Move to group"}
+                        aria-label={`Move ${labelTitle(label)} to a group`}
+                        className={ACTION_CLS}
+                        style={g ? { color: g.color, borderColor: g.color } : undefined}
+                        onClick={(e) => {
+                          const r = e.currentTarget.getBoundingClientRect();
+                          setMenu({ label, x: r.right, y: r.bottom + 6 });
+                        }}
+                      >
+                        <TagIcon />
+                      </button>
+                    );
+                  })()}
                   <button
                     title="Duplicate"
                     aria-label={`Duplicate ${labelTitle(label)}`}
@@ -341,6 +383,45 @@ export default function LibraryPage() {
           </div>
         )}
       </main>
+
+      {menu && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setMenu(null)}
+            aria-hidden="true"
+          />
+          <div
+            role="menu"
+            className="panel fixed z-50 w-52 overflow-hidden py-1 shadow-lg"
+            style={{ left: menu.x, top: menu.y, transform: "translateX(-100%)" }}
+          >
+            <p className="truncate px-3 py-1.5 text-xs text-muted">
+              Move to group
+            </p>
+            <GroupOption
+              name="No group"
+              color="#8b7a68"
+              on={!menu.label.groupId}
+              onSelect={() => moveToGroup(menu.label, "")}
+            />
+            {groups.map((g) => (
+              <GroupOption
+                key={g.id}
+                name={g.name}
+                color={g.color}
+                on={menu.label.groupId === g.id}
+                onSelect={() => moveToGroup(menu.label, g.id)}
+              />
+            ))}
+            {groups.length === 0 && (
+              <p className="px-3 py-2 text-xs text-muted">
+                No groups yet — create one with <b className="text-ink">+ Group</b>.
+              </p>
+            )}
+          </div>
+        </>
+      )}
 
       {viewing && (
         <StickerViewer
@@ -459,6 +540,43 @@ function Svg({ children }: { children: React.ReactNode }) {
     >
       {children}
     </svg>
+  );
+}
+
+function GroupOption({
+  name,
+  color,
+  on,
+  onSelect,
+}: {
+  name: string;
+  color: string;
+  on: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      role="menuitem"
+      onClick={onSelect}
+      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-brand-soft"
+      style={{ fontWeight: on ? 700 : 400 }}
+    >
+      <span
+        className="h-2.5 w-2.5 shrink-0 rounded-full"
+        style={{ background: color }}
+      />
+      <span className="truncate">{name}</span>
+      {on && <span className="ml-auto text-brand">✓</span>}
+    </button>
+  );
+}
+
+function TagIcon() {
+  return (
+    <Svg>
+      <path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2.6 12.6A2 2 0 0 1 2 11.2V4a2 2 0 0 1 2-2h7.2a2 2 0 0 1 1.4.6l8 8a2 2 0 0 1 0 2.8Z" />
+      <circle cx="7.5" cy="7.5" r="1.3" />
+    </Svg>
   );
 }
 

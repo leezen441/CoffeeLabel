@@ -42,8 +42,11 @@ Each brew method holds:
 
 ## Groups
 
-**+ Group** in the header creates a group; each label picks one in the editor
-(*The coffee → Group*). Groups appear as coloured chips under the search box:
+**+ Group** in the header creates a group. To put a label in one, click the **tag
+icon** on its card and pick from the list — the icon takes on the group's colour once
+assigned. The same choice also exists in the editor (*The coffee → Group*).
+
+Groups appear as coloured chips under the search box:
 
 - Clicking a chip highlights it and filters the library to that group.
 - Several chips can be on at once — the library then shows the **union** of them.
