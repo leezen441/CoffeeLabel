@@ -24,6 +24,7 @@ export default function PrintView({ id }: { id: string }) {
   const [copies, setCopies] = useState(4);
   const [gap, setGap] = useState(4);
   const [guides, setGuides] = useState(true);
+  const [variant, setVariant] = useState<"full" | "brew">("full");
   const origin = useOrigin();
 
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -68,7 +69,7 @@ export default function PrintView({ id }: { id: string }) {
     ro.observe(wrap);
     ro.observe(inner);
     return () => ro.disconnect();
-  }, [sheet, copies, gap, label?.size, guides]);
+  }, [sheet, copies, gap, label?.size, guides, variant]);
 
   if (missing) {
     return (
@@ -97,6 +98,7 @@ export default function PrintView({ id }: { id: string }) {
       key={n}
       label={label}
       qrUrl={brewUrl}
+      variant={variant}
       className={guides ? "cut-guide" : ""}
       style={guides ? { outline: "0.1mm dashed #c9c9c9" } : undefined}
     />
@@ -159,7 +161,18 @@ export default function PrintView({ id }: { id: string }) {
       </header>
 
       <div className="no-print mx-auto max-w-6xl px-5 pt-5">
-        <div className="panel grid gap-3 p-4 sm:grid-cols-4">
+        <div className="panel grid gap-3 p-4 sm:grid-cols-5">
+          <label className="field">
+            <span>Content</span>
+            <select
+              className="select"
+              value={variant}
+              onChange={(e) => setVariant(e.target.value as "full" | "brew")}
+            >
+              <option value="full">Full label</option>
+              <option value="brew">Brew guide only</option>
+            </select>
+          </label>
           <label className="field">
             <span>Paper</span>
             <select

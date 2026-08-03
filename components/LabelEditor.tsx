@@ -9,6 +9,7 @@ import { useOrigin } from "@/lib/useOrigin";
 import {
   type BrewMethod,
   type CoffeeLabel,
+  type LabelGroup,
   type LayoutId,
   type RoastLevel,
   type SizeId,
@@ -30,6 +31,7 @@ export default function LabelEditor({ id }: { id: string }) {
   const [missing, setMissing] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [noteDraft, setNoteDraft] = useState("");
+  const [groups, setGroups] = useState<LabelGroup[]>([]);
   const origin = useOrigin();
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -37,6 +39,7 @@ export default function LabelEditor({ id }: { id: string }) {
 
   useEffect(() => {
     void store.getLabel(id).then((l) => (l ? setLabel(l) : setMissing(true)));
+    void store.listGroups().then(setGroups);
   }, [id]);
 
   const persist = useCallback(async (next: CoffeeLabel) => {
@@ -214,6 +217,26 @@ export default function LabelEditor({ id }: { id: string }) {
                   value={label.altitude}
                   onChange={(e) => update({ altitude: e.target.value })}
                 />
+              </label>
+              <label className="field">
+                <span>Group</span>
+                <select
+                  className="select"
+                  value={label.groupId}
+                  onChange={(e) => update({ groupId: e.target.value })}
+                >
+                  <option value="">No group</option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-muted">
+                  {groups.length
+                    ? "Filter by this in the library"
+                    : "Create groups from the library with + Group"}
+                </span>
               </label>
             </div>
           </section>

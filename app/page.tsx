@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import StickerScaler from "@/components/StickerScaler";
@@ -11,26 +11,38 @@ import type { StorageMode } from "@/lib/store";
 import { useOrigin } from "@/lib/useOrigin";
 import {
   type CoffeeLabel,
+  type LabelGroup,
+  emptyGroup,
   emptyLabel,
   labelTitle,
-  normalizeLabel,
   uid,
 } from "@/lib/types";
+
+/** Sentinel for the "labels with no group" chip. */
+const UNGROUPED = "__ungrouped__";
 
 export default function LibraryPage() {
   const router = useRouter();
   const [labels, setLabels] = useState<CoffeeLabel[] | null>(null);
+  const [groups, setGroups] = useState<LabelGroup[]>([]);
   const [mode, setMode] = useState<StorageMode | null>(null);
   const [query, setQuery] = useState("");
+  /** "" = search everything, otherwise restrict the text search to one group */
+  const [scope, setScope] = useState("");
+  const [active, setActive] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [viewing, setViewing] = useState<CoffeeLabel | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const origin = useOrigin();
 
   const refresh = useCallback(
     () =>
-      Promise.all([store.listLabels(), store.storageMode()]).then(([list, m]) => {
+      Promise.all([
+        store.listLabels(),
+        store.listGroups(),
+        store.storageMode(),
+      ]).then(([list, gs, m]) => {
         setLabels(list);
+        setGroups(gs);
         setMode(m);
       }),
     [],
@@ -40,17 +52,81 @@ export default function LibraryPage() {
     void refresh();
   }, [refresh]);
 
+  const groupOf = useCallback(
+    (l: CoffeeLabel) => l.groupId || UNGROUPED,
+    [],
+  );
+
+  const counts = useMemo(() => {
+    const m = new Map<string, number>();
+    (labels ?? []).forEach((l) => m.set(groupOf(l), (m.get(groupOf(l)) ?? 0) + 1));
+    return m;
+  }, [labels, groupOf]);
+
+  /**
+   * Three independent filters, intersected:
+   *   chips  — which groups are shown (none selected = all)
+   *   scope  — restricts the text search to one group
+   *   query  — the text itself
+   */
   const filtered = useMemo(() => {
     if (!labels) return [];
     const q = query.trim().toLowerCase();
-    if (!q) return labels;
-    return labels.filter((l) =>
-      [l.coffeeName, l.roaster, l.variety, l.origin, l.process, ...l.tastingNotes]
+    return labels.filter((l) => {
+      if (active.size > 0 && !active.has(groupOf(l))) return false;
+      if (scope && l.groupId !== scope) return false;
+      if (!q) return true;
+      return [l.coffeeName, l.roaster, l.variety, l.origin, l.process, ...l.tastingNotes]
         .join(" ")
         .toLowerCase()
-        .includes(q),
-    );
-  }, [labels, query]);
+        .includes(q);
+    });
+  }, [labels, query, active, scope, groupOf]);
+
+  const toggleGroup = (id: string) =>
+    setActive((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  async function addGroup() {
+    const name = prompt("Group name")?.trim();
+    if (!name) return;
+    if (groups.some((g) => g.name.toLowerCase() === name.toLowerCase())) {
+      alert(`A group called "${name}" already exists.`);
+      return;
+    }
+    setBusy(true);
+    try {
+      await store.saveGroup(emptyGroup(name, groups.length));
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeGroup(group: LabelGroup) {
+    const n = counts.get(group.id) ?? 0;
+    const msg = n
+      ? `Delete the group "${group.name}"? Its ${n} label${n === 1 ? "" : "s"} will be kept but become ungrouped.`
+      : `Delete the group "${group.name}"?`;
+    if (!confirm(msg)) return;
+    setBusy(true);
+    try {
+      await store.deleteGroup(group.id);
+      setActive((prev) => {
+        const next = new Set(prev);
+        next.delete(group.id);
+        return next;
+      });
+      if (scope === group.id) setScope("");
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function createNew() {
     setBusy(true);
@@ -99,35 +175,6 @@ export default function LibraryPage() {
     }
   }
 
-  function exportAll() {
-    if (!labels?.length) return;
-    const blob = new Blob([JSON.stringify(labels, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `bean-labels-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  async function importFile(file: File) {
-    setBusy(true);
-    try {
-      const parsed = JSON.parse(await file.text());
-      const arr: CoffeeLabel[] = Array.isArray(parsed) ? parsed : [parsed];
-      const count = await store.importLabels(arr.map((l) => normalizeLabel(l)));
-      await refresh();
-      alert(`Imported ${count} label${count === 1 ? "" : "s"}.`);
-    } catch {
-      alert("That file could not be read as a Bean Label export.");
-    } finally {
-      setBusy(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  }
-
   return (
     <div className="flex-1">
       <header className="border-b border-line bg-card">
@@ -140,22 +187,9 @@ export default function LibraryPage() {
             </div>
           </div>
           <StorageBadge mode={mode} />
-          <button className="btn" onClick={exportAll} disabled={!labels?.length}>
-            Export
+          <button className="btn" onClick={addGroup} disabled={busy}>
+            + Group
           </button>
-          <button className="btn" onClick={() => fileRef.current?.click()}>
-            Import
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void importFile(f);
-            }}
-          />
           <button className="btn btn-primary" onClick={createNew} disabled={busy}>
             + New label
           </button>
@@ -163,19 +197,65 @@ export default function LibraryPage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-5 py-6">
-        <div className="mb-5 flex items-center gap-3">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           <input
             className="input max-w-xs"
             placeholder="Search coffee, roaster, origin…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+          <select
+            className="select w-auto"
+            value={scope}
+            onChange={(e) => setScope(e.target.value)}
+            title="Limit the search to one group"
+          >
+            <option value="">Search all groups</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>
+                Search in {g.name}
+              </option>
+            ))}
+          </select>
           {labels && (
             <span className="text-xs text-muted">
               {filtered.length} of {labels.length} label{labels.length === 1 ? "" : "s"}
             </span>
           )}
         </div>
+
+        {(groups.length > 0 || (counts.get(UNGROUPED) ?? 0) > 0) && (
+          <div className="mb-5 flex flex-wrap items-center gap-2">
+            {groups.map((g) => (
+              <GroupChip
+                key={g.id}
+                name={g.name}
+                color={g.color}
+                count={counts.get(g.id) ?? 0}
+                on={active.has(g.id)}
+                onToggle={() => toggleGroup(g.id)}
+                onDelete={() => removeGroup(g)}
+              />
+            ))}
+            {(counts.get(UNGROUPED) ?? 0) > 0 && (
+              <GroupChip
+                name="Ungrouped"
+                color="#8b7a68"
+                count={counts.get(UNGROUPED) ?? 0}
+                on={active.has(UNGROUPED)}
+                onToggle={() => toggleGroup(UNGROUPED)}
+              />
+            )}
+            {active.size > 0 && (
+              <button
+                className="btn btn-ghost text-xs"
+                onClick={() => setActive(new Set())}
+              >
+                Clear filter
+              </button>
+            )}
+          </div>
+        )}
 
         {labels === null && <p className="text-sm text-muted">Loading…</p>}
 
@@ -291,6 +371,72 @@ function StorageBadge({ mode }: { mode: StorageMode | null }) {
         style={{ background: cloud ? "#2E6B4B" : "#C89B4A" }}
       />
       {cloud ? "Database" : "This browser"}
+    </span>
+  );
+}
+
+/**
+ * Pill-shaped group filter. Selected chips fill with the group colour; several
+ * can be on at once and the library shows the union of them.
+ */
+function GroupChip({
+  name,
+  color,
+  count,
+  on,
+  onToggle,
+  onDelete,
+}: {
+  name: string;
+  color: string;
+  count: number;
+  on: boolean;
+  onToggle: () => void;
+  onDelete?: () => void;
+}) {
+  return (
+    <span className="group/chip relative inline-flex">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-pressed={on}
+        title={`${name} — ${count} label${count === 1 ? "" : "s"}`}
+        className="inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition"
+        style={{
+          background: on ? color : "transparent",
+          borderColor: on ? color : "var(--line)",
+          color: on ? "#fff" : "var(--muted)",
+        }}
+      >
+        <span
+          className="h-2.5 w-2.5 rounded-full border"
+          style={{
+            background: on ? "rgb(255 255 255 / 0.9)" : color,
+            borderColor: on ? "rgb(255 255 255 / 0.9)" : color,
+          }}
+        />
+        {name}
+        <span
+          className="rounded-full px-1.5 text-xs tabular-nums"
+          style={{
+            background: on ? "rgb(255 255 255 / 0.22)" : "var(--brand-soft)",
+            color: on ? "#fff" : "var(--muted)",
+          }}
+        >
+          {count}
+        </span>
+      </button>
+      {onDelete && (
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label={`Delete group ${name}`}
+          title={`Delete group ${name}`}
+          className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full border border-line bg-card text-xs leading-none text-muted shadow-sm hover:border-[var(--danger)] hover:text-[var(--danger)] group-hover/chip:flex"
+        >
+          ✕
+        </button>
+      )}
     </span>
   );
 }

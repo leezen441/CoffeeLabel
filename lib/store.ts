@@ -1,9 +1,10 @@
-import type { CoffeeLabel } from "./types";
+import type { CoffeeLabel, LabelGroup } from "./types";
 import { normalizeLabel } from "./types";
 
 export type StorageMode = "cloud" | "local";
 
 const LS_KEY = "coffee-labels/v1";
+const LS_GROUPS = "coffee-groups/v1";
 
 let modePromise: Promise<StorageMode> | null = null;
 
@@ -89,6 +90,60 @@ export async function deleteLabel(id: string): Promise<void> {
     throw new Error(`Delete failed (${res.status})`);
   }
   writeLocal(readLocal().filter((l) => l.id !== id));
+}
+
+/* ------------------------------- groups ------------------------------- */
+
+function readLocalGroups(): LabelGroup[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(LS_GROUPS);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalGroups(groups: LabelGroup[]): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(LS_GROUPS, JSON.stringify(groups));
+}
+
+export async function listGroups(): Promise<LabelGroup[]> {
+  if ((await storageMode()) === "cloud") {
+    const res = await fetch("/api/groups", { cache: "no-store" });
+    if (res.ok) return (await res.json()).groups as LabelGroup[];
+  }
+  return readLocalGroups();
+}
+
+export async function saveGroup(group: LabelGroup): Promise<LabelGroup> {
+  if ((await storageMode()) === "cloud") {
+    const res = await fetch("/api/groups", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(group),
+    });
+    if (res.ok) return (await res.json()).group as LabelGroup;
+    throw new Error(`Save group failed (${res.status})`);
+  }
+  const all = readLocalGroups().filter((g) => g.id !== group.id);
+  writeLocalGroups([...all, group]);
+  return group;
+}
+
+/** Deletes the group and clears it from every label that used it. */
+export async function deleteGroup(id: string): Promise<void> {
+  if ((await storageMode()) === "cloud") {
+    const res = await fetch(`/api/groups/${id}`, { method: "DELETE" });
+    if (res.ok) return;
+    throw new Error(`Delete group failed (${res.status})`);
+  }
+  writeLocalGroups(readLocalGroups().filter((g) => g.id !== id));
+  const labels = readLocal();
+  const touched = labels.map((l) => (l.groupId === id ? { ...l, groupId: "" } : l));
+  writeLocal(touched);
 }
 
 export async function importLabels(labels: CoffeeLabel[]): Promise<number> {

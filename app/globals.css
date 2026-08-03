@@ -182,7 +182,7 @@ body {
   overflow: hidden;
   position: relative;
   box-sizing: border-box;
-  padding: calc(4 * var(--u));
+  padding: calc(3 * var(--u));
   display: flex;
   /* flex-start keeps .cl-fit at its natural height so overflow is measurable */
   align-items: flex-start;
@@ -194,7 +194,7 @@ body {
   transform-origin: top left;
   display: flex;
   flex-direction: column;
-  gap: calc(1.8 * var(--u));
+  gap: calc(1.3 * var(--u));
   width: 100%;
   flex: none;
 }
@@ -207,7 +207,7 @@ body {
 }
 
 .cl-roaster {
-  font-size: calc(2.6 * var(--u));
+  font-size: calc(3.1 * var(--u));
   font-weight: 700;
   letter-spacing: calc(0.18 * var(--u));
   text-transform: uppercase;
@@ -234,7 +234,7 @@ body {
 }
 
 .cl-roast-name {
-  font-size: calc(2.2 * var(--u));
+  font-size: calc(2.7 * var(--u));
   font-weight: 700;
   letter-spacing: calc(0.1 * var(--u));
   text-transform: uppercase;
@@ -253,9 +253,9 @@ body {
 }
 
 .cl-origin {
-  font-size: calc(2.5 * var(--u));
+  font-size: calc(3 * var(--u));
   color: var(--cl-muted);
-  line-height: 1.35;
+  line-height: 1.25;
 }
 
 .cl-origin b {
@@ -264,7 +264,7 @@ body {
 }
 
 .cl-notes {
-  font-size: calc(2.5 * var(--u));
+  font-size: calc(3 * var(--u));
   font-style: italic;
   font-family: var(--font-display);
   color: var(--cl-ink);
@@ -280,11 +280,11 @@ body {
 .cl-brews {
   display: flex;
   flex-direction: column;
-  gap: calc(1.5 * var(--u));
+  gap: calc(1.2 * var(--u));
 }
 
 .cl-brews-label {
-  font-size: calc(2 * var(--u));
+  font-size: calc(2.5 * var(--u));
   font-weight: 700;
   letter-spacing: calc(0.16 * var(--u));
   text-transform: uppercase;
@@ -294,7 +294,7 @@ body {
 .cl-brew {
   display: flex;
   flex-direction: column;
-  gap: calc(0.6 * var(--u));
+  gap: calc(0.5 * var(--u));
 }
 
 .cl-brew-head {
@@ -305,7 +305,7 @@ body {
 }
 
 .cl-brew-name {
-  font-size: calc(3 * var(--u));
+  font-size: calc(3.5 * var(--u));
   font-weight: 700;
   letter-spacing: calc(0.02 * var(--u));
   flex-shrink: 0;
@@ -317,7 +317,7 @@ body {
   gap: calc(1.2 * var(--u));
   flex-wrap: wrap;
   font-family: var(--font-mono);
-  font-size: calc(2.4 * var(--u));
+  font-size: calc(2.9 * var(--u));
   color: var(--cl-muted);
 }
 
@@ -331,9 +331,9 @@ body {
   align-items: baseline;
   gap: calc(1 * var(--u));
   font-family: var(--font-mono);
-  font-size: calc(2.3 * var(--u));
+  font-size: calc(2.8 * var(--u));
   color: var(--cl-muted);
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .cl-grind b {
@@ -343,7 +343,7 @@ body {
 
 .cl-grind-label {
   font-family: var(--font-ui);
-  font-size: calc(1.9 * var(--u));
+  font-size: calc(2.4 * var(--u));
   font-weight: 700;
   letter-spacing: calc(0.1 * var(--u));
   text-transform: uppercase;
@@ -357,14 +357,14 @@ body {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: calc(0.35 * var(--u));
+  gap: calc(0.3 * var(--u));
 }
 
 .cl-step {
   display: flex;
   gap: calc(1 * var(--u));
-  font-size: calc(2.3 * var(--u));
-  line-height: 1.3;
+  font-size: calc(2.8 * var(--u));
+  line-height: 1.25;
   color: var(--cl-ink);
 }
 
@@ -387,7 +387,7 @@ body {
   align-items: flex-end;
   justify-content: space-between;
   gap: calc(2 * var(--u));
-  font-size: calc(2.2 * var(--u));
+  font-size: calc(2.7 * var(--u));
   color: var(--cl-muted);
 }
 

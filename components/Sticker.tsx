@@ -55,6 +55,7 @@ export default function Sticker({
   qrUrl,
   className = "",
   style,
+  variant = "full",
 }: {
   label: CoffeeLabel;
   /** show greyed placeholders for empty fields */
@@ -63,6 +64,8 @@ export default function Sticker({
   qrUrl?: string;
   className?: string;
   style?: React.CSSProperties;
+  /** "brew" drops the origin/notes/roast/footer blocks and prints only the recipes */
+  variant?: "full" | "brew";
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const fitRef = useRef<HTMLDivElement>(null);
@@ -72,6 +75,7 @@ export default function Sticker({
   const size = SIZES[label.size] ?? SIZES["100x70"];
   const roast = ROAST_LEVELS[label.roastLevel] ?? ROAST_LEVELS[3];
   const compact = label.layout === "compact";
+  const brewOnly = variant === "brew";
 
   useEffect(() => {
     if (!label.showQr || !qrUrl) return;
@@ -176,21 +180,23 @@ export default function Sticker({
       }
     >
       <div ref={fitRef} className="cl-fit">
-        <div className="cl-head">
-          <div className="cl-roaster">{ph(label.roaster, "Roaster name")}</div>
-          <div className="cl-roast">
-            <div className="cl-beans">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <Bean key={n} filled={n <= label.roastLevel} color={theme.accent} />
-              ))}
+        {!brewOnly && (
+          <div className="cl-head">
+            <div className="cl-roaster">{ph(label.roaster, "Roaster name")}</div>
+            <div className="cl-roast">
+              <div className="cl-beans">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Bean key={n} filled={n <= label.roastLevel} color={theme.accent} />
+                ))}
+              </div>
+              <span className="cl-roast-name">{roast.name}</span>
             </div>
-            <span className="cl-roast-name">{roast.name}</span>
           </div>
-        </div>
+        )}
 
         <h1 className="cl-name">{ph(label.coffeeName, "Coffee name")}</h1>
 
-        {(originBits.length > 0 || preview) && (
+        {!brewOnly && (originBits.length > 0 || preview) && (
           <div className="cl-origin">
             {originBits.length ? (
               originBits.map((bit, i) => (
@@ -205,7 +211,7 @@ export default function Sticker({
           </div>
         )}
 
-        {label.tastingNotes.length > 0 && (
+        {!brewOnly && label.tastingNotes.length > 0 && (
           <div className="cl-notes">{label.tastingNotes.join("  ·  ")}</div>
         )}
 
@@ -263,28 +269,32 @@ export default function Sticker({
           </div>
         )}
 
-        <div className="cl-rule" />
+        {!brewOnly && (
+          <>
+            <div className="cl-rule" />
 
-        <div className="cl-foot">
-          <div className="cl-foot-meta">
-            {label.roastDate && (
-              <span>
-                Roasted <b>{formatDate(label.roastDate)}</b>
-                {bb && <> · Best before <b>{formatDate(bb)}</b></>}
-              </span>
-            )}
-            {label.netWeight && (
-              <span>
-                Net <b>{label.netWeight}</b>
-              </span>
-            )}
-          </div>
-          {label.showQr && qr && (
-            // A locally-generated data URL — next/image would only add overhead.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img className="cl-qr" src={qr} alt="Brew guide QR code" />
-          )}
-        </div>
+            <div className="cl-foot">
+              <div className="cl-foot-meta">
+                {label.roastDate && (
+                  <span>
+                    Roasted <b>{formatDate(label.roastDate)}</b>
+                    {bb && <> · Best before <b>{formatDate(bb)}</b></>}
+                  </span>
+                )}
+                {label.netWeight && (
+                  <span>
+                    Net <b>{label.netWeight}</b>
+                  </span>
+                )}
+              </div>
+              {label.showQr && qr && (
+                // A locally-generated data URL — next/image would only add overhead.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className="cl-qr" src={qr} alt="Brew guide QR code" />
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

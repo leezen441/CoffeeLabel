@@ -1,5 +1,5 @@
 import { neon } from "@neondatabase/serverless";
-import type { CoffeeLabel } from "./types";
+import type { CoffeeLabel, LabelGroup } from "./types";
 import { normalizeLabel } from "./types";
 
 /**
@@ -44,6 +44,13 @@ async function ensureSchema(): Promise<void> {
       await sql`
         CREATE INDEX IF NOT EXISTS coffee_labels_updated_at_idx
         ON coffee_labels (updated_at DESC)
+      `;
+      await sql`
+        CREATE TABLE IF NOT EXISTS coffee_groups (
+          id          TEXT PRIMARY KEY,
+          data        JSONB NOT NULL,
+          created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
       `;
     })().catch((err) => {
       // Let the next call retry rather than caching a failure forever.
@@ -95,4 +102,40 @@ export async function deleteLabel(id: string): Promise<void> {
   await ensureSchema();
   const sql = client();
   await sql`DELETE FROM coffee_labels WHERE id = ${id}`;
+}
+
+/* ------------------------------- groups ------------------------------- */
+
+type GroupRow = { id: string; data: LabelGroup };
+
+export async function listGroups(): Promise<LabelGroup[]> {
+  await ensureSchema();
+  const sql = client();
+  const rows = (await sql`
+    SELECT id, data FROM coffee_groups ORDER BY created_at ASC
+  `) as GroupRow[];
+  return rows.map((r) => ({ ...r.data, id: r.id }));
+}
+
+export async function saveGroup(group: LabelGroup): Promise<LabelGroup> {
+  await ensureSchema();
+  const sql = client();
+  await sql`
+    INSERT INTO coffee_groups (id, data)
+    VALUES (${group.id}, ${JSON.stringify(group)}::jsonb)
+    ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data
+  `;
+  return group;
+}
+
+/** Removes the group and clears it from any label that referenced it. */
+export async function deleteGroup(id: string): Promise<void> {
+  await ensureSchema();
+  const sql = client();
+  await sql`DELETE FROM coffee_groups WHERE id = ${id}`;
+  await sql`
+    UPDATE coffee_labels
+    SET data = jsonb_set(data, '{groupId}', '""'::jsonb)
+    WHERE data->>'groupId' = ${id}
+  `;
 }

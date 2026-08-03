@@ -35,10 +35,25 @@ Each brew method holds:
 
 | Route | Purpose |
 | --- | --- |
-| `/` | Library — all labels, search, duplicate, delete, JSON export/import. Clicking a card opens a read-only viewer with zoom (buttons, scroll wheel, double-click) and drag-to-pan; Esc closes it. |
+| `/` | Library — all labels, groups, search, duplicate, delete. Clicking a card opens a read-only viewer with zoom (buttons, pinch, scroll wheel, double-tap) and drag-to-pan; Esc closes it. |
 | `/editor/[id]` | Form with a live sticker preview; autosaves as you type |
 | `/print/[id]` | Print sheet — paper size, copies, gap, cut guides |
 | `/b/[id]` | Mobile brew guide — what the QR code opens |
+
+## Groups
+
+**+ Group** in the header creates a group; each label picks one in the editor
+(*The coffee → Group*). Groups appear as coloured chips under the search box:
+
+- Clicking a chip highlights it and filters the library to that group.
+- Several chips can be on at once — the library then shows the **union** of them.
+- **Ungrouped** appears automatically whenever some labels have no group.
+- Hovering a chip reveals ✕ to delete the group. Its labels are kept and simply
+  become ungrouped.
+
+The dropdown beside the search box restricts the **text search** to one group,
+independently of the chips. All three filters (chips, search scope, search text)
+are intersected.
 
 ## Sticker sizes
 
@@ -53,6 +68,10 @@ until it fits — nothing is ever clipped. On the smallest labels choose the
 
 Open a label → **Print stickers**. Choose:
 
+- **Content** — *Full label*, or *Brew guide only*, which drops the roaster line,
+  origin, tasting notes, roast dates and QR and prints just the coffee name plus the
+  recipes. Because far less has to fit, the type comes out noticeably larger
+  (≈6 pt instead of ≈4.4 pt on a 100 × 70 mm sticker).
 - **Paper** — A4, US Letter, or "Label printer — one per page" (sets `@page` to the
   exact sticker size for a thermal/roll printer)
 - **Copies** — tiled across as many pages as needed
@@ -66,13 +85,11 @@ In the browser print dialog set **Margins: None**, **Scale: 100%**, and enable
 The app works in two modes and tells you which one is active with a badge in the
 header:
 
-- **Database** — when a Postgres connection string is present. Labels are stored in
-  a `coffee_labels` table (created automatically on first use) and are available from
-  any device, which is what makes the QR codes work off your phone.
-- **This browser** — no database configured; labels live in `localStorage`. Handy for
+- **Database** — when a Postgres connection string is present. Data lives in
+  `coffee_labels` and `coffee_groups` (both created automatically on first use) and is
+  available from any device, which is what makes the QR codes work off your phone.
+- **This browser** — no database configured; data lives in `localStorage`. Handy for
   a quick local try, but a scanned QR code will only resolve on the same browser.
-
-Use **Export** / **Import** in the header to move labels between the two.
 
 ## Local development
 

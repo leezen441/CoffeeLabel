@@ -24,8 +24,38 @@ export type BrewMethod = {
   steps: BrewStep[];
 };
 
+export type LabelGroup = {
+  id: string;
+  name: string;
+  color: string;
+  createdAt: string;
+};
+
+/** Chip colours cycled through as groups are created. */
+export const GROUP_COLORS = [
+  "#8A5A2B",
+  "#A4302A",
+  "#2E6B4B",
+  "#26547C",
+  "#6B4E9E",
+  "#B07C1E",
+  "#1F6F6B",
+  "#9B3D6E",
+] as const;
+
+export function emptyGroup(name: string, index = 0): LabelGroup {
+  return {
+    id: uid(),
+    name: name.trim(),
+    color: GROUP_COLORS[index % GROUP_COLORS.length],
+    createdAt: new Date().toISOString(),
+  };
+}
+
 export type CoffeeLabel = {
   id: string;
+  /** "" means ungrouped */
+  groupId: string;
   roaster: string;
   coffeeName: string;
   variety: string;
@@ -197,6 +227,7 @@ export function emptyLabel(): CoffeeLabel {
   const now = new Date().toISOString();
   return {
     id: uid(),
+    groupId: "",
     roaster: "",
     coffeeName: "",
     variety: "",
