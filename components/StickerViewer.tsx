@@ -28,9 +28,19 @@ export default function StickerViewer({
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
+  /** every finger/pointer currently down, so two-finger pinch can be tracked */
+  const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
   const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+  const pinch = useRef<{
+    dist: number;
+    fx: number;
+    fy: number;
+    zoom: number;
+    px: number;
+    py: number;
+  } | null>(null);
   const moved = useRef(false);
-  /** mirrors `drag.current` for rendering — the transition is disabled mid-drag */
+  /** mirrors the gesture refs for rendering — the transition is off mid-gesture */
   const [dragging, setDragging] = useState(false);
 
   const size = SIZES[label.size] ?? SIZES["100x70"];
@@ -77,36 +87,122 @@ export default function StickerViewer({
     window.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
+    // iOS Safari fires its own non-standard gesture events and will zoom the
+    // whole page on a two-finger pinch, fighting the viewer's own zoom.
+    // Suppressed only while the viewer is open.
+    const stopSafariPinch = (e: Event) => e.preventDefault();
+    const gestures = ["gesturestart", "gesturechange", "gestureend"];
+    gestures.forEach((g) =>
+      document.addEventListener(g, stopSafariPinch, { passive: false }),
+    );
+
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
+      gestures.forEach((g) => document.removeEventListener(g, stopSafariPinch));
     };
   }, [onClose, nudge, reset]);
 
+  /** centre of the viewing area in client coordinates — the transform origin */
+  const areaCentre = () => {
+    const r = areaRef.current?.getBoundingClientRect();
+    return r
+      ? { cx: r.left + r.width / 2, cy: r.top + r.height / 2 }
+      : { cx: 0, cy: 0 };
+  };
+
+  /**
+   * Zoom so that the content under `f` stays under `f`.
+   * Derived from  f = centre + pan + contentPoint * scale  solved for the new pan.
+   */
+  const applyZoom = (
+    nextRaw: number,
+    fx: number,
+    fy: number,
+    from: { zoom: number; px: number; py: number },
+    fromX = fx,
+    fromY = fy,
+  ) => {
+    const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, nextRaw));
+    const { cx, cy } = areaCentre();
+    const k = next / from.zoom;
+    setPan({
+      x: fx - cx - (fromX - cx - from.px) * k,
+      y: fy - cy - (fromY - cy - from.py) * k,
+    });
+    setZoom(next);
+  };
+
   const onWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    nudge(e.deltaY < 0 ? 1.12 : 1 / 1.12);
+    applyZoom(zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12), e.clientX, e.clientY, {
+      zoom,
+      px: pan.x,
+      py: pan.y,
+    });
+  };
+
+  const twoFingers = () => {
+    const [a, b] = [...pointers.current.values()];
+    return {
+      dist: Math.hypot(a.x - b.x, a.y - b.y),
+      fx: (a.x + b.x) / 2,
+      fy: (a.y + b.y) / 2,
+    };
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
-    moved.current = false;
-    drag.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // pointer already released — capture is an optimisation, not a requirement
+    }
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     setDragging(true);
-    (e.target as Element).setPointerCapture?.(e.pointerId);
+
+    if (pointers.current.size === 1) {
+      moved.current = false;
+      drag.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
+    } else if (pointers.current.size === 2) {
+      // A pinch is starting — stop single-finger panning and never treat it as a tap.
+      drag.current = null;
+      moved.current = true;
+      const { dist, fx, fy } = twoFingers();
+      pinch.current = { dist, fx, fy, zoom, px: pan.x, py: pan.y };
+    }
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
+    if (!pointers.current.has(e.pointerId)) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pointers.current.size >= 2 && pinch.current) {
+      const p = pinch.current;
+      const { dist, fx, fy } = twoFingers();
+      if (p.dist > 0) {
+        // Uses the pinch-start pan/zoom, so the gesture stays stable, and the
+        // moving midpoint pans at the same time.
+        applyZoom(p.zoom * (dist / p.dist), fx, fy, p, p.fx, p.fy);
+      }
+      return;
+    }
+
     const d = drag.current;
-    if (!d) return;
+    if (!d || zoom <= 1) return;
     const dx = e.clientX - d.x;
     const dy = e.clientY - d.y;
     if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved.current = true;
     setPan({ x: d.px + dx, y: d.py + dy });
   };
 
-  const onPointerUp = () => {
-    drag.current = null;
-    setDragging(false);
+  const onPointerUp = (e: React.PointerEvent) => {
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size < 2) pinch.current = null;
+    if (pointers.current.size === 0) {
+      drag.current = null;
+      setDragging(false);
+    }
   };
 
   const pct = Math.round(zoom * 100);
@@ -210,7 +306,7 @@ export default function StickerViewer({
       </div>
 
       <p className="px-4 pb-3 text-center text-xs text-white/50">
-        Scroll to zoom · drag to move · double-click to toggle · Esc to close
+        Pinch or scroll to zoom · drag to move · double-tap to toggle · Esc to close
       </p>
     </div>
   );

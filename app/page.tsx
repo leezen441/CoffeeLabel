@@ -11,10 +11,7 @@ import type { StorageMode } from "@/lib/store";
 import { useOrigin } from "@/lib/useOrigin";
 import {
   type CoffeeLabel,
-  ROAST_LEVELS,
-  daysSince,
   emptyLabel,
-  formatDate,
   labelTitle,
   normalizeLabel,
   uid,
@@ -205,73 +202,62 @@ export default function LibraryPage() {
 
         {labels && labels.length > 0 && (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((label) => {
-              const age = daysSince(label.roastDate);
-              return (
-                <article key={label.id} className="panel relative overflow-hidden">
-                  <button
-                    type="button"
-                    className="block w-full cursor-zoom-in bg-paper p-4 text-left"
-                    onClick={() => setViewing(label)}
-                    aria-label={`View ${labelTitle(label)}`}
-                  >
-                    <StickerScaler
-                      label={label}
-                      preview
-                      qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
-                    />
-                  </button>
+            {filtered.map((label) => (
+              <article key={label.id} className="panel relative overflow-hidden">
+                {/* The sticker already carries the name, roaster and dates, so the
+                    card is just the sticker plus an action rail. */}
+                <button
+                  type="button"
+                  className="block w-full cursor-zoom-in bg-card py-4 pl-4 pr-16 text-left"
+                  onClick={() => setViewing(label)}
+                  aria-label={`View ${labelTitle(label)}`}
+                >
+                  <StickerScaler
+                    label={label}
+                    preview
+                    qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
+                  />
+                </button>
 
-                  {/* sibling of the thumbnail button — a button cannot nest in a button */}
+                {/* Siblings of the thumbnail button — interactive elements cannot nest. */}
+                <div className="absolute right-3 top-3 z-10 flex flex-col gap-1.5">
                   <Link
                     href={`/print/${label.id}`}
                     title="Print stickers"
                     aria-label={`Print ${labelTitle(label)}`}
-                    className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-card text-muted shadow-sm transition hover:border-brand hover:text-brand"
+                    className={ACTION_CLS}
                   >
                     <PrinterIcon />
                   </Link>
-                  <div className="border-t border-line px-4 py-3">
-                    <h3 className="truncate font-serif text-base font-semibold">
-                      <button
-                        type="button"
-                        className="cursor-zoom-in hover:text-brand"
-                        onClick={() => setViewing(label)}
-                      >
-                        {labelTitle(label)}
-                      </button>
-                    </h3>
-                    <p className="truncate text-xs text-muted">
-                      {label.roaster || "No roaster"} ·{" "}
-                      {ROAST_LEVELS[label.roastLevel].name} roast
-                    </p>
-                    <p className="mt-1 text-xs text-muted">
-                      {label.roastDate ? formatDate(label.roastDate) : "No roast date"}
-                      {age !== null && age >= 0 && ` · ${age}d ago`}
-                    </p>
-                    <div className="mt-3 flex items-center gap-1">
-                      <Link href={`/editor/${label.id}`} className="btn btn-ghost">
-                        Edit
-                      </Link>
-                      <button
-                        className="btn btn-ghost"
-                        onClick={() => duplicate(label)}
-                        disabled={busy}
-                      >
-                        Duplicate
-                      </button>
-                      <button
-                        className="btn btn-ghost btn-danger ml-auto"
-                        onClick={() => remove(label)}
-                        disabled={busy}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
+                  <Link
+                    href={`/editor/${label.id}`}
+                    title="Edit"
+                    aria-label={`Edit ${labelTitle(label)}`}
+                    className={ACTION_CLS}
+                  >
+                    <PencilIcon />
+                  </Link>
+                  <button
+                    title="Duplicate"
+                    aria-label={`Duplicate ${labelTitle(label)}`}
+                    className={ACTION_CLS}
+                    onClick={() => duplicate(label)}
+                    disabled={busy}
+                  >
+                    <CopyIcon />
+                  </button>
+                  <button
+                    title="Delete"
+                    aria-label={`Delete ${labelTitle(label)}`}
+                    className={`${ACTION_CLS} hover:!border-[var(--danger)] hover:!text-[var(--danger)]`}
+                    onClick={() => remove(label)}
+                    disabled={busy}
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
+              </article>
+            ))}
           </div>
         )}
       </main>
@@ -309,11 +295,14 @@ function StorageBadge({ mode }: { mode: StorageMode | null }) {
   );
 }
 
-function PrinterIcon() {
+const ACTION_CLS =
+  "flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-card text-muted shadow-sm transition hover:border-brand hover:text-brand disabled:opacity-40";
+
+function Svg({ children }: { children: React.ReactNode }) {
   return (
     <svg
-      width="18"
-      height="18"
+      width="17"
+      height="17"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -322,10 +311,47 @@ function PrinterIcon() {
       strokeLinejoin="round"
       aria-hidden="true"
     >
+      {children}
+    </svg>
+  );
+}
+
+function PrinterIcon() {
+  return (
+    <Svg>
       <path d="M6 9V3h12v6" />
       <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
       <rect x="6" y="14" width="12" height="8" rx="1" />
-    </svg>
+    </Svg>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <Svg>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </Svg>
+  );
+}
+
+function CopyIcon() {
+  return (
+    <Svg>
+      <rect x="9" y="9" width="13" height="13" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </Svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <Svg>
+      <path d="M3 6h18" />
+      <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+    </Svg>
   );
 }
 
