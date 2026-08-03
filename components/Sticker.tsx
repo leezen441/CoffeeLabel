@@ -5,10 +5,10 @@ import QRCode from "qrcode";
 import {
   type CoffeeLabel,
   ROAST_LEVELS,
-  SIZES,
   THEMES,
   bestBefore,
   formatDate,
+  labelSize,
   ratioOf,
 } from "@/lib/types";
 
@@ -79,7 +79,7 @@ export default function Sticker({
   const [qr, setQr] = useState<string>("");
 
   const theme = THEMES[label.theme] ?? THEMES.espresso;
-  const size = SIZES[label.size] ?? SIZES["100x70"];
+  const size = labelSize(label);
   const roast = ROAST_LEVELS[label.roastLevel] ?? ROAST_LEVELS[3];
   const compact = label.layout === "compact";
   const brewOnly = variant === "brew";

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Sticker from "./Sticker";
-import { type CoffeeLabel, SIZES, labelTitle } from "@/lib/types";
+import { type CoffeeLabel, labelSize, labelTitle } from "@/lib/types";
 
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
@@ -43,7 +43,7 @@ export default function StickerViewer({
   /** mirrors the gesture refs for rendering — the transition is off mid-gesture */
   const [dragging, setDragging] = useState(false);
 
-  const size = SIZES[label.size] ?? SIZES["100x70"];
+  const size = labelSize(label);
 
   const measure = useCallback(() => {
     const area = areaRef.current;

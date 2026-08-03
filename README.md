@@ -60,12 +60,26 @@ are intersected.
 
 ## Sticker sizes
 
-`100×70`, `90×60`, `80×50`, `70×40`, `60×60` mm and an A6 brew card (105×148 mm).
+`100×150`, `100×100`, `100×70`, `90×60`, `80×50`, `70×40`, `60×60` mm, an A6 brew
+card (105×148 mm), and **Custom size…** — type any width × height from 20 to 300 mm.
+Values outside that range are clamped, and a blank or invalid entry falls back to
+100 × 70. Custom sizes behave exactly like presets everywhere: preview, viewer,
+tiling on a sheet, and the `@page` rule when printing one per page.
+
+**Match the sticker size to the paper actually loaded in the printer.** A 100×70
+sticker sent to a 100×150 mm label roll prints at the top and wastes the bottom
+80 mm. Don't compensate with the print dialog's Scale setting — that breaks the
+millimetre accuracy. Pick the matching size instead.
 
 The layout is defined in units of 1% of the label width, so one design renders
-correctly at every size. Content that would overflow is scaled down automatically
-until it fits — nothing is ever clipped. On the smallest labels choose the
-**Compact** layout, which prints the specs line without the step-by-step sequence.
+correctly at every size. The content block is then scaled to **fill** the label:
+shrunk when there is too much, enlarged when a short label would otherwise leave
+the bottom blank (capped at 1.9× so a nearly-empty label doesn't turn into giant
+type). Nothing is ever clipped. On the smallest labels choose the **Compact**
+layout, which prints the specs line without the step-by-step sequence.
+
+Fewer brew methods means bigger type, because less has to fit. One V60 recipe on a
+100×150 label prints at roughly 13 pt; the same recipe on 70×40 lands near 4 pt.
 
 ## Printing
 

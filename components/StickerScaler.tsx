@@ -52,7 +52,8 @@ export default function StickerScaler({
     const ro = new ResizeObserver(fit);
     ro.observe(wrap);
     return () => ro.disconnect();
-  }, [label.size, maxScale]);
+    // customW/H matter too: the sticker resizes without the wrapper changing
+  }, [label.size, label.customW, label.customH, maxScale]);
 
   return (
     <div ref={wrapRef} style={{ width: "100%", height: box.h || undefined }}>

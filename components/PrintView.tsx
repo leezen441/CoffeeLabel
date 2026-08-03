@@ -5,7 +5,7 @@ import Link from "next/link";
 import Sticker from "./Sticker";
 import * as store from "@/lib/store";
 import { useOrigin } from "@/lib/useOrigin";
-import { type CoffeeLabel, SIZES, labelTitle } from "@/lib/types";
+import { type CoffeeLabel, labelSize, labelTitle } from "@/lib/types";
 
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
@@ -35,7 +35,7 @@ export default function PrintView({ id }: { id: string }) {
     void store.getLabel(id).then((l) => (l ? setLabel(l) : setMissing(true)));
   }, [id]);
 
-  const size = label ? SIZES[label.size] : null;
+  const size = label ? labelSize(label) : null;
 
   const grid = useMemo(() => {
     if (!size) return null;
@@ -228,7 +228,7 @@ export default function PrintView({ id }: { id: string }) {
         </div>
 
         <p className="mt-3 text-xs text-muted">
-          Sticker {SIZES[label.size].name} · {grid.cols} × {grid.rows} per page ·{" "}
+          Sticker {size.name} · {grid.cols} × {grid.rows} per page ·{" "}
           {grid.pages} page{grid.pages === 1 ? "" : "s"}.
         </p>
         <div className="mt-2 rounded-lg border border-line bg-brand-soft/50 px-3 py-2 text-xs text-muted">

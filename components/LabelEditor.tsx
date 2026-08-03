@@ -15,11 +15,14 @@ import {
   type SizeId,
   type ThemeId,
   MAX_BREWS,
+  MAX_MM,
   MAX_NOTES,
+  MIN_MM,
   PROCESS_PRESETS,
   ROAST_LEVELS,
   SIZES,
   THEMES,
+  clampMm,
   emptyBrew,
   labelTitle,
 } from "@/lib/types";
@@ -426,9 +429,53 @@ export default function LabelEditor({ id }: { id: string }) {
                   ))}
                 </select>
                 <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-muted">
-                  {SIZES[label.size].hint}
+                  {label.size === "custom"
+                    ? `Between ${MIN_MM} and ${MAX_MM} mm on each side`
+                    : SIZES[label.size].hint}
                 </span>
               </label>
+
+              {label.size === "custom" && (
+                <div className="grid grid-cols-2 gap-3 rounded-lg border border-line bg-paper/60 p-3">
+                  <label className="field">
+                    <span>Width (mm)</span>
+                    <input
+                      type="number"
+                      min={MIN_MM}
+                      max={MAX_MM}
+                      className="input"
+                      value={label.customW}
+                      onChange={(e) => update({ customW: Number(e.target.value) })}
+                      onBlur={(e) =>
+                        update({ customW: clampMm(Number(e.target.value), 100) })
+                      }
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Height (mm)</span>
+                    <input
+                      type="number"
+                      min={MIN_MM}
+                      max={MAX_MM}
+                      className="input"
+                      value={label.customH}
+                      onChange={(e) => update({ customH: Number(e.target.value) })}
+                      onBlur={(e) =>
+                        update({ customH: clampMm(Number(e.target.value), 70) })
+                      }
+                    />
+                  </label>
+                  <p className="col-span-2 text-xs text-muted">
+                    Prints at exactly{" "}
+                    <b className="text-ink">
+                      {clampMm(label.customW, 100)} × {clampMm(label.customH, 70)} mm
+                    </b>
+                    . Type scales to fill the label automatically — set the print dialog
+                    to <b className="text-ink">Scale 100%</b>, never &ldquo;Fit to
+                    page&rdquo;.
+                  </p>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <label className="field">

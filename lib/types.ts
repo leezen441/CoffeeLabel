@@ -71,6 +71,9 @@ export type CoffeeLabel = {
   /** sticker appearance */
   theme: ThemeId;
   size: SizeId;
+  /** used only when size === "custom", in millimetres */
+  customW: number;
+  customH: number;
   layout: LayoutId;
   showQr: boolean;
   createdAt: string;
@@ -79,12 +82,15 @@ export type CoffeeLabel = {
 
 export type ThemeId = "espresso" | "crimson" | "forest" | "navy" | "mono";
 export type SizeId =
+  | "100x150"
+  | "100x100"
   | "100x70"
   | "90x60"
   | "80x50"
   | "70x40"
   | "60x60"
-  | "a6";
+  | "a6"
+  | "custom";
 export type LayoutId = "full" | "compact";
 
 export const MAX_BREWS = 5;
@@ -184,13 +190,49 @@ export const THEMES: Record<
 
 /** Physical sticker sizes in millimetres. */
 export const SIZES: Record<SizeId, { name: string; w: number; h: number; hint: string }> = {
+  "100x150": {
+    name: "100 × 150 mm",
+    w: 100,
+    h: 150,
+    hint: "4×6in thermal label roll — biggest, most readable print",
+  },
+  "100x100": { name: "100 × 100 mm", w: 100, h: 100, hint: "Square thermal label roll" },
   "100x70": { name: "100 × 70 mm", w: 100, h: 70, hint: "Bag label — fits all brew steps" },
   "90x60": { name: "90 × 60 mm", w: 90, h: 60, hint: "Standard sticker sheet" },
   "80x50": { name: "80 × 50 mm", w: 80, h: 50, hint: "Thermal label printer" },
   "70x40": { name: "70 × 40 mm", w: 70, h: 40, hint: "Small — use Compact layout" },
   "60x60": { name: "60 × 60 mm", w: 60, h: 60, hint: "Square — use Compact layout" },
   a6: { name: "A6 card (105 × 148 mm)", w: 105, h: 148, hint: "Brew card for the counter" },
+  custom: { name: "Custom size…", w: 100, h: 70, hint: "Type the exact width and height" },
 };
+
+/** Bounds for a custom size, in millimetres. */
+export const MIN_MM = 20;
+export const MAX_MM = 300;
+
+export function clampMm(value: number, fallback: number): number {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n) || n <= 0) return fallback;
+  return Math.min(MAX_MM, Math.max(MIN_MM, n));
+}
+
+/**
+ * Resolve a label's physical size. Everything that renders or prints a sticker
+ * goes through this so a custom size behaves exactly like a preset one.
+ */
+export function labelSize(label: CoffeeLabel): {
+  name: string;
+  w: number;
+  h: number;
+  hint: string;
+} {
+  if (label.size === "custom") {
+    const w = clampMm(label.customW, 100);
+    const h = clampMm(label.customH, 70);
+    return { name: `${w} × ${h} mm`, w, h, hint: "Custom size" };
+  }
+  return SIZES[label.size] ?? SIZES["100x70"];
+}
 
 export function uid(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -242,6 +284,8 @@ export function emptyLabel(): CoffeeLabel {
     brews: [emptyBrew("Espresso"), emptyBrew("V60"), emptyBrew("Aeropress")],
     theme: "espresso",
     size: "100x70",
+    customW: 100,
+    customH: 70,
     layout: "full",
     showQr: false,
     createdAt: now,
