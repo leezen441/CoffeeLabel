@@ -28,7 +28,8 @@ export function sampleLabel(): CoffeeLabel {
         waterTempC: "93",
         doseG: "18",
         yieldG: "38",
-        grind: "Fine",
+        grinder: "DF64",
+        grind: "1.8",
         totalTime: "28s",
         steps: [
           { id: uid(), text: "Distribute and tamp level", at: "" },
@@ -42,7 +43,8 @@ export function sampleLabel(): CoffeeLabel {
         waterTempC: "94",
         doseG: "15",
         yieldG: "250",
-        grind: "Medium",
+        grinder: "Comandante C40",
+        grind: "24 clicks",
         totalTime: "2:45",
         steps: [
           { id: uid(), text: "Bloom 45 g, swirl", at: "0:00" },
@@ -57,7 +59,8 @@ export function sampleLabel(): CoffeeLabel {
         waterTempC: "88",
         doseG: "14",
         yieldG: "220",
-        grind: "Medium-fine",
+        grinder: "Comandante C40",
+        grind: "20 clicks",
         totalTime: "1:45",
         steps: [
           { id: uid(), text: "Inverted, add all water", at: "0:00" },

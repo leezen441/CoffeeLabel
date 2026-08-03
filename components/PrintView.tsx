@@ -216,11 +216,27 @@ export default function PrintView({ id }: { id: string }) {
 
         <p className="mt-3 text-xs text-muted">
           Sticker {SIZES[label.size].name} · {grid.cols} × {grid.rows} per page ·{" "}
-          {grid.pages} page{grid.pages === 1 ? "" : "s"}. In the browser print dialog set{" "}
-          <b className="text-ink">Margins: None</b> and{" "}
-          <b className="text-ink">Scale: 100%</b>, and enable background graphics so the
-          colours print.
+          {grid.pages} page{grid.pages === 1 ? "" : "s"}.
         </p>
+        <div className="mt-2 rounded-lg border border-line bg-brand-soft/50 px-3 py-2 text-xs text-muted">
+          <b className="text-ink">In the browser print dialog → More settings:</b>
+          <ul className="mt-1 list-disc space-y-0.5 pl-4">
+            <li>
+              Untick <b className="text-ink">Headers and footers</b> — otherwise the browser
+              prints the date and page URL in the corners
+            </li>
+            <li>
+              <b className="text-ink">Margins: None</b>
+            </li>
+            <li>
+              <b className="text-ink">Scale: 100%</b> — not &ldquo;Fit to page&rdquo;, which
+              breaks the millimetre sizing
+            </li>
+            <li>
+              Enable <b className="text-ink">Background graphics</b> so the colours print
+            </li>
+          </ul>
+        </div>
       </div>
 
       <div className="print-root mx-auto max-w-6xl px-5 py-5">

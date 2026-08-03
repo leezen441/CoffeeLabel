@@ -170,9 +170,12 @@ export default function BrewGuide({
                 <Stat theme={theme} label="Ratio" value={ratioOf(brew) || "—"} />
                 <Stat theme={theme} label="Time" value={brew.totalTime || "—"} />
               </div>
-              {brew.grind && (
+              {(brew.grinder || brew.grind) && (
                 <p className="mt-4 text-sm" style={{ color: theme.muted }}>
-                  Grind <b style={{ color: theme.ink }}>{brew.grind}</b>
+                  Grind{" "}
+                  {brew.grinder && <b style={{ color: theme.ink }}>{brew.grinder}</b>}
+                  {brew.grinder && brew.grind && " · "}
+                  {brew.grind && <b style={{ color: theme.ink }}>{brew.grind}</b>}
                 </p>
               )}
 

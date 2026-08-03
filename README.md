@@ -24,7 +24,10 @@ Each brew method holds:
   Cold Brew, Kalita Wave, Siphon (or type your own)
 - **Water temperature** in °C
 - **Dose → Yield** in grams, with the **ratio computed automatically** (`1:2`, `1:16.7`)
-- **Grind** setting and **total time**
+- **Total time**
+- **Grinder** and **grind setting** — printed on their own line, e.g.
+  `GRIND  Comandante C40 · 24 clicks`. The grinder field has a preset list
+  (Comandante, 1Zpresso, Timemore, Niche, DF64, …) but accepts anything typed.
 - **Brew sequence** — an ordered, reorderable list of steps, each with an optional
   timestamp (`0:45`)
 

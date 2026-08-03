@@ -7,6 +7,7 @@ import StickerScaler from "@/components/StickerScaler";
 import { sampleLabel } from "@/lib/sample";
 import * as store from "@/lib/store";
 import type { StorageMode } from "@/lib/store";
+import { useOrigin } from "@/lib/useOrigin";
 import {
   type CoffeeLabel,
   ROAST_LEVELS,
@@ -25,6 +26,7 @@ export default function LibraryPage() {
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const origin = useOrigin();
 
   const refresh = useCallback(
     () =>
@@ -206,7 +208,11 @@ export default function LibraryPage() {
               return (
                 <article key={label.id} className="panel overflow-hidden">
                   <Link href={`/editor/${label.id}`} className="block bg-paper p-4">
-                    <StickerScaler label={label} preview />
+                    <StickerScaler
+                      label={label}
+                      preview
+                      qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
+                    />
                   </Link>
                   <div className="border-t border-line px-4 py-3">
                     <h3 className="truncate font-serif text-base font-semibold">

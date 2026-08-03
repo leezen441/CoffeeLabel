@@ -2,6 +2,7 @@
 
 import {
   type BrewMethod,
+  GRINDER_PRESETS,
   METHOD_PRESETS,
   emptyStep,
   ratioOf,
@@ -87,7 +88,7 @@ export default function BrewEditor({
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <label className="field">
           <span>Water °C</span>
           <input
@@ -127,11 +128,24 @@ export default function BrewEditor({
             onChange={(e) => set("totalTime", e.target.value)}
           />
         </label>
+      </div>
+
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
         <label className="field">
-          <span>Grind</span>
+          <span>Grinder</span>
           <input
             className="input"
-            placeholder="Fine"
+            list="grinder-presets"
+            placeholder="Comandante C40"
+            value={brew.grinder}
+            onChange={(e) => set("grinder", e.target.value)}
+          />
+        </label>
+        <label className="field">
+          <span>Grind setting</span>
+          <input
+            className="input"
+            placeholder="18 clicks"
             value={brew.grind}
             onChange={(e) => set("grind", e.target.value)}
           />
@@ -204,6 +218,12 @@ export default function BrewEditor({
       <datalist id="method-presets">
         {METHOD_PRESETS.map((m) => (
           <option key={m} value={m} />
+        ))}
+      </datalist>
+
+      <datalist id="grinder-presets">
+        {GRINDER_PRESETS.map((g) => (
+          <option key={g} value={g} />
         ))}
       </datalist>
     </div>

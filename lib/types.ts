@@ -15,6 +15,9 @@ export type BrewMethod = {
   waterTempC: string;
   doseG: string;
   yieldG: string;
+  /** grinder model, e.g. "Comandante C40" */
+  grinder: string;
+  /** grind setting on that grinder, e.g. "18 clicks" or "2.5" */
   grind: string;
   /** total brew time, e.g. "2:45" */
   totalTime: string;
@@ -77,6 +80,21 @@ export const METHOD_PRESETS = [
   "Cold Brew",
   "Kalita Wave",
   "Siphon",
+] as const;
+
+export const GRINDER_PRESETS = [
+  "Comandante C40",
+  "1Zpresso J-Max",
+  "1Zpresso JX-Pro",
+  "1Zpresso K-Ultra",
+  "Timemore C3",
+  "Kingrinder K6",
+  "Baratza Encore",
+  "Fellow Ode Gen 2",
+  "Niche Zero",
+  "DF64",
+  "Eureka Mignon",
+  "Mazzer Mini",
 ] as const;
 
 export const PROCESS_PRESETS = [
@@ -162,6 +180,7 @@ export function emptyBrew(name = ""): BrewMethod {
     waterTempC: "",
     doseG: "",
     yieldG: "",
+    grinder: "",
     grind: "",
     totalTime: "",
     steps: [emptyStep()],

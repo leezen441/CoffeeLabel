@@ -234,9 +234,18 @@ export default function Sticker({
                       />
                       <Spec label="" value={ratioOf(brew)} />
                       <Spec label="" value={brew.totalTime} />
-                      <Spec label="" value={brew.grind} />
                     </span>
                   </div>
+                  {(brew.grinder || brew.grind) && (
+                    <div className="cl-grind">
+                      <span className="cl-grind-label">Grind</span>
+                      <span>
+                        {brew.grinder && <b>{brew.grinder}</b>}
+                        {brew.grinder && brew.grind && " · "}
+                        {brew.grind && <b>{brew.grind}</b>}
+                      </span>
+                    </div>
+                  )}
                   {!compact && steps.length > 0 && (
                     <ol className="cl-steps">
                       {steps.map((step, i) => (
