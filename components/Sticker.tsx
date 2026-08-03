@@ -14,6 +14,13 @@ import {
 
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
+/**
+ * Bounds for the auto-fit scale. The upper bound stops a nearly-empty label
+ * from blowing its few words up to fill the whole sticker.
+ */
+const MIN_FIT = 0.3;
+const MAX_FIT = 1.9;
+
 function Bean({ filled, color }: { filled: boolean; color: string }) {
   return (
     <svg className="cl-bean" viewBox="0 0 24 24" aria-hidden="true">
@@ -96,8 +103,10 @@ export default function Sticker({
   }, [label.showQr, qrUrl, theme.ink]);
 
   /**
-   * Shrink the content block until it fits the sticker. Runs after every render
-   * (purely imperative, idempotent) plus on resize and once fonts have loaded.
+   * Scale the content block so it exactly fills the sticker — shrinking when
+   * there is too much, and enlarging when a short label would otherwise leave
+   * the bottom half blank. Runs after every render (purely imperative and
+   * idempotent) plus on resize and once fonts have loaded.
    */
   useIsoLayoutEffect(() => {
     const frame = frameRef.current;
@@ -105,10 +114,13 @@ export default function Sticker({
     if (!frame || !fit) return;
 
     const apply = (s: number) => {
-      const full = s >= 0.999;
-      fit.style.transform = full ? "none" : `scale(${s})`;
-      fit.style.width = full ? "100%" : `${100 / s}%`;
+      // Width is compensated so `width * scale` always equals the frame width.
+      const untouched = Math.abs(s - 1) < 0.002;
+      fit.style.transform = untouched ? "none" : `scale(${s})`;
+      fit.style.width = untouched ? "100%" : `${100 / s}%`;
     };
+
+    const clamp = (s: number) => Math.max(MIN_FIT, Math.min(MAX_FIT, s));
 
     const measure = () => {
       const cs = getComputedStyle(frame);
@@ -116,24 +128,28 @@ export default function Sticker({
         frame.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
       if (avail <= 0) return;
 
-      // Shrinking widens the content box, which reflows text shorter — so a
-      // single pass always overshoots. Iterate to a fixed point for a tight fit.
+      // Changing the scale also changes how the text wraps, so a single pass
+      // always overshoots. Iterate to a fixed point for a tight fit. Later
+      // passes are damped, otherwise a big swing can settle into a 2-cycle
+      // and never converge (most visible on tall formats like A6).
       let s = 1;
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 8; i++) {
         apply(s);
         const natural = fit.scrollHeight;
         if (natural <= 0) break;
-        const target = Math.max(0.3, Math.min(1, avail / natural));
-        const settled = Math.abs(target - s) < 0.005;
-        s = target;
-        if (settled) break;
+        const target = clamp(avail / natural);
+        if (Math.abs(target - s) < 0.004) {
+          s = target;
+          break;
+        }
+        s = i < 2 ? target : clamp((s + target) / 2);
       }
 
       // Guarantee the final state fits, whatever the iteration converged on.
       apply(s);
       const finalNatural = fit.scrollHeight;
       if (finalNatural * s > avail) {
-        apply(Math.max(0.3, avail / finalNatural));
+        apply(clamp(avail / finalNatural));
       }
     };
 
