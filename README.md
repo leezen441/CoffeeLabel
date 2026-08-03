@@ -35,7 +35,7 @@ Each brew method holds:
 
 | Route | Purpose |
 | --- | --- |
-| `/` | Library — all labels, search, duplicate, delete, JSON export/import |
+| `/` | Library — all labels, search, duplicate, delete, JSON export/import. Clicking a card opens a read-only viewer with zoom (buttons, scroll wheel, double-click) and drag-to-pan; Esc closes it. |
 | `/editor/[id]` | Form with a live sticker preview; autosaves as you type |
 | `/print/[id]` | Print sheet — paper size, copies, gap, cut guides |
 | `/b/[id]` | Mobile brew guide — what the QR code opens |

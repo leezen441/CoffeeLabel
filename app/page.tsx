@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import StickerScaler from "@/components/StickerScaler";
+import StickerViewer from "@/components/StickerViewer";
 import { sampleLabel } from "@/lib/sample";
 import * as store from "@/lib/store";
 import type { StorageMode } from "@/lib/store";
@@ -25,6 +26,7 @@ export default function LibraryPage() {
   const [mode, setMode] = useState<StorageMode | null>(null);
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
+  const [viewing, setViewing] = useState<CoffeeLabel | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const origin = useOrigin();
 
@@ -207,16 +209,27 @@ export default function LibraryPage() {
               const age = daysSince(label.roastDate);
               return (
                 <article key={label.id} className="panel overflow-hidden">
-                  <Link href={`/editor/${label.id}`} className="block bg-paper p-4">
+                  <button
+                    type="button"
+                    className="block w-full cursor-zoom-in bg-paper p-4 text-left"
+                    onClick={() => setViewing(label)}
+                    aria-label={`View ${labelTitle(label)}`}
+                  >
                     <StickerScaler
                       label={label}
                       preview
                       qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
                     />
-                  </Link>
+                  </button>
                   <div className="border-t border-line px-4 py-3">
                     <h3 className="truncate font-serif text-base font-semibold">
-                      {labelTitle(label)}
+                      <button
+                        type="button"
+                        className="cursor-zoom-in hover:text-brand"
+                        onClick={() => setViewing(label)}
+                      >
+                        {labelTitle(label)}
+                      </button>
                     </h3>
                     <p className="truncate text-xs text-muted">
                       {label.roaster || "No roaster"} ·{" "}
@@ -227,6 +240,12 @@ export default function LibraryPage() {
                       {age !== null && age >= 0 && ` · ${age}d ago`}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-1">
+                      <button
+                        className="btn btn-ghost"
+                        onClick={() => setViewing(label)}
+                      >
+                        View
+                      </button>
                       <Link href={`/editor/${label.id}`} className="btn btn-ghost">
                         Edit
                       </Link>
@@ -255,6 +274,14 @@ export default function LibraryPage() {
           </div>
         )}
       </main>
+
+      {viewing && (
+        <StickerViewer
+          label={viewing}
+          qrUrl={origin ? `${origin}/b/${viewing.id}` : undefined}
+          onClose={() => setViewing(null)}
+        />
+      )}
     </div>
   );
 }
