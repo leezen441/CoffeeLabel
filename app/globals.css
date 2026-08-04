@@ -316,7 +316,9 @@ body {
   align-items: center;
   /* wider gap between values than inside one, so each icon binds to its number */
   gap: calc(2.4 * var(--u));
-  flex-wrap: wrap;
+  /* must stay on one line — the auto-fit shrinks to guarantee it, see Sticker.tsx */
+  flex-wrap: nowrap;
+  white-space: nowrap;
   font-family: var(--font-mono);
   font-size: calc(2.9 * var(--u));
   color: var(--cl-muted);

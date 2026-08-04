@@ -5,7 +5,19 @@ import Link from "next/link";
 import Sticker from "./Sticker";
 import * as store from "@/lib/store";
 import { useOrigin } from "@/lib/useOrigin";
-import { type CoffeeLabel, labelSize, labelTitle } from "@/lib/types";
+import {
+  type CoffeeLabel,
+  type LayoutId,
+  type SizeId,
+  type ThemeId,
+  MAX_MM,
+  MIN_MM,
+  SIZES,
+  THEMES,
+  clampMm,
+  labelSize,
+  labelTitle,
+} from "@/lib/types";
 
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
@@ -21,7 +33,7 @@ export default function PrintView({ id }: { id: string }) {
   const [label, setLabel] = useState<CoffeeLabel | null>(null);
   const [missing, setMissing] = useState(false);
   const [sheet, setSheet] = useState<SheetId>("a4");
-  const [copies, setCopies] = useState(4);
+  const [copies, setCopies] = useState(1);
   const [gap, setGap] = useState(4);
   const [guides, setGuides] = useState(true);
   const [variant, setVariant] = useState<"full" | "brew">("full");
@@ -30,10 +42,31 @@ export default function PrintView({ id }: { id: string }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   const [screen, setScreen] = useState({ scale: 1, h: 0 });
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     void store.getLabel(id).then((l) => (l ? setLabel(l) : setMissing(true)));
   }, [id]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+  }, []);
+
+  /**
+   * Sticker appearance is stored on the label, so editing it here has to save
+   * back — debounced, the same way the editor does it.
+   */
+  const update = (patch: Partial<CoffeeLabel>) => {
+    setLabel((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...patch };
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => void store.saveLabel(next).catch(() => {}), 600);
+      return next;
+    });
+  };
 
   const size = label ? labelSize(label) : null;
 
@@ -69,7 +102,18 @@ export default function PrintView({ id }: { id: string }) {
     ro.observe(wrap);
     ro.observe(inner);
     return () => ro.disconnect();
-  }, [sheet, copies, gap, label?.size, guides, variant]);
+  }, [
+    sheet,
+    copies,
+    gap,
+    guides,
+    variant,
+    label?.size,
+    label?.customW,
+    label?.customH,
+    label?.layout,
+    label?.showQr,
+  ]);
 
   if (missing) {
     return (
@@ -161,6 +205,100 @@ export default function PrintView({ id }: { id: string }) {
       </header>
 
       <div className="no-print mx-auto max-w-6xl px-5 pt-5">
+        <div className="panel mb-3 p-4">
+          <h2 className="section-title mb-3">Sticker</h2>
+          <div className="grid gap-3 sm:grid-cols-4">
+            <label className="field">
+              <span>Size</span>
+              <select
+                className="select"
+                value={label.size}
+                onChange={(e) => update({ size: e.target.value as SizeId })}
+              >
+                {(Object.keys(SIZES) as SizeId[]).map((k) => (
+                  <option key={k} value={k}>
+                    {SIZES[k].name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Layout</span>
+              <select
+                className="select"
+                value={label.layout}
+                onChange={(e) => update({ layout: e.target.value as LayoutId })}
+              >
+                <option value="full">Full — with steps</option>
+                <option value="compact">Compact — specs only</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Colour</span>
+              <select
+                className="select"
+                value={label.theme}
+                onChange={(e) => update({ theme: e.target.value as ThemeId })}
+              >
+                {(Object.keys(THEMES) as ThemeId[]).map((k) => (
+                  <option key={k} value={k}>
+                    {THEMES[k].name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>QR code</span>
+              <span className="flex h-[38px] items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={label.showQr}
+                  onChange={(e) => update({ showQr: e.target.checked })}
+                />
+                <span className="text-sm font-normal normal-case tracking-normal text-ink">
+                  Print a QR code
+                </span>
+              </span>
+            </label>
+
+            {label.size === "custom" && (
+              <div className="grid grid-cols-2 gap-3 sm:col-span-2">
+                <label className="field">
+                  <span>Width (mm)</span>
+                  <input
+                    type="number"
+                    min={MIN_MM}
+                    max={MAX_MM}
+                    className="input"
+                    value={label.customW}
+                    onChange={(e) => update({ customW: Number(e.target.value) })}
+                    onBlur={(e) => update({ customW: clampMm(Number(e.target.value), 100) })}
+                  />
+                </label>
+                <label className="field">
+                  <span>Height (mm)</span>
+                  <input
+                    type="number"
+                    min={MIN_MM}
+                    max={MAX_MM}
+                    className="input"
+                    value={label.customH}
+                    onChange={(e) => update({ customH: Number(e.target.value) })}
+                    onBlur={(e) => update({ customH: clampMm(Number(e.target.value), 70) })}
+                  />
+                </label>
+              </div>
+            )}
+          </div>
+          <p className="mt-2 text-xs text-muted">
+            {label.size === "custom"
+              ? `Custom — between ${MIN_MM} and ${MAX_MM} mm on each side`
+              : SIZES[label.size].hint}
+            {" · "}
+            Changes are saved to the label
+          </p>
+        </div>
+
         <div className="panel grid gap-3 p-4 sm:grid-cols-5">
           <label className="field">
             <span>Content</span>

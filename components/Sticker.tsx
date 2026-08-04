@@ -190,7 +190,17 @@ export default function Sticker({
         apply(s);
         const natural = fit.scrollHeight;
         if (natural <= 0) break;
-        const target = clamp(avail / natural);
+
+        // Vertical: fit the content height.
+        let target = avail / natural;
+
+        // Horizontal: the specs row must never wrap, so it can overflow instead.
+        // Shrink until it stops, otherwise it would be clipped at the edge.
+        if (fit.scrollWidth > fit.clientWidth + 0.5 && fit.scrollWidth > 0) {
+          target = Math.min(target, s * (fit.clientWidth / fit.scrollWidth));
+        }
+
+        target = clamp(target);
         if (Math.abs(target - s) < 0.004) {
           s = target;
           break;
@@ -202,7 +212,11 @@ export default function Sticker({
       apply(s);
       const finalNatural = fit.scrollHeight;
       if (finalNatural * s > avail) {
-        apply(clamp(avail / finalNatural));
+        s = clamp(avail / finalNatural);
+        apply(s);
+      }
+      if (fit.scrollWidth > fit.clientWidth + 0.5) {
+        apply(clamp(s * (fit.clientWidth / fit.scrollWidth)));
       }
     };
 

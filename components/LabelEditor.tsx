@@ -3,26 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import BrewEditor from "./BrewEditor";
-import StickerScaler from "./StickerScaler";
 import * as store from "@/lib/store";
-import { useOrigin } from "@/lib/useOrigin";
 import {
   type BrewMethod,
   type CoffeeLabel,
   type LabelGroup,
-  type LayoutId,
   type RoastLevel,
-  type SizeId,
-  type ThemeId,
   MAX_BREWS,
-  MAX_MM,
   MAX_NOTES,
-  MIN_MM,
   PROCESS_PRESETS,
   ROAST_LEVELS,
-  SIZES,
-  THEMES,
-  clampMm,
   emptyBrew,
   labelTitle,
 } from "@/lib/types";
@@ -35,7 +25,6 @@ export default function LabelEditor({ id }: { id: string }) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [noteDraft, setNoteDraft] = useState("");
   const [groups, setGroups] = useState<LabelGroup[]>([]);
-  const origin = useOrigin();
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dirty = useRef(false);
@@ -133,7 +122,6 @@ export default function LabelEditor({ id }: { id: string }) {
     setNoteDraft("");
   };
 
-  const brewUrl = origin ? `${origin}/b/${label.id}` : "";
 
   return (
     <div className="flex-1">
@@ -155,8 +143,8 @@ export default function LabelEditor({ id }: { id: string }) {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl gap-6 px-5 py-6 lg:grid-cols-[minmax(0,1fr)_400px]">
-        {/* ---------------- form ---------------- */}
+      <div className="mx-auto max-w-4xl px-5 py-6">
+        {/* Sticker appearance and preview live on the print page. */}
         <div className="flex flex-col gap-5">
           <section className="panel p-4">
             <h2 className="section-title mb-3">The coffee</h2>
@@ -406,126 +394,6 @@ export default function LabelEditor({ id }: { id: string }) {
           </section>
         </div>
 
-        {/* ---------------- preview ---------------- */}
-        <div className="lg:sticky lg:top-[4.25rem] lg:self-start">
-          <div className="panel p-4">
-            <h2 className="section-title mb-3">Sticker preview</h2>
-            <div className="rounded-lg bg-paper p-4">
-              <StickerScaler label={label} preview qrUrl={brewUrl} />
-            </div>
-
-            <div className="mt-4 grid gap-3">
-              <label className="field">
-                <span>Sticker size</span>
-                <select
-                  className="select"
-                  value={label.size}
-                  onChange={(e) => update({ size: e.target.value as SizeId })}
-                >
-                  {(Object.keys(SIZES) as SizeId[]).map((k) => (
-                    <option key={k} value={k}>
-                      {SIZES[k].name}
-                    </option>
-                  ))}
-                </select>
-                <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-muted">
-                  {label.size === "custom"
-                    ? `Between ${MIN_MM} and ${MAX_MM} mm on each side`
-                    : SIZES[label.size].hint}
-                </span>
-              </label>
-
-              {label.size === "custom" && (
-                <div className="grid grid-cols-2 gap-3 rounded-lg border border-line bg-paper/60 p-3">
-                  <label className="field">
-                    <span>Width (mm)</span>
-                    <input
-                      type="number"
-                      min={MIN_MM}
-                      max={MAX_MM}
-                      className="input"
-                      value={label.customW}
-                      onChange={(e) => update({ customW: Number(e.target.value) })}
-                      onBlur={(e) =>
-                        update({ customW: clampMm(Number(e.target.value), 100) })
-                      }
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Height (mm)</span>
-                    <input
-                      type="number"
-                      min={MIN_MM}
-                      max={MAX_MM}
-                      className="input"
-                      value={label.customH}
-                      onChange={(e) => update({ customH: Number(e.target.value) })}
-                      onBlur={(e) =>
-                        update({ customH: clampMm(Number(e.target.value), 70) })
-                      }
-                    />
-                  </label>
-                  <p className="col-span-2 text-xs text-muted">
-                    Prints at exactly{" "}
-                    <b className="text-ink">
-                      {clampMm(label.customW, 100)} × {clampMm(label.customH, 70)} mm
-                    </b>
-                    . Type scales to fill the label automatically — set the print dialog
-                    to <b className="text-ink">Scale 100%</b>, never &ldquo;Fit to
-                    page&rdquo;.
-                  </p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-3">
-                <label className="field">
-                  <span>Layout</span>
-                  <select
-                    className="select"
-                    value={label.layout}
-                    onChange={(e) => update({ layout: e.target.value as LayoutId })}
-                  >
-                    <option value="full">Full — with steps</option>
-                    <option value="compact">Compact — specs only</option>
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Colour</span>
-                  <select
-                    className="select"
-                    value={label.theme}
-                    onChange={(e) => update({ theme: e.target.value as ThemeId })}
-                  >
-                    {(Object.keys(THEMES) as ThemeId[]).map((k) => (
-                      <option key={k} value={k}>
-                        {THEMES[k].name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <label className="flex items-start gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  className="mt-0.5"
-                  checked={label.showQr}
-                  onChange={(e) => update({ showQr: e.target.checked })}
-                />
-                <span>
-                  Print a QR code
-                  <span className="block text-xs text-muted">
-                    Scan it on the bag to open the full brew guide on your phone.
-                  </span>
-                </span>
-              </label>
-            </div>
-
-            <Link href={`/print/${label.id}`} className="btn btn-primary mt-4 w-full">
-              Print stickers
-            </Link>
-          </div>
-        </div>
       </div>
     </div>
   );
