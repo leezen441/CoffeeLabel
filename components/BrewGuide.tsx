@@ -10,6 +10,9 @@ import {
   bestBefore,
   daysSince,
   formatDate,
+  formatDoseYield,
+  formatTime,
+  formatWeight,
   labelTitle,
   ratioOf,
 } from "@/lib/types";
@@ -114,7 +117,7 @@ export default function BrewGuide({
           )}
           {label.netWeight && (
             <span style={{ color: theme.muted }}>
-              Net <b style={{ color: theme.ink }}>{label.netWeight}</b>
+              Net <b style={{ color: theme.ink }}>{formatWeight(label.netWeight)}</b>
             </span>
           )}
         </div>
@@ -159,16 +162,10 @@ export default function BrewGuide({
                 <Stat
                   theme={theme}
                   label="Dose → Yield"
-                  value={
-                    brew.doseG && brew.yieldG
-                      ? `${brew.doseG} → ${brew.yieldG} g`
-                      : brew.doseG
-                        ? `${brew.doseG} g`
-                        : "—"
-                  }
+                  value={formatDoseYield(brew.doseG, brew.yieldG) || "—"}
                 />
                 <Stat theme={theme} label="Ratio" value={ratioOf(brew) || "—"} />
-                <Stat theme={theme} label="Time" value={brew.totalTime || "—"} />
+                <Stat theme={theme} label="Time" value={formatTime(brew.totalTime) || "—"} />
               </div>
               {(brew.grinder || brew.grind) && (
                 <p className="mt-4 text-sm" style={{ color: theme.muted }}>
@@ -196,10 +193,10 @@ export default function BrewGuide({
                         </span>
                         {step.at && (
                           <span
-                            className="pt-1 font-mono text-xs"
+                            className="pt-1 font-mono text-xs whitespace-nowrap"
                             style={{ color: theme.muted }}
                           >
-                            {step.at}
+                            {formatTime(step.at)}
                           </span>
                         )}
                       </li>

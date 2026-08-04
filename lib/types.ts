@@ -316,6 +316,36 @@ export function ratioOf(brew: BrewMethod): string {
   return `1:${(out / dose).toFixed(1).replace(/\.0$/, "")}`;
 }
 
+/**
+ * Appends the time unit so it never has to be typed. Anything containing a
+ * letter is assumed to already carry its own unit ("28s", "2:15 Min") and is
+ * left exactly as entered.
+ */
+export function formatTime(value: string): string {
+  const v = (value ?? "").trim();
+  if (!v) return "";
+  if (/[a-z]/i.test(v)) return v;
+  return `${v} min.`;
+}
+
+/** Same idea as formatTime, for weights. */
+export function formatWeight(value: string): string {
+  const v = (value ?? "").trim();
+  if (!v) return "";
+  if (/[a-z]/i.test(v)) return v;
+  return `${v} g.`;
+}
+
+/** "18.2→36 g." — the unit is written once, at the end of the pair. */
+export function formatDoseYield(dose: string, out: string): string {
+  const d = (dose ?? "").trim();
+  const y = (out ?? "").trim();
+  if (!d && !y) return "";
+  const joined = d && y ? `${d}→${y}` : d || y;
+  if (/[a-z]/i.test(joined)) return joined;
+  return `${joined} g.`;
+}
+
 export function formatDate(iso: string): string {
   if (!iso) return "";
   const d = new Date(`${iso}T00:00:00`);

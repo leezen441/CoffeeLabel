@@ -123,7 +123,8 @@ export default function BrewEditor({
           <span>Time</span>
           <input
             className="input"
-            placeholder="28s"
+            placeholder="2:15"
+            title="Just the time — “min.” is added on the label automatically"
             value={brew.totalTime}
             onChange={(e) => set("totalTime", e.target.value)}
           />
@@ -158,6 +159,13 @@ export default function BrewEditor({
         </p>
       )}
 
+      <p className="mt-2 text-xs text-muted">
+        Units are added automatically — <b className="text-ink">g.</b> on weights and{" "}
+        <b className="text-ink">min.</b> on times, so type just{" "}
+        <span className="font-mono">18.2</span> or <span className="font-mono">2:15</span>.
+        Typing your own unit (<span className="font-mono">28s</span>) overrides it.
+      </p>
+
       <div className="mt-3">
         <div className="mb-1.5 flex items-center justify-between">
           <span className="section-title">Brew sequence</span>
@@ -182,7 +190,7 @@ export default function BrewEditor({
               <input
                 className="input w-20 shrink-0 text-center font-mono"
                 placeholder="0:45"
-                title="Timestamp (optional)"
+                title="Timestamp (optional) — “min.” is added on the label automatically"
                 value={step.at}
                 onChange={(e) => setStep(step.id, { at: e.target.value })}
               />

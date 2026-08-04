@@ -305,10 +305,13 @@ export default function LabelEditor({ id }: { id: string }) {
                   <span>Net weight</span>
                   <input
                     className="input"
-                    placeholder="250 g"
+                    placeholder="250"
                     value={label.netWeight}
                     onChange={(e) => update({ netWeight: e.target.value })}
                   />
+                  <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-muted">
+                    <b className="text-ink">g.</b> is added automatically
+                  </span>
                 </label>
               </div>
             </div>

@@ -8,6 +8,9 @@ import {
   THEMES,
   bestBefore,
   formatDate,
+  formatDoseYield,
+  formatTime,
+  formatWeight,
   labelSize,
   ratioOf,
 } from "@/lib/types";
@@ -358,16 +361,10 @@ export default function Sticker({
                       />
                       <Spec
                         icon="weight"
-                        value={
-                          brew.doseG && brew.yieldG
-                            ? `${brew.doseG}→${brew.yieldG} g`
-                            : brew.doseG
-                              ? `${brew.doseG} g`
-                              : ""
-                        }
+                        value={formatDoseYield(brew.doseG, brew.yieldG)}
                       />
                       <Spec icon="ratio" value={ratioOf(brew)} />
-                      <Spec icon="time" value={brew.totalTime} />
+                      <Spec icon="time" value={formatTime(brew.totalTime)} />
                     </span>
                   </div>
                   {(brew.grinder || brew.grind) && (
@@ -386,7 +383,9 @@ export default function Sticker({
                         <li key={step.id} className="cl-step">
                           <span className="cl-step-n">{i + 1}.</span>
                           <span>{step.text}</span>
-                          {step.at && <span className="cl-step-at">{step.at}</span>}
+                          {step.at && (
+                            <span className="cl-step-at">{formatTime(step.at)}</span>
+                          )}
                         </li>
                       ))}
                     </ol>
@@ -417,7 +416,7 @@ export default function Sticker({
                 )}
                 {label.netWeight && (
                   <span>
-                    Net <b>{label.netWeight}</b>
+                    Net <b>{formatWeight(label.netWeight)}</b>
                   </span>
                 )}
               </div>
