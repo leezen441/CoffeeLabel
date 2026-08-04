@@ -420,8 +420,14 @@ body {
 
 .cl-foot-meta {
   display: flex;
-  flex-direction: column;
-  gap: calc(0.4 * var(--u));
+  flex-wrap: wrap;
+  /* row-gap, column-gap — facts sit side by side and wrap as whole units */
+  gap: calc(0.4 * var(--u)) calc(2.4 * var(--u));
+  min-width: 0;
+}
+
+.cl-foot-meta > span {
+  white-space: nowrap;
 }
 
 .cl-qr {

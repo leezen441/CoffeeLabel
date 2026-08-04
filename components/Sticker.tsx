@@ -402,11 +402,17 @@ export default function Sticker({
             <div className="cl-rule" />
 
             <div className="cl-foot">
+              {/* Separate spans, each nowrap: a line break can only fall
+                  between facts, never inside "Best before" or a date. */}
               <div className="cl-foot-meta">
                 {label.roastDate && (
                   <span>
                     Roasted <b>{formatDate(label.roastDate)}</b>
-                    {bb && <> · Best before <b>{formatDate(bb)}</b></>}
+                  </span>
+                )}
+                {bb && (
+                  <span>
+                    Best before <b>{formatDate(bb)}</b>
                   </span>
                 )}
                 {label.netWeight && (
