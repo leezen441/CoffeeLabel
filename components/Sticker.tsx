@@ -175,6 +175,49 @@ export default function Sticker({
 
     const clamp = (s: number) => Math.max(MIN_FIT, Math.min(MAX_FIT, s));
 
+    /**
+     * The specs row must never wrap. Rather than shrinking the whole sticker to
+     * make it fit — which would leave the label half empty — only that row is
+     * scaled down, and only when it is actually too wide.
+     */
+    const fitSpecsRows = () => {
+      fit.querySelectorAll<HTMLElement>(".cl-specs").forEach((row) => {
+        row.style.setProperty("--specs-fit", "1");
+        const available = row.clientWidth;
+        const needed = row.scrollWidth;
+        if (available > 0 && needed > available + 0.5) {
+          row.style.setProperty(
+            "--specs-fit",
+            String(Math.max(0.4, available / needed)),
+          );
+        }
+      });
+    };
+
+    /**
+     * The roast beans and their label can't wrap either. Shrink that group by
+     * exactly the overflow rather than the whole sticker.
+     */
+    const fitRoastGroup = () => {
+      const head = fit.querySelector<HTMLElement>(".cl-head");
+      const roast = head?.querySelector<HTMLElement>(".cl-roast");
+      if (!head || !roast) return;
+      roast.style.setProperty("--roast-fit", "1");
+      const over = head.scrollWidth - head.clientWidth;
+      const width = roast.getBoundingClientRect().width;
+      if (over > 0.5 && width > 0) {
+        roast.style.setProperty(
+          "--roast-fit",
+          String(Math.max(0.4, (width - over) / width)),
+        );
+      }
+    };
+
+    const fitRows = () => {
+      fitSpecsRows();
+      fitRoastGroup();
+    };
+
     const measure = () => {
       const cs = getComputedStyle(frame);
       const avail =
@@ -185,22 +228,15 @@ export default function Sticker({
       // always overshoots. Iterate to a fixed point for a tight fit. Later
       // passes are damped, otherwise a big swing can settle into a 2-cycle
       // and never converge (most visible on tall formats like A6).
+      // The global scale is driven purely by height, so the content always
+      // fills the label however many brew methods it has.
       let s = 1;
       for (let i = 0; i < 8; i++) {
         apply(s);
+        fitRows();
         const natural = fit.scrollHeight;
         if (natural <= 0) break;
-
-        // Vertical: fit the content height.
-        let target = avail / natural;
-
-        // Horizontal: the specs row must never wrap, so it can overflow instead.
-        // Shrink until it stops, otherwise it would be clipped at the edge.
-        if (fit.scrollWidth > fit.clientWidth + 0.5 && fit.scrollWidth > 0) {
-          target = Math.min(target, s * (fit.clientWidth / fit.scrollWidth));
-        }
-
-        target = clamp(target);
+        const target = clamp(avail / natural);
         if (Math.abs(target - s) < 0.004) {
           s = target;
           break;
@@ -210,13 +246,19 @@ export default function Sticker({
 
       // Guarantee the final state fits, whatever the iteration converged on.
       apply(s);
+      fitRows();
       const finalNatural = fit.scrollHeight;
       if (finalNatural * s > avail) {
         s = clamp(avail / finalNatural);
         apply(s);
+        fitRows();
       }
+
+      // Backstop: if some row still can't be squeezed, shrink the whole block
+      // rather than let anything be clipped at the edge.
       if (fit.scrollWidth > fit.clientWidth + 0.5) {
         apply(clamp(s * (fit.clientWidth / fit.scrollWidth)));
+        fitRows();
       }
     };
 

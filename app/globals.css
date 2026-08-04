@@ -215,26 +215,27 @@ body {
   line-height: 1.2;
 }
 
+/* --roast-fit shrinks just this group when the header row would overflow */
 .cl-roast {
   display: flex;
   align-items: center;
-  gap: calc(1.2 * var(--u));
+  gap: calc(1.2 * var(--u) * var(--roast-fit, 1));
   flex-shrink: 0;
 }
 
 .cl-beans {
   display: flex;
-  gap: calc(0.5 * var(--u));
+  gap: calc(0.5 * var(--u) * var(--roast-fit, 1));
 }
 
 .cl-bean {
-  width: calc(3 * var(--u));
-  height: calc(3 * var(--u));
+  width: calc(3 * var(--u) * var(--roast-fit, 1));
+  height: calc(3 * var(--u) * var(--roast-fit, 1));
   display: block;
 }
 
 .cl-roast-name {
-  font-size: calc(2.7 * var(--u));
+  font-size: calc(2.7 * var(--u) * var(--roast-fit, 1));
   font-weight: 700;
   letter-spacing: calc(0.1 * var(--u));
   text-transform: uppercase;
@@ -315,19 +316,24 @@ body {
   display: flex;
   align-items: center;
   /* wider gap between values than inside one, so each icon binds to its number */
-  gap: calc(2.4 * var(--u));
-  /* must stay on one line — the auto-fit shrinks to guarantee it, see Sticker.tsx */
+  gap: calc(2.4 * var(--u) * var(--specs-fit, 1));
+  /*
+   * Must stay on one line. This row alone is scaled by --specs-fit when it would
+   * be too wide, so the whole sticker doesn't have to shrink for it —
+   * see the specs pass in Sticker.tsx.
+   */
   flex-wrap: nowrap;
   white-space: nowrap;
+  min-width: 0;
   font-family: var(--font-mono);
-  font-size: calc(2.9 * var(--u));
+  font-size: calc(2.9 * var(--u) * var(--specs-fit, 1));
   color: var(--cl-muted);
 }
 
 .cl-spec {
   display: inline-flex;
   align-items: center;
-  gap: calc(0.7 * var(--u));
+  gap: calc(0.7 * var(--u) * var(--specs-fit, 1));
 }
 
 .cl-spec b {
@@ -336,8 +342,8 @@ body {
 }
 
 .cl-spec-icon {
-  width: calc(2.9 * var(--u));
-  height: calc(2.9 * var(--u));
+  width: calc(2.9 * var(--u) * var(--specs-fit, 1));
+  height: calc(2.9 * var(--u) * var(--specs-fit, 1));
   flex-shrink: 0;
   color: var(--cl-accent);
 }
