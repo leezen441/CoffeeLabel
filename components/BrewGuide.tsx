@@ -66,9 +66,8 @@ export default function BrewGuide({
   const brew = brews[Math.min(active, brews.length - 1)];
   const age = daysSince(label.roastDate);
   const bb = bestBefore(label.roastDate, label.bestBeforeDays);
-  const originBits = [label.variety, label.process, label.origin, label.altitude].filter(
-    Boolean,
-  );
+  const originBits = [label.variety, label.process, label.origin].filter(Boolean);
+  const altitude = (label.altitude ?? "").trim();
 
   return (
     <div className="flex-1" style={{ background: theme.paper, color: theme.ink }}>
@@ -85,6 +84,11 @@ export default function BrewGuide({
         {originBits.length > 0 && (
           <p className="mt-2 text-sm" style={{ color: theme.muted }}>
             {originBits.join(" · ")}
+          </p>
+        )}
+        {altitude && (
+          <p className="text-sm" style={{ color: theme.muted }}>
+            {altitude}
           </p>
         )}
 

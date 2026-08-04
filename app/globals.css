@@ -264,6 +264,11 @@ body {
   font-weight: 600;
 }
 
+/* altitude always starts its own line */
+.cl-altitude {
+  display: block;
+}
+
 .cl-notes {
   font-size: calc(3 * var(--u));
   font-style: italic;

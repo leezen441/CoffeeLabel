@@ -282,9 +282,9 @@ export default function Sticker({
       <span className="cl-placeholder">{placeholder}</span>
     ) : null;
 
-  const originBits = [label.variety, label.process, label.origin, label.altitude].filter(
-    Boolean,
-  );
+  // Altitude is kept out of the joined line — it gets a line of its own.
+  const originBits = [label.variety, label.process, label.origin].filter(Boolean);
+  const altitude = (label.altitude ?? "").trim();
   const brews = label.brews.filter(
     (b) => b.name || b.waterTempC || b.doseG || b.steps.some((s) => s.text),
   );
@@ -324,17 +324,22 @@ export default function Sticker({
 
         <h1 className="cl-name">{ph(label.coffeeName, "Coffee name")}</h1>
 
-        {!brewOnly && (originBits.length > 0 || preview) && (
+        {!brewOnly && (originBits.length > 0 || altitude || preview) && (
           <div className="cl-origin">
-            {originBits.length ? (
-              originBits.map((bit, i) => (
-                <span key={i}>
-                  {i > 0 && " · "}
-                  <b>{bit}</b>
-                </span>
-              ))
-            ) : (
-              <span className="cl-placeholder">Variety · Process · Origin</span>
+            {originBits.length
+              ? originBits.map((bit, i) => (
+                  <span key={i}>
+                    {i > 0 && " · "}
+                    <b>{bit}</b>
+                  </span>
+                ))
+              : !altitude && (
+                  <span className="cl-placeholder">Variety · Process · Origin</span>
+                )}
+            {altitude && (
+              <span className="cl-altitude">
+                <b>{altitude}</b>
+              </span>
             )}
           </div>
         )}
