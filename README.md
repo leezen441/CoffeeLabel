@@ -25,6 +25,11 @@ Each brew method holds:
 - **Water temperature** in °C
 - **Dose → Yield** in grams, with the **ratio computed automatically** (`1:2`, `1:16.7`)
 - **Total time**
+
+On the sticker these four print as one row, each preceded by a small icon —
+thermometer, weight, proportion bars, clock — so the numbers read as labelled
+values instead of a run of digits. The icons scale with the label, so they are
+clearest when a sticker carries only one or two recipes.
 - **Grinder** and **grind setting** — printed on their own line, e.g.
   `GRIND  Comandante C40 · 24 clicks`. The grinder field has a preset list
   (Comandante, 1Zpresso, Timemore, Niche, DF64, …) but accepts anything typed.

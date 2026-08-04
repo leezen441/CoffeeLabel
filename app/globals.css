@@ -313,17 +313,31 @@ body {
 
 .cl-specs {
   display: flex;
-  align-items: baseline;
-  gap: calc(1.2 * var(--u));
+  align-items: center;
+  /* wider gap between values than inside one, so each icon binds to its number */
+  gap: calc(2.4 * var(--u));
   flex-wrap: wrap;
   font-family: var(--font-mono);
   font-size: calc(2.9 * var(--u));
   color: var(--cl-muted);
 }
 
+.cl-spec {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(0.7 * var(--u));
+}
+
 .cl-spec b {
   color: var(--cl-ink);
   font-weight: 600;
+}
+
+.cl-spec-icon {
+  width: calc(2.9 * var(--u));
+  height: calc(2.9 * var(--u));
+  flex-shrink: 0;
+  color: var(--cl-accent);
 }
 
 .cl-grind {

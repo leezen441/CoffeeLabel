@@ -46,11 +46,64 @@ function Bean({ filled, color }: { filled: boolean; color: string }) {
   );
 }
 
-function Spec({ label, value }: { label: string; value: string }) {
+/**
+ * Tiny markers so the specs row reads as labelled values rather than a run of
+ * numbers. Deliberately bold and simple — they have to survive printing at ~2 mm.
+ */
+function SpecIcon({ kind }: { kind: "temp" | "weight" | "ratio" | "time" }) {
+  const common = {
+    className: "cl-spec-icon",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2.2,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+  if (kind === "temp") {
+    return (
+      <svg {...common}>
+        <path d="M13.5 13.8V5.2a1.6 1.6 0 0 0-3.2 0v8.6a3.8 3.8 0 1 0 3.2 0Z" />
+        <circle cx="11.9" cy="17.4" r="1.7" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
+  if (kind === "weight") {
+    return (
+      <svg {...common}>
+        <path d="M9.6 8.2a2.4 2.4 0 0 1 4.8 0" />
+        <path d="M7 8.2h10l2 11.6H5L7 8.2Z" />
+      </svg>
+    );
+  }
+  if (kind === "ratio") {
+    return (
+      <svg {...common}>
+        <rect x="3.5" y="12" width="6" height="8" rx="1.2" />
+        <rect x="14.5" y="4.5" width="6" height="15.5" rx="1.2" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common}>
+      <circle cx="12" cy="12.5" r="8.2" />
+      <path d="M12 7.6v5l3.1 2" />
+    </svg>
+  );
+}
+
+function Spec({
+  icon,
+  value,
+}: {
+  icon: "temp" | "weight" | "ratio" | "time";
+  value: string;
+}) {
   if (!value) return null;
   return (
     <span className="cl-spec">
-      {label ? `${label} ` : ""}
+      <SpecIcon kind={icon} />
       <b>{value}</b>
     </span>
   );
@@ -243,9 +296,12 @@ export default function Sticker({
                   <div className="cl-brew-head">
                     <span className="cl-brew-name">{brew.name || "Method"}</span>
                     <span className="cl-specs">
-                      <Spec label="" value={brew.waterTempC ? `${brew.waterTempC}°C` : ""} />
                       <Spec
-                        label=""
+                        icon="temp"
+                        value={brew.waterTempC ? `${brew.waterTempC}°C` : ""}
+                      />
+                      <Spec
+                        icon="weight"
                         value={
                           brew.doseG && brew.yieldG
                             ? `${brew.doseG}→${brew.yieldG} g`
@@ -254,8 +310,8 @@ export default function Sticker({
                               : ""
                         }
                       />
-                      <Spec label="" value={ratioOf(brew)} />
-                      <Spec label="" value={brew.totalTime} />
+                      <Spec icon="ratio" value={ratioOf(brew)} />
+                      <Spec icon="time" value={brew.totalTime} />
                     </span>
                   </div>
                   {(brew.grinder || brew.grind) && (
