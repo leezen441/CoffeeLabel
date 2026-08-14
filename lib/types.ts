@@ -567,12 +567,45 @@ export function formatDate(iso: string): string {
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export function bestBefore(iso: string, days: number): string {
-  if (!iso || !days) return "";
+/**
+ * YYYY-MM-DD from a Date's *local* parts. Using toISOString() here would shift
+ * the day by the UTC offset — local midnight in UTC+7 is the previous date in UTC.
+ */
+function localISO(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** roastDate + n days, as an ISO date. */
+export function addDays(iso: string, days: number): string {
+  if (!iso) return "";
   const d = new Date(`${iso}T00:00:00`);
   if (Number.isNaN(d.getTime())) return "";
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return localISO(d);
+}
+
+/**
+ * "18–22 Aug 2026", collapsing the month and year when they are shared so the
+ * range stays short enough for one line on a sticker.
+ */
+export function formatDateRange(fromIso: string, toIso: string): string {
+  if (!fromIso || !toIso) return "";
+  const a = new Date(`${fromIso}T00:00:00`);
+  const b = new Date(`${toIso}T00:00:00`);
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return "";
+  const day = (d: Date) => String(d.getDate()).padStart(2, "0");
+  const mon = (d: Date) => d.toLocaleDateString("en-GB", { month: "short" });
+  const sameMonth = a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+  const sameYear = a.getFullYear() === b.getFullYear();
+  if (sameMonth) return `${day(a)}–${day(b)} ${mon(b)} ${b.getFullYear()}`;
+  if (sameYear) return `${day(a)} ${mon(a)} – ${day(b)} ${mon(b)} ${b.getFullYear()}`;
+  return `${day(a)} ${mon(a)} ${a.getFullYear()} – ${day(b)} ${mon(b)} ${b.getFullYear()}`;
+}
+
+export function bestBefore(iso: string, days: number): string {
+  if (!iso || !days) return "";
+  return addDays(iso, days);
 }
 
 export function daysSince(iso: string): number | null {

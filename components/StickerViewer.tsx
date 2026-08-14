@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Sticker from "./Sticker";
+import { saveStickerImage } from "@/lib/saveImage";
 import { type CoffeeLabel, labelSize, labelTitle } from "@/lib/types";
 
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -42,6 +43,20 @@ export default function StickerViewer({
   const moved = useRef(false);
   /** mirrors the gesture refs for rendering — the transition is off mid-gesture */
   const [dragging, setDragging] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  async function saveImage() {
+    const node = innerRef.current?.firstElementChild as HTMLElement | null;
+    if (!node) return;
+    setSaving(true);
+    try {
+      await saveStickerImage(node, labelTitle(label));
+    } catch (err) {
+      alert(`Could not save the image: ${String(err)}`);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const size = labelSize(label);
 
@@ -249,6 +264,13 @@ export default function StickerViewer({
           </button>
         </div>
 
+        <button
+          onClick={saveImage}
+          disabled={saving}
+          className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20 disabled:opacity-50"
+        >
+          {saving ? "Rendering…" : "Save image"}
+        </button>
         <Link
           href={`/editor/${label.id}`}
           className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20"

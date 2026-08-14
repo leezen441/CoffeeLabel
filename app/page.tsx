@@ -508,12 +508,13 @@ function GroupChip({
         </span>
       </button>
       {onDelete && (
+        /* Always visible — a hover-only control is unreachable on a phone. */
         <button
           type="button"
           onClick={onDelete}
           aria-label={`Delete group ${name}`}
           title={`Delete group ${name}`}
-          className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full border border-line bg-card text-xs leading-none text-muted shadow-sm hover:border-[var(--danger)] hover:text-[var(--danger)] group-hover/chip:flex"
+          className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-line bg-card text-xs leading-none text-muted shadow-sm transition hover:border-[var(--danger)] hover:bg-[var(--danger)] hover:text-white"
         >
           ✕
         </button>

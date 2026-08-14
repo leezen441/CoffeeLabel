@@ -7,9 +7,12 @@ import {
   type CoffeeLabel,
   ROAST_LEVELS,
   THEMES,
+  addDays,
   bestBefore,
   daysSince,
   formatDate,
+  formatDateRange,
+  restWindow,
   formatDoseYield,
   formatTime,
   formatWeight,
@@ -66,6 +69,13 @@ export default function BrewGuide({
   const brew = brews[Math.min(active, brews.length - 1)];
   const age = daysSince(label.roastDate);
   const bb = bestBefore(label.roastDate, label.bestBeforeDays);
+  const rest = restWindow(label);
+  const restDates = label.showRest
+    ? formatDateRange(
+        addDays(label.roastDate, rest.from),
+        addDays(label.roastDate, rest.to),
+      )
+    : "";
   const originBits = [label.variety, label.process, label.origin].filter(Boolean);
   const altitude = (label.altitude ?? "").trim();
 
@@ -135,6 +145,7 @@ export default function BrewGuide({
         {bb && (
           <p className="mt-1 text-xs" style={{ color: theme.muted }}>
             Best before {formatDate(bb)}
+            {restDates && <> · Peak {restDates}</>}
           </p>
         )}
 

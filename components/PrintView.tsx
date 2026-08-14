@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Sticker from "./Sticker";
 import * as store from "@/lib/store";
+import { saveStickerImage } from "@/lib/saveImage";
 import { useOrigin } from "@/lib/useOrigin";
 import {
   type CoffeeLabel,
@@ -43,6 +44,26 @@ export default function PrintView({ id }: { id: string }) {
   const innerRef = useRef<HTMLDivElement>(null);
   const [screen, setScreen] = useState({ scale: 1, h: 0 });
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** an unscaled, guide-free copy of the sticker, rendered only for PNG export */
+  const exportRef = useRef<HTMLDivElement>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function saveImage() {
+    const node = exportRef.current?.firstElementChild as HTMLElement | null;
+    if (!node || !label) return;
+    setSaving(true);
+    try {
+      const how = await saveStickerImage(node, labelTitle(label));
+      if (how === "downloaded") {
+        // On a phone the share sheet handles it; on desktop say where it went.
+        console.info("Label saved as PNG");
+      }
+    } catch (err) {
+      alert(`Could not save the image: ${String(err)}`);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   useEffect(() => {
     void store.getLabel(id).then((l) => (l ? setLabel(l) : setMissing(true)));
@@ -198,6 +219,9 @@ export default function PrintView({ id }: { id: string }) {
           <h1 className="mr-auto truncate font-serif text-lg font-semibold">
             Print · {labelTitle(label)}
           </h1>
+          <button className="btn" onClick={saveImage} disabled={saving}>
+            {saving ? "Rendering…" : "Save image"}
+          </button>
           <button className="btn btn-primary" onClick={() => window.print()}>
             Print
           </button>
@@ -389,6 +413,16 @@ export default function PrintView({ id }: { id: string }) {
             </li>
           </ul>
         </div>
+      </div>
+
+      {/* Off-screen so it can be rendered to PNG at full size without the
+          on-screen fit scaling or the dashed cut guide. */}
+      <div
+        ref={exportRef}
+        aria-hidden="true"
+        className="no-print pointer-events-none fixed left-[-10000px] top-0"
+      >
+        <Sticker label={label} qrUrl={brewUrl} variant={variant} />
       </div>
 
       <div className="print-root mx-auto max-w-6xl px-5 py-5">

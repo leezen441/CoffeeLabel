@@ -11,7 +11,7 @@ label at a real millimetre size and stick it on the bag.
 | Roaster / shop name | Small caps, top-left |
 | Coffee name | Display serif headline |
 | Variety, Process, Origin, Altitude | Combined into one meta line |
-| Roast level | 1–5 coffee-bean icons + name (Light → Dark) |
+| Roast level | Segmented scale with a marker, or 1–5 bean icons — Light · Light-Medium · Medium · Medium-Dark · Dark |
 | Roast date | Plus an auto-calculated **Best before** (roast date + N days) |
 | Tasting notes | Up to 4 |
 | Net weight | Footer |
@@ -30,11 +30,43 @@ On the sticker these four print as one row, each preceded by a small icon —
 thermometer, weight, proportion bars, clock — so the numbers read as labelled
 values instead of a run of digits. The icons scale with the label, so they are
 clearest when a sticker carries only one or two recipes.
-- **Grinder** and **grind setting** — printed on their own line, e.g.
-  `GRIND  Comandante C40 · 24 clicks`. The grinder field has a preset list
-  (Comandante, 1Zpresso, Timemore, Niche, DF64, …) but accepts anything typed.
+- **Grinder** — pick a model and the dial input relabels itself to match how that
+  grinder is actually read: *clicks* (Comandante, 1Zpresso, Timemore, Kingrinder),
+  a *dial number* (DF64/Lagom, Niche, Fellow, Baratza, Eureka) or *microns*
+  (Generic). The unit is appended for you, so the label reads
+  `GRIND  Comandante C40 · 24 clicks` or `… · 800 µm`. Choose **Other…** to type a
+  model that isn't listed.
 - **Brew sequence** — an ordered, reorderable list of steps, each with an optional
-  timestamp (`0:45`)
+  timestamp (`0:45`) and an optional **cumulative water** figure (`45`, `150`, `250`)
+
+### Pour timeline ribbon
+
+Give the steps cumulative water and the **Ribbon** layout prints them as a
+proportional block timeline instead of a numbered list — each block's width is the
+water added during that pour, captioned with the running total and the timestamp.
+It needs water on at least two steps; any method without it (espresso, immersion)
+falls back to the numbered list automatically, so the two can mix on one label.
+
+### Rest & degas window
+
+With a roast date set, the label prints a **peak window** derived from the process —
+Washed 10–14, Honey 12–18, Natural and Anaerobic 14–21 days — as a bar with the
+window highlighted and a marker showing how long the bag has actually rested.
+Override the days per label, or switch the bar off.
+
+The window prints as **real dates** (`24–28 Aug 2026`), not day counts: once the
+sticker is on a bag, "Day 10–14" would still need counting from the roast date.
+
+### Single-dose tracker
+
+An optional row of up to 12 tick boxes to cross off as you use single doses out of
+the bag.
+
+### Flavour colours
+
+Tasting notes carry a colour dot taken from the SCA flavour families. Notes are
+matched on keywords, so "Jasmine" picks up Floral pink and "Peach" Stone Fruit
+orange without any tagging. A quick-pick row inserts the families directly.
 
 ## Pages
 
@@ -81,7 +113,8 @@ correctly at every size. The content block is then scaled to **fill** the label:
 shrunk when there is too much, enlarged when a short label would otherwise leave
 the bottom blank (capped at 1.9× so a nearly-empty label doesn't turn into giant
 type). Nothing is ever clipped. On the smallest labels choose the **Compact**
-layout, which prints the specs line without the step-by-step sequence.
+layout, which prints the specs line without the step-by-step sequence. **Ribbon**
+sits in between — the pour timeline takes far less height than numbered steps.
 
 Fewer brew methods means bigger type, because less has to fit. One V60 recipe on a
 100×150 label prints at roughly 13 pt; the same recipe on 70×40 lands near 4 pt.
@@ -101,6 +134,20 @@ Open a label → **Print stickers**. Choose:
 
 In the browser print dialog set **Margins: None**, **Scale: 100%**, and enable
 **Background graphics** so the colours print.
+
+## Saving a label as an image
+
+**Save image** — in the print page header and in the library viewer — renders the
+sticker to a PNG at roughly 384 dpi (a 100 × 70 mm label comes out 1512 × 1060 px).
+
+On a phone this opens the system share sheet, where **Save Image** puts it straight
+into the photo album. On desktop it downloads as `coffee-name.png`. The dashed cut
+guide is never included.
+
+The renderer wraps a clone of the sticker in an SVG `<foreignObject>` and carries
+across only the `:root` variables and `.cl-*` rules it needs. Off-the-shelf
+DOM-to-image libraries stalled indefinitely on this markup; the targeted approach
+also keeps the intermediate data URL small.
 
 ## Storage
 

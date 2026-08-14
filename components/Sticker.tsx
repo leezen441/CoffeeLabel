@@ -6,8 +6,10 @@ import {
   type CoffeeLabel,
   ROAST_LEVELS,
   THEMES,
+  addDays,
   bestBefore,
   daysSince,
+  formatDateRange,
   dialLabel,
   flavorColor,
   formatDate,
@@ -336,6 +338,12 @@ export default function Sticker({
   const bb = bestBefore(label.roastDate, label.bestBeforeDays);
   const rest = restWindow(label);
   const age = daysSince(label.roastDate);
+  // Printed as real dates: once the label is on a bag, counting days from the
+  // roast date defeats the point.
+  const restDates = formatDateRange(
+    addDays(label.roastDate, rest.from),
+    addDays(label.roastDate, rest.to),
+  );
 
   // The rest track spans 0 → (window end + 50%), so the peak block sits in the
   // middle third and there is visible room after it.
@@ -514,7 +522,7 @@ export default function Sticker({
               <div className="cl-rest-head">
                 <span className="cl-rest-label">Peak window</span>
                 <span className="cl-rest-value">
-                  Day <b>{rest.from}</b>–<b>{rest.to}</b>
+                  <b>{restDates}</b>
                   {age !== null && age >= 0 && (
                     <>
                       {" · "}
