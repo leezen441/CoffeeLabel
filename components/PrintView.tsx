@@ -164,6 +164,7 @@ export default function PrintView({ id }: { id: string }) {
       label={label}
       qrUrl={brewUrl}
       variant={variant}
+      live={false}
       className={guides ? "cut-guide" : ""}
       style={guides ? { outline: "0.1mm dashed #c9c9c9" } : undefined}
     />
@@ -422,7 +423,7 @@ export default function PrintView({ id }: { id: string }) {
         aria-hidden="true"
         className="no-print pointer-events-none fixed left-[-10000px] top-0"
       >
-        <Sticker label={label} qrUrl={brewUrl} variant={variant} />
+        <Sticker label={label} qrUrl={brewUrl} variant={variant} live={false} />
       </div>
 
       <div className="print-root mx-auto max-w-6xl px-5 py-5">

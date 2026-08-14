@@ -44,9 +44,12 @@ export default function StickerViewer({
   /** mirrors the gesture refs for rendering — the transition is off mid-gesture */
   const [dragging, setDragging] = useState(false);
   const [saving, setSaving] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   async function saveImage() {
-    const node = innerRef.current?.firstElementChild as HTMLElement | null;
+    // Export the offscreen copy, not what's on screen: a saved image is an
+    // artefact like a print, so it drops the live rest bar and "Nd rested".
+    const node = exportRef.current?.firstElementChild as HTMLElement | null;
     if (!node) return;
     setSaving(true);
     try {
@@ -330,6 +333,15 @@ export default function StickerViewer({
       <p className="px-4 pb-3 text-center text-xs text-white/50">
         Pinch or scroll to zoom · drag to move · double-tap to toggle · Esc to close
       </p>
+
+      {/* Offscreen, unscaled and non-live — this is what "Save image" renders. */}
+      <div
+        ref={exportRef}
+        aria-hidden="true"
+        className="pointer-events-none fixed left-[-10000px] top-0"
+      >
+        <Sticker label={label} qrUrl={qrUrl} live={false} />
+      </div>
     </div>
   );
 }

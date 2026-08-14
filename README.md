@@ -57,6 +57,10 @@ Override the days per label, or switch the bar off.
 The window prints as **real dates** (`24–28 Aug 2026`), not day counts: once the
 sticker is on a bag, "Day 10–14" would still need counting from the roast date.
 
+The bar and the `Nd rested` readout are **screen-only**. They are correct only at
+the moment they are drawn, so anything printed or saved as an image keeps just the
+peak-window dates, which stay true.
+
 ### Single-dose tracker
 
 An optional row of up to 12 tick boxes to cross off as you use single doses out of

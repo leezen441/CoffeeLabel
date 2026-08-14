@@ -104,6 +104,54 @@ function SpecIcon({ kind }: { kind: "temp" | "weight" | "ratio" | "time" }) {
   );
 }
 
+/**
+ * Markers for the bean facts. Without them "Yellow Honey · Boquete, Panama"
+ * gives no clue which part is the variety and which the process.
+ */
+function OriginIcon({ kind }: { kind: "variety" | "process" | "origin" | "altitude" }) {
+  const common = {
+    className: "cl-origin-icon",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2.1,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+  if (kind === "variety") {
+    // sprout — the bean varietal
+    return (
+      <svg {...common}>
+        <path d="M12 20.5v-7" />
+        <path d="M12 13.5c0-4 2.6-6.8 7-7.4.3 4.4-2.4 7.4-7 7.4Z" />
+        <path d="M12 15.5c-3.8 0-6.2-2.4-6.6-6.2 3.7.5 6 2.7 6.6 6.2Z" />
+      </svg>
+    );
+  }
+  if (kind === "process") {
+    // droplet — washed / natural / honey processing
+    return (
+      <svg {...common}>
+        <path d="M12 3.4c3.6 4.3 6 7.4 6 10.2a6 6 0 0 1-12 0c0-2.8 2.4-5.9 6-10.2Z" />
+      </svg>
+    );
+  }
+  if (kind === "origin") {
+    return (
+      <svg {...common}>
+        <path d="M12 21.2s6.8-5.6 6.8-10.8a6.8 6.8 0 1 0-13.6 0C5.2 15.6 12 21.2 12 21.2Z" />
+        <circle cx="12" cy="10.2" r="2.5" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common}>
+      <path d="M2.6 19h18.8L14.2 6.2l-3.9 6.1-2.4-2.9Z" />
+    </svg>
+  );
+}
+
 /** Burr icon marking the grinder badge. */
 function BurrIcon() {
   return (
@@ -166,6 +214,7 @@ export default function Sticker({
   className = "",
   style,
   variant = "full",
+  live = true,
 }: {
   label: CoffeeLabel;
   /** show greyed placeholders for empty fields */
@@ -176,6 +225,12 @@ export default function Sticker({
   style?: React.CSSProperties;
   /** "brew" drops the origin/notes/roast/footer blocks and prints only the recipes */
   variant?: "full" | "brew";
+  /**
+   * On-screen the rest bar and "Nd rested" are useful. On paper they are frozen
+   * the moment you print, so anything printed or exported passes live={false}
+   * and keeps only the absolute peak-window dates.
+   */
+  live?: boolean;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const fitRef = useRef<HTMLDivElement>(null);
@@ -395,18 +450,30 @@ export default function Sticker({
 
         {!brewOnly && (originBits.length > 0 || altitude || preview) && (
           <div className="cl-origin">
-            {originBits.length
-              ? originBits.map((bit, i) => (
-                  <span key={i}>
-                    {i > 0 && " · "}
-                    <b>{bit}</b>
-                  </span>
-                ))
-              : !altitude && (
-                  <span className="cl-placeholder">Variety · Process · Origin</span>
-                )}
+            {originBits.length === 0 && !altitude && preview && (
+              <span className="cl-placeholder">Variety · Process · Origin</span>
+            )}
+            {label.variety && (
+              <span className="cl-origin-item">
+                <OriginIcon kind="variety" />
+                <b>{label.variety}</b>
+              </span>
+            )}
+            {label.process && (
+              <span className="cl-origin-item">
+                <OriginIcon kind="process" />
+                <b>{label.process}</b>
+              </span>
+            )}
+            {label.origin && (
+              <span className="cl-origin-item">
+                <OriginIcon kind="origin" />
+                <b>{label.origin}</b>
+              </span>
+            )}
             {altitude && (
-              <span className="cl-altitude">
+              <span className="cl-origin-item cl-altitude">
+                <OriginIcon kind="altitude" />
                 <b>{altitude}</b>
               </span>
             )}
@@ -523,7 +590,7 @@ export default function Sticker({
                 <span className="cl-rest-label">Peak window</span>
                 <span className="cl-rest-value">
                   <b>{restDates}</b>
-                  {age !== null && age >= 0 && (
+                  {live && age !== null && age >= 0 && (
                     <>
                       {" · "}
                       <b>{age}d</b> rested
@@ -531,22 +598,24 @@ export default function Sticker({
                   )}
                 </span>
               </div>
-              <div className="cl-rest-track">
-                <span
-                  className="cl-rest-window"
-                  style={{
-                    left: `${restBar.startPct}%`,
-                    width: `${restBar.widthPct}%`,
-                    background: theme.accent,
-                  }}
-                />
-                {restBar.markerPct !== null && (
+              {live && (
+                <div className="cl-rest-track">
                   <span
-                    className="cl-rest-marker"
-                    style={{ left: `${restBar.markerPct}%`, background: theme.ink }}
+                    className="cl-rest-window"
+                    style={{
+                      left: `${restBar.startPct}%`,
+                      width: `${restBar.widthPct}%`,
+                      background: theme.accent,
+                    }}
                   />
-                )}
-              </div>
+                  {restBar.markerPct !== null && (
+                    <span
+                      className="cl-rest-marker"
+                      style={{ left: `${restBar.markerPct}%`, background: theme.ink }}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           </>
         )}

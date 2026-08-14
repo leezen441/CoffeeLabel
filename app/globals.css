@@ -254,9 +254,28 @@ body {
 }
 
 .cl-origin {
-  font-size: calc(3 * var(--u));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(0.5 * var(--u)) calc(2.2 * var(--u));
+  font-size: calc(2.8 * var(--u));
   color: var(--cl-muted);
   line-height: 1.25;
+}
+
+/* each fact travels with its own icon and never splits across lines */
+.cl-origin-item {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(0.7 * var(--u));
+  min-width: 0;
+}
+
+.cl-origin-icon {
+  width: calc(2.8 * var(--u));
+  height: calc(2.8 * var(--u));
+  flex-shrink: 0;
+  color: var(--cl-accent);
 }
 
 .cl-origin b {
@@ -266,7 +285,7 @@ body {
 
 /* altitude always starts its own line */
 .cl-altitude {
-  display: block;
+  flex-basis: 100%;
 }
 
 /* ---- flavour notes: colour dot + name, coloured by SCA family ---- */
@@ -479,11 +498,16 @@ body {
   gap: calc(0.5 * var(--u));
 }
 
+/*
+ * Column, not a wrapping row: with a row the specs sat beside the method name
+ * whenever they happened to fit, so labels looked inconsistent side by side.
+ * The method name always gets its own line.
+ */
 .cl-brew-head {
   display: flex;
-  align-items: baseline;
-  gap: calc(1.4 * var(--u));
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(0.5 * var(--u));
 }
 
 .cl-brew-name {
