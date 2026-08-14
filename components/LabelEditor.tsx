@@ -9,12 +9,15 @@ import {
   type CoffeeLabel,
   type LabelGroup,
   type RoastLevel,
+  FLAVOR_FAMILIES,
   MAX_BREWS,
   MAX_NOTES,
   PROCESS_PRESETS,
   ROAST_LEVELS,
   emptyBrew,
+  flavorColor,
   labelTitle,
+  restWindow,
 } from "@/lib/types";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -110,6 +113,8 @@ export default function LabelEditor({ id }: { id: string }) {
     [next[i], next[j]] = [next[j], next[i]];
     update({ brews: next });
   };
+
+  const rest = restWindow(label);
 
   const addNote = () => {
     const value = noteDraft.trim();
@@ -315,6 +320,111 @@ export default function LabelEditor({ id }: { id: string }) {
                 </label>
               </div>
             </div>
+
+            <div className="mt-4 grid gap-3 border-t border-line pt-4 sm:grid-cols-2">
+              <label className="field">
+                <span>Roast indicator</span>
+                <select
+                  className="select"
+                  value={label.roastDisplay}
+                  onChange={(e) =>
+                    update({ roastDisplay: e.target.value as "beans" | "scale" })
+                  }
+                >
+                  <option value="scale">Segmented scale</option>
+                  <option value="beans">Coffee beans</option>
+                </select>
+              </label>
+
+              <div className="field">
+                <span>Rest / degas window</span>
+                <label className="flex h-[38px] items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={label.showRest}
+                    onChange={(e) => update({ showRest: e.target.checked })}
+                  />
+                  <span className="font-normal normal-case tracking-normal text-ink">
+                    Show peak window bar
+                  </span>
+                </label>
+              </div>
+
+              {label.showRest && (
+                <div className="sm:col-span-2 rounded-lg border border-line bg-paper/60 p-3">
+                  <p className="text-xs text-muted">
+                    From process <b className="text-ink">{label.process || "—"}</b> →{" "}
+                    <b className="text-ink">
+                      Day {rest.from}–{rest.to}
+                    </b>{" "}
+                    ({rest.auto ? `${rest.basis} default` : "custom"})
+                  </p>
+                  <div className="mt-2 grid grid-cols-2 gap-3">
+                    <label className="field">
+                      <span>Rest from (days)</span>
+                      <input
+                        type="number"
+                        min={0}
+                        className="input"
+                        placeholder="auto"
+                        value={label.restFrom || ""}
+                        onChange={(e) => update({ restFrom: Number(e.target.value) || 0 })}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Rest to (days)</span>
+                      <input
+                        type="number"
+                        min={0}
+                        className="input"
+                        placeholder="auto"
+                        value={label.restTo || ""}
+                        onChange={(e) => update({ restTo: Number(e.target.value) || 0 })}
+                      />
+                    </label>
+                  </div>
+                  <p className="mt-1 text-xs text-muted">
+                    Leave both blank to follow the process automatically — Washed 10–14,
+                    Honey 12–18, Natural &amp; Anaerobic 14–21 days.
+                  </p>
+                </div>
+              )}
+
+              <div className="field sm:col-span-2">
+                <span>Single-dose tracker</span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={label.showDoseBoxes}
+                      onChange={(e) => update({ showDoseBoxes: e.target.checked })}
+                    />
+                    <span className="font-normal normal-case tracking-normal text-ink">
+                      Print tick boxes
+                    </span>
+                  </label>
+                  {label.showDoseBoxes && (
+                    <label className="flex items-center gap-2 text-sm">
+                      <span className="font-normal normal-case tracking-normal text-muted">
+                        How many
+                      </span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={12}
+                        className="input w-20"
+                        value={label.doseBoxes}
+                        onChange={(e) =>
+                          update({
+                            doseBoxes: Math.min(12, Math.max(1, Number(e.target.value) || 1)),
+                          })
+                        }
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+            </div>
           </section>
 
           <section className="panel p-4">
@@ -327,6 +437,10 @@ export default function LabelEditor({ id }: { id: string }) {
                   key={note}
                   className="inline-flex items-center gap-1.5 rounded-full border border-line bg-brand-soft px-3 py-1 text-sm"
                 >
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ background: flavorColor(note) }}
+                  />
                   {note}
                   <button
                     className="text-muted hover:text-ink"
@@ -361,6 +475,33 @@ export default function LabelEditor({ id }: { id: string }) {
                 </span>
               )}
             </div>
+
+            {label.tastingNotes.length < MAX_NOTES && (
+              <>
+                <p className="mt-3 mb-1.5 text-xs text-muted">
+                  Quick pick — each family carries its SCA colour onto the label
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {FLAVOR_FAMILIES.filter(
+                    (f) => !label.tastingNotes.includes(f.name),
+                  ).map((f) => (
+                    <button
+                      key={f.id}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs hover:border-brand"
+                      onClick={() =>
+                        update({ tastingNotes: [...label.tastingNotes, f.name] })
+                      }
+                    >
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ background: f.color }}
+                      />
+                      {f.name}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </section>
 
           <section className="panel p-4">

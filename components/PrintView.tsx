@@ -229,7 +229,8 @@ export default function PrintView({ id }: { id: string }) {
                 value={label.layout}
                 onChange={(e) => update({ layout: e.target.value as LayoutId })}
               >
-                <option value="full">Full — with steps</option>
+                <option value="full">Full — numbered steps</option>
+                <option value="ribbon">Ribbon — pour timeline</option>
                 <option value="compact">Compact — specs only</option>
               </select>
             </label>

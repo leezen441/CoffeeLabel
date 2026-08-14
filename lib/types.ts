@@ -6,6 +6,8 @@ export type BrewStep = {
   text: string;
   /** optional cumulative timestamp, e.g. "0:45" */
   at: string;
+  /** cumulative water in the brewer at the end of this step, drives the ribbon */
+  waterG: string;
 };
 
 export type BrewMethod = {
@@ -15,14 +17,61 @@ export type BrewMethod = {
   waterTempC: string;
   doseG: string;
   yieldG: string;
+  /** key into GRINDERS, or "" for a free-typed model */
+  grinderId: string;
   /** grinder model, e.g. "Comandante C40" */
   grinder: string;
-  /** grind setting on that grinder, e.g. "18 clicks" or "2.5" */
+  /** dial setting on that grinder, e.g. "24" or "3.2.0" or "800" */
   grind: string;
   /** total brew time, e.g. "2:45" */
   totalTime: string;
   steps: BrewStep[];
 };
+
+/* --------------------------- grinder dial presets --------------------------- */
+
+export type DialKind = "clicks" | "number" | "microns";
+
+export const GRINDERS: Record<
+  string,
+  { name: string; dial: DialKind; placeholder: string }
+> = {
+  comandante: { name: "Comandante C40", dial: "clicks", placeholder: "24" },
+  "1zpresso-jx": { name: "1Zpresso JX-Pro", dial: "clicks", placeholder: "3.2.0" },
+  "1zpresso-k": { name: "1Zpresso K-Ultra", dial: "clicks", placeholder: "4.5.0" },
+  "1zpresso-j": { name: "1Zpresso J-Max", dial: "clicks", placeholder: "2.4.0" },
+  timemore: { name: "Timemore Chestnut", dial: "clicks", placeholder: "18" },
+  kingrinder: { name: "Kingrinder K6", dial: "clicks", placeholder: "70" },
+  df64: { name: "DF64 / Lagom", dial: "number", placeholder: "6.2" },
+  niche: { name: "Niche Zero", dial: "number", placeholder: "20" },
+  fellow: { name: "Fellow Ode Gen 2", dial: "number", placeholder: "4.1" },
+  baratza: { name: "Baratza Encore", dial: "number", placeholder: "15" },
+  eureka: { name: "Eureka Mignon", dial: "number", placeholder: "3.5" },
+  generic: { name: "Generic / Micron", dial: "microns", placeholder: "800" },
+};
+
+/** Unit shown after the dial value, e.g. "24 clicks" or "800 µm". */
+export const DIAL_UNIT: Record<DialKind, string> = {
+  clicks: "clicks",
+  number: "",
+  microns: "µm",
+};
+
+export function grinderOf(brew: BrewMethod): { name: string; dial: DialKind } {
+  const preset = GRINDERS[brew.grinderId];
+  if (preset) return { name: preset.name, dial: preset.dial };
+  return { name: (brew.grinder ?? "").trim(), dial: "number" };
+}
+
+/** "Comandante C40 · 24 clicks" — empty when nothing is set. */
+export function dialLabel(brew: BrewMethod): string {
+  const value = (brew.grind ?? "").trim();
+  if (!value) return "";
+  const { dial } = grinderOf(brew);
+  const unit = DIAL_UNIT[dial];
+  if (!unit || /[a-z]/i.test(value)) return value;
+  return `${value} ${unit}`;
+}
 
 export type LabelGroup = {
   id: string;
@@ -68,6 +117,16 @@ export type CoffeeLabel = {
   tastingNotes: string[];
   netWeight: string;
   brews: BrewMethod[];
+  /** "beans" = five bean icons, "scale" = segmented roast bar */
+  roastDisplay: "beans" | "scale";
+  /** resting window; 0/0 means derive it from the process */
+  showRest: boolean;
+  restFrom: number;
+  restTo: number;
+  /** row of tick boxes for tracking single doses used out of the bag */
+  showDoseBoxes: boolean;
+  doseBoxes: number;
+
   /** sticker appearance */
   theme: ThemeId;
   size: SizeId;
@@ -91,7 +150,7 @@ export type SizeId =
   | "60x60"
   | "a6"
   | "custom";
-export type LayoutId = "full" | "compact";
+export type LayoutId = "full" | "ribbon" | "compact";
 
 export const MAX_BREWS = 5;
 export const DEFAULT_BREWS = 3;
@@ -99,11 +158,128 @@ export const MAX_NOTES = 4;
 
 export const ROAST_LEVELS: Record<RoastLevel, { name: string; blurb: string }> = {
   1: { name: "Light", blurb: "Bright, floral, high acidity" },
-  2: { name: "Medium-Light", blurb: "Fruit-forward, clean finish" },
+  2: { name: "Light-Medium", blurb: "Fruit-forward, clean finish" },
   3: { name: "Medium", blurb: "Balanced sweetness and body" },
   4: { name: "Medium-Dark", blurb: "Chocolate, low acidity" },
   5: { name: "Dark", blurb: "Bold, smoky, full body" },
 };
+
+/* ------------------------------ flavour wheel ------------------------------ */
+
+export type FlavorFamily = {
+  id: string;
+  name: string;
+  color: string;
+  /** notes typed by hand are matched against these to pick up the colour */
+  keywords: string[];
+};
+
+/** Families and colours follow the SCA flavour wheel groupings. */
+export const FLAVOR_FAMILIES: FlavorFamily[] = [
+  {
+    id: "citrus",
+    name: "Citrus",
+    color: "#E3B23C",
+    keywords: ["citrus", "lemon", "lime", "orange", "grapefruit", "bergamot", "mandarin"],
+  },
+  {
+    id: "floral",
+    name: "Floral",
+    color: "#D9789E",
+    keywords: ["floral", "jasmine", "rose", "lavender", "hibiscus", "chamomile", "blossom"],
+  },
+  {
+    id: "berry",
+    name: "Berry",
+    color: "#8E4FA8",
+    keywords: ["berry", "strawberry", "raspberry", "blueberry", "blackberry", "currant", "cherry"],
+  },
+  {
+    id: "stone-fruit",
+    name: "Stone Fruit",
+    color: "#E2803C",
+    keywords: ["peach", "apricot", "nectarine", "plum", "stone fruit"],
+  },
+  {
+    id: "tropical",
+    name: "Tropical",
+    color: "#3FA796",
+    keywords: ["tropical", "mango", "pineapple", "papaya", "lychee", "passion", "melon"],
+  },
+  {
+    id: "nutty",
+    name: "Nutty",
+    color: "#B08A5E",
+    keywords: ["nut", "almond", "hazelnut", "walnut", "peanut", "pecan"],
+  },
+  {
+    id: "chocolate",
+    name: "Chocolate",
+    color: "#6B4327",
+    keywords: ["chocolate", "cocoa", "cacao", "fudge", "mocha"],
+  },
+  {
+    id: "caramel",
+    name: "Caramel / Sweet",
+    color: "#C98A3E",
+    keywords: ["caramel", "toffee", "honey", "brown sugar", "molasses", "vanilla", "syrup", "sweet"],
+  },
+  {
+    id: "spice",
+    name: "Spices",
+    color: "#A4432A",
+    keywords: ["spice", "cinnamon", "clove", "nutmeg", "cardamom", "pepper", "anise"],
+  },
+  {
+    id: "herbal",
+    name: "Herbal / Green",
+    color: "#4E8C5A",
+    keywords: ["herbal", "green", "tea", "grass", "mint", "sage", "tobacco", "earthy"],
+  },
+  {
+    id: "fermented",
+    name: "Winey / Fermented",
+    color: "#7B2D4A",
+    keywords: ["wine", "winey", "boozy", "rum", "whisky", "bourbon", "ferment", "funky", "raisin"],
+  },
+];
+
+const NEUTRAL_FLAVOR = "#8b7a68";
+
+/** Colour for a tasting note, matched loosely against the flavour families. */
+export function flavorColor(note: string): string {
+  const n = (note ?? "").trim().toLowerCase();
+  if (!n) return NEUTRAL_FLAVOR;
+  for (const f of FLAVOR_FAMILIES) {
+    if (f.id === n) return f.color;
+    if (f.keywords.some((k) => n.includes(k))) return f.color;
+  }
+  return NEUTRAL_FLAVOR;
+}
+
+/* --------------------------- rest / degas window --------------------------- */
+
+const REST_RULES: { match: RegExp; from: number; to: number; label: string }[] = [
+  { match: /anaerobic|carbonic|macerat|ferment/i, from: 14, to: 21, label: "Anaerobic" },
+  { match: /natural|dry\s*process/i, from: 14, to: 21, label: "Natural" },
+  { match: /honey|pulped/i, from: 12, to: 18, label: "Honey" },
+  { match: /washed|wet/i, from: 10, to: 14, label: "Washed" },
+];
+
+/** Recommended resting days, derived from the process unless overridden. */
+export function restWindow(label: CoffeeLabel): {
+  from: number;
+  to: number;
+  auto: boolean;
+  basis: string;
+} {
+  if (label.restFrom > 0 && label.restTo > 0) {
+    return { from: label.restFrom, to: label.restTo, auto: false, basis: "Custom" };
+  }
+  const rule = REST_RULES.find((r) => r.match.test(label.process ?? ""));
+  if (rule) return { from: rule.from, to: rule.to, auto: true, basis: rule.label };
+  return { from: 10, to: 14, auto: true, basis: "Default" };
+}
 
 export const METHOD_PRESETS = [
   "Espresso",
@@ -116,21 +292,6 @@ export const METHOD_PRESETS = [
   "Cold Brew",
   "Kalita Wave",
   "Siphon",
-] as const;
-
-export const GRINDER_PRESETS = [
-  "Comandante C40",
-  "1Zpresso J-Max",
-  "1Zpresso JX-Pro",
-  "1Zpresso K-Ultra",
-  "Timemore C3",
-  "Kingrinder K6",
-  "Baratza Encore",
-  "Fellow Ode Gen 2",
-  "Niche Zero",
-  "DF64",
-  "Eureka Mignon",
-  "Mazzer Mini",
 ] as const;
 
 export const PROCESS_PRESETS = [
@@ -242,7 +403,7 @@ export function uid(): string {
 }
 
 export function emptyStep(): BrewStep {
-  return { id: uid(), text: "", at: "" };
+  return { id: uid(), text: "", at: "", waterG: "" };
 }
 
 export function emptyBrew(name = ""): BrewMethod {
@@ -252,6 +413,7 @@ export function emptyBrew(name = ""): BrewMethod {
     waterTempC: "",
     doseG: "",
     yieldG: "",
+    grinderId: "",
     grinder: "",
     grind: "",
     totalTime: "",
@@ -281,6 +443,12 @@ export function emptyLabel(): CoffeeLabel {
     bestBeforeDays: 90,
     tastingNotes: [],
     netWeight: "",
+    roastDisplay: "scale",
+    showRest: true,
+    restFrom: 0,
+    restTo: 0,
+    showDoseBoxes: false,
+    doseBoxes: 5,
     brews: [emptyBrew("Espresso"), emptyBrew("V60"), emptyBrew("Aeropress")],
     theme: "espresso",
     size: "100x70",
@@ -307,6 +475,52 @@ export function normalizeLabel(raw: Partial<CoffeeLabel> & { id: string }): Coff
       steps: Array.isArray(b.steps) && b.steps.length ? b.steps : [emptyStep()],
     })),
   };
+}
+
+export type RibbonBlock = {
+  id: string;
+  /** share of the total pour, 0–1 — drives the block width */
+  share: number;
+  /** water added during this step */
+  addedG: number;
+  /** running total after this step */
+  totalG: number;
+  at: string;
+  text: string;
+};
+
+/**
+ * Turns the steps into proportional blocks for the pour timeline. Needs
+ * cumulative water on at least two steps; returns [] otherwise so the label
+ * can fall back to the plain numbered list.
+ */
+export function ribbonBlocks(brew: BrewMethod): RibbonBlock[] {
+  const withWater = brew.steps
+    .map((s) => ({ ...s, n: parseFloat(s.waterG) }))
+    .filter((s) => Number.isFinite(s.n) && s.n > 0);
+  if (withWater.length < 2) return [];
+
+  const total = withWater[withWater.length - 1].n;
+  if (!(total > 0)) return [];
+
+  let prev = 0;
+  const blocks = withWater.map((s) => {
+    const added = Math.max(0, s.n - prev);
+    prev = s.n;
+    return {
+      id: s.id,
+      share: added / total,
+      addedG: added,
+      totalG: s.n,
+      at: s.at,
+      text: s.text,
+    };
+  });
+  // A zero-width first block would vanish; give every block a visible minimum.
+  const floor = 0.06;
+  const raised = blocks.map((b) => ({ ...b, share: Math.max(floor, b.share) }));
+  const sum = raised.reduce((a, b) => a + b.share, 0);
+  return raised.map((b) => ({ ...b, share: b.share / sum }));
 }
 
 export function ratioOf(brew: BrewMethod): string {

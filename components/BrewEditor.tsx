@@ -2,7 +2,7 @@
 
 import {
   type BrewMethod,
-  GRINDER_PRESETS,
+  GRINDERS,
   METHOD_PRESETS,
   emptyStep,
   ratioOf,
@@ -26,7 +26,10 @@ export default function BrewEditor({
   const set = <K extends keyof BrewMethod>(key: K, value: BrewMethod[K]) =>
     onChange({ ...brew, [key]: value });
 
-  const setStep = (id: string, patch: Partial<{ text: string; at: string }>) =>
+  const setStep = (
+    id: string,
+    patch: Partial<{ text: string; at: string; waterG: string }>,
+  ) =>
     onChange({
       ...brew,
       steps: brew.steps.map((s) => (s.id === id ? { ...s, ...patch } : s)),
@@ -49,6 +52,10 @@ export default function BrewEditor({
   };
 
   const ratio = ratioOf(brew);
+  const preset = GRINDERS[brew.grinderId];
+  const dialWord = preset
+    ? { clicks: "Clicks", number: "Dial number", microns: "Microns (µm)" }[preset.dial]
+    : "Dial setting";
 
   return (
     <div className="rounded-xl border border-line bg-paper/50 p-3">
@@ -134,23 +141,47 @@ export default function BrewEditor({
       <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
         <label className="field">
           <span>Grinder</span>
-          <input
-            className="input"
-            list="grinder-presets"
-            placeholder="Comandante C40"
-            value={brew.grinder}
-            onChange={(e) => set("grinder", e.target.value)}
-          />
+          <select
+            className="select"
+            value={brew.grinderId || "__custom"}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "__custom") {
+                onChange({ ...brew, grinderId: "", grinder: brew.grinder });
+              } else {
+                onChange({ ...brew, grinderId: v, grinder: GRINDERS[v].name });
+              }
+            }}
+          >
+            {Object.entries(GRINDERS).map(([k, g]) => (
+              <option key={k} value={k}>
+                {g.name}
+              </option>
+            ))}
+            <option value="__custom">Other…</option>
+          </select>
         </label>
         <label className="field">
-          <span>Grind setting</span>
+          <span>{dialWord}</span>
           <input
             className="input"
-            placeholder="18 clicks"
+            inputMode="decimal"
+            placeholder={preset ? preset.placeholder : "6.2"}
             value={brew.grind}
             onChange={(e) => set("grind", e.target.value)}
           />
         </label>
+        {!brew.grinderId && (
+          <label className="field sm:col-span-2">
+            <span>Grinder name</span>
+            <input
+              className="input"
+              placeholder="Type your grinder"
+              value={brew.grinder}
+              onChange={(e) => set("grinder", e.target.value)}
+            />
+          </label>
+        )}
       </div>
 
       {ratio && (
@@ -194,6 +225,14 @@ export default function BrewEditor({
                 value={step.at}
                 onChange={(e) => setStep(step.id, { at: e.target.value })}
               />
+              <input
+                className="input w-20 shrink-0 text-center font-mono"
+                inputMode="decimal"
+                placeholder="water g"
+                title="Total water in the brewer after this step — drives the pour ribbon"
+                value={step.waterG}
+                onChange={(e) => setStep(step.id, { waterG: e.target.value })}
+              />
               <button
                 className="btn btn-ghost px-1.5"
                 title="Move up"
@@ -229,11 +268,6 @@ export default function BrewEditor({
         ))}
       </datalist>
 
-      <datalist id="grinder-presets">
-        {GRINDER_PRESETS.map((g) => (
-          <option key={g} value={g} />
-        ))}
-      </datalist>
     </div>
   );
 }

@@ -7,12 +7,18 @@ import {
   ROAST_LEVELS,
   THEMES,
   bestBefore,
+  daysSince,
+  dialLabel,
+  flavorColor,
   formatDate,
   formatDoseYield,
   formatTime,
   formatWeight,
+  grinderOf,
   labelSize,
   ratioOf,
+  restWindow,
+  ribbonBlocks,
 } from "@/lib/types";
 
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -96,6 +102,45 @@ function SpecIcon({ kind }: { kind: "temp" | "weight" | "ratio" | "time" }) {
   );
 }
 
+/** Burr icon marking the grinder badge. */
+function BurrIcon() {
+  return (
+    <svg
+      className="cl-grind-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="8.4" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3.6v3M12 17.4v3M3.6 12h3M17.4 12h3" />
+    </svg>
+  );
+}
+
+/** Segmented roast scale with a marker on the selected level. */
+function RoastScale({ level, accent, rule }: { level: number; accent: string; rule: string }) {
+  return (
+    <div className="cl-roast-scale" aria-label={`Roast level ${level} of 5`}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <span
+          key={n}
+          className="cl-roast-seg"
+          style={{
+            background: n <= level ? accent : rule,
+            opacity: n <= level ? 0.35 + n * 0.13 : 1,
+          }}
+        />
+      ))}
+      <span className="cl-roast-marker" style={{ left: `${(level - 0.5) * 20}%`, background: accent }} />
+    </div>
+  );
+}
+
 function Spec({
   icon,
   value,
@@ -137,7 +182,7 @@ export default function Sticker({
   const theme = THEMES[label.theme] ?? THEMES.espresso;
   const size = labelSize(label);
   const roast = ROAST_LEVELS[label.roastLevel] ?? ROAST_LEVELS[3];
-  const compact = label.layout === "compact";
+  const layout = label.layout;
   const brewOnly = variant === "brew";
 
   useEffect(() => {
@@ -289,6 +334,18 @@ export default function Sticker({
     (b) => b.name || b.waterTempC || b.doseG || b.steps.some((s) => s.text),
   );
   const bb = bestBefore(label.roastDate, label.bestBeforeDays);
+  const rest = restWindow(label);
+  const age = daysSince(label.roastDate);
+
+  // The rest track spans 0 → (window end + 50%), so the peak block sits in the
+  // middle third and there is visible room after it.
+  const restSpan = Math.max(rest.to * 1.5, rest.to + 7);
+  const restBar = {
+    startPct: (rest.from / restSpan) * 100,
+    widthPct: ((rest.to - rest.from) / restSpan) * 100,
+    markerPct:
+      age !== null && age >= 0 ? Math.min(100, (age / restSpan) * 100) : null,
+  };
 
   return (
     <div
@@ -312,11 +369,15 @@ export default function Sticker({
           <div className="cl-head">
             <div className="cl-roaster">{ph(label.roaster, "Roaster name")}</div>
             <div className="cl-roast">
-              <div className="cl-beans">
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <Bean key={n} filled={n <= label.roastLevel} color={theme.accent} />
-                ))}
-              </div>
+              {label.roastDisplay === "scale" ? (
+                <RoastScale level={label.roastLevel} accent={theme.accent} rule={theme.rule} />
+              ) : (
+                <div className="cl-beans">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Bean key={n} filled={n <= label.roastLevel} color={theme.accent} />
+                  ))}
+                </div>
+              )}
               <span className="cl-roast-name">{roast.name}</span>
             </div>
           </div>
@@ -345,7 +406,14 @@ export default function Sticker({
         )}
 
         {!brewOnly && label.tastingNotes.length > 0 && (
-          <div className="cl-notes">{label.tastingNotes.join("  ·  ")}</div>
+          <div className="cl-notes">
+            {label.tastingNotes.map((note) => (
+              <span key={note} className="cl-note">
+                <span className="cl-note-dot" style={{ background: flavorColor(note) }} />
+                {note}
+              </span>
+            ))}
+          </div>
         )}
 
         {(brews.length > 0 || preview) && <div className="cl-rule" />}
@@ -355,6 +423,9 @@ export default function Sticker({
             <div className="cl-brews-label">Brew Guide</div>
             {brews.map((brew) => {
               const steps = brew.steps.filter((s) => s.text.trim());
+              const grinder = grinderOf(brew);
+              const dial = dialLabel(brew);
+              const ribbon = layout === "ribbon" ? ribbonBlocks(brew) : [];
               return (
                 <div key={brew.id} className="cl-brew">
                   <div className="cl-brew-head">
@@ -372,17 +443,52 @@ export default function Sticker({
                       <Spec icon="time" value={formatTime(brew.totalTime)} />
                     </span>
                   </div>
-                  {(brew.grinder || brew.grind) && (
+                  {(grinder.name || dial) && (
                     <div className="cl-grind">
-                      <span className="cl-grind-label">Grind</span>
+                      <span className="cl-grind-label">
+                        <BurrIcon />
+                        Grind
+                      </span>
                       <span>
-                        {brew.grinder && <b>{brew.grinder}</b>}
-                        {brew.grinder && brew.grind && " · "}
-                        {brew.grind && <b>{brew.grind}</b>}
+                        {grinder.name && <b>{grinder.name}</b>}
+                        {grinder.name && dial && " · "}
+                        {dial && <b>{dial}</b>}
                       </span>
                     </div>
                   )}
-                  {!compact && steps.length > 0 && (
+
+                  {ribbon.length > 0 && (
+                    <div className="cl-ribbon" aria-label="Pour timeline">
+                      <div className="cl-ribbon-track">
+                        {ribbon.map((b, i) => (
+                          <div
+                            key={b.id}
+                            className="cl-ribbon-block"
+                            style={{
+                              width: `${b.share * 100}%`,
+                              background: theme.accent,
+                              // each pour a shade lighter than the last
+                              opacity: 0.45 + (i / Math.max(1, ribbon.length - 1)) * 0.55,
+                            }}
+                          >
+                            <span className="cl-ribbon-total">{b.totalG}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="cl-ribbon-track cl-ribbon-times">
+                        {ribbon.map((b) => (
+                          <span key={b.id} style={{ width: `${b.share * 100}%` }}>
+                            {b.at}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ribbon mode falls back to the numbered list for any method
+                      that has no cumulative water to plot. */}
+                  {(layout === "full" || (layout === "ribbon" && ribbon.length === 0)) &&
+                    steps.length > 0 && (
                     <ol className="cl-steps">
                       {steps.map((step, i) => (
                         <li key={step.id} className="cl-step">
@@ -398,6 +504,53 @@ export default function Sticker({
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {!brewOnly && label.showRest && label.roastDate && (
+          <>
+            <div className="cl-rule" />
+            <div className="cl-rest">
+              <div className="cl-rest-head">
+                <span className="cl-rest-label">Peak window</span>
+                <span className="cl-rest-value">
+                  Day <b>{rest.from}</b>–<b>{rest.to}</b>
+                  {age !== null && age >= 0 && (
+                    <>
+                      {" · "}
+                      <b>{age}d</b> rested
+                    </>
+                  )}
+                </span>
+              </div>
+              <div className="cl-rest-track">
+                <span
+                  className="cl-rest-window"
+                  style={{
+                    left: `${restBar.startPct}%`,
+                    width: `${restBar.widthPct}%`,
+                    background: theme.accent,
+                  }}
+                />
+                {restBar.markerPct !== null && (
+                  <span
+                    className="cl-rest-marker"
+                    style={{ left: `${restBar.markerPct}%`, background: theme.ink }}
+                  />
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {!brewOnly && label.showDoseBoxes && label.doseBoxes > 0 && (
+          <div className="cl-doses">
+            <span className="cl-doses-label">Doses</span>
+            <span className="cl-doses-row">
+              {Array.from({ length: Math.min(12, label.doseBoxes) }, (_, i) => (
+                <span key={i} className="cl-dose-box" style={{ borderColor: theme.muted }} />
+              ))}
+            </span>
           </div>
         )}
 
