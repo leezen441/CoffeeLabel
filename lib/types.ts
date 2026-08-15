@@ -17,10 +17,9 @@ export type BrewMethod = {
   waterTempC: string;
   doseG: string;
   yieldG: string;
-  /** key into GRINDERS, or "" for a free-typed model */
-  grinderId: string;
-  /** grinder model, e.g. "Comandante C40" */
-  grinder: string;
+  /** brand and model are picked separately; either may be free text */
+  grinderBrand: string;
+  grinderModel: string;
   /** dial setting on that grinder, e.g. "24" or "3.2.0" or "800" */
   grind: string;
   /** total brew time, e.g. "2:45" */
@@ -32,23 +31,165 @@ export type BrewMethod = {
 
 export type DialKind = "clicks" | "number" | "microns";
 
-export const GRINDERS: Record<
-  string,
-  { name: string; dial: DialKind; placeholder: string }
-> = {
-  comandante: { name: "Comandante C40", dial: "clicks", placeholder: "24" },
-  "1zpresso-jx": { name: "1Zpresso JX-Pro", dial: "clicks", placeholder: "3.2.0" },
-  "1zpresso-k": { name: "1Zpresso K-Ultra", dial: "clicks", placeholder: "4.5.0" },
-  "1zpresso-j": { name: "1Zpresso J-Max", dial: "clicks", placeholder: "2.4.0" },
-  timemore: { name: "Timemore Chestnut", dial: "clicks", placeholder: "18" },
-  kingrinder: { name: "Kingrinder K6", dial: "clicks", placeholder: "70" },
-  df64: { name: "DF64 / Lagom", dial: "number", placeholder: "6.2" },
-  niche: { name: "Niche Zero", dial: "number", placeholder: "20" },
-  fellow: { name: "Fellow Ode Gen 2", dial: "number", placeholder: "4.1" },
-  baratza: { name: "Baratza Encore", dial: "number", placeholder: "15" },
-  eureka: { name: "Eureka Mignon", dial: "number", placeholder: "3.5" },
-  generic: { name: "Generic / Micron", dial: "microns", placeholder: "800" },
-};
+export type GrinderModel = { name: string; dial: DialKind; placeholder: string };
+
+/** Brand → models. Both levels fall back to free text via "Other…". */
+export const GRINDER_BRANDS: { brand: string; models: GrinderModel[] }[] = [
+  {
+    brand: "Comandante",
+    models: [
+      { name: "C40 MK4", dial: "clicks", placeholder: "24" },
+      { name: "C40 MK3", dial: "clicks", placeholder: "24" },
+      { name: "X25", dial: "clicks", placeholder: "24" },
+    ],
+  },
+  {
+    brand: "1Zpresso",
+    models: [
+      { name: "J-Max", dial: "clicks", placeholder: "2.4.0" },
+      { name: "JX-Pro", dial: "clicks", placeholder: "3.2.0" },
+      { name: "JX", dial: "clicks", placeholder: "3.2.0" },
+      { name: "K-Ultra", dial: "clicks", placeholder: "4.5.0" },
+      { name: "K-Max", dial: "clicks", placeholder: "4.5.0" },
+      { name: "K-Plus", dial: "clicks", placeholder: "4.5.0" },
+      { name: "X-Pro", dial: "clicks", placeholder: "20" },
+      { name: "Q2", dial: "clicks", placeholder: "12" },
+      { name: "ZP6", dial: "clicks", placeholder: "3.0.0" },
+    ],
+  },
+  {
+    brand: "Timemore",
+    models: [
+      { name: "Chestnut C2", dial: "clicks", placeholder: "18" },
+      { name: "Chestnut C3", dial: "clicks", placeholder: "18" },
+      { name: "Chestnut X", dial: "clicks", placeholder: "12" },
+      { name: "Sculptor 064", dial: "number", placeholder: "3.5" },
+      { name: "Sculptor 078", dial: "number", placeholder: "3.5" },
+    ],
+  },
+  {
+    brand: "Kingrinder",
+    models: [
+      { name: "K2", dial: "clicks", placeholder: "70" },
+      { name: "K4", dial: "clicks", placeholder: "70" },
+      { name: "K6", dial: "clicks", placeholder: "70" },
+      { name: "P2", dial: "clicks", placeholder: "70" },
+    ],
+  },
+  {
+    brand: "DF / Lagom",
+    models: [
+      { name: "DF54", dial: "number", placeholder: "6.2" },
+      { name: "DF64", dial: "number", placeholder: "6.2" },
+      { name: "DF64 Gen 2", dial: "number", placeholder: "6.2" },
+      { name: "DF83", dial: "number", placeholder: "6.2" },
+      { name: "Lagom P64", dial: "number", placeholder: "3.5" },
+      { name: "Lagom Mini", dial: "number", placeholder: "3.5" },
+    ],
+  },
+  {
+    brand: "Niche",
+    models: [
+      { name: "Zero", dial: "number", placeholder: "20" },
+      { name: "Duo", dial: "number", placeholder: "20" },
+    ],
+  },
+  {
+    brand: "Fellow",
+    models: [
+      { name: "Ode Gen 1", dial: "number", placeholder: "4" },
+      { name: "Ode Gen 2", dial: "number", placeholder: "4.1" },
+      { name: "Opus", dial: "number", placeholder: "6" },
+    ],
+  },
+  {
+    brand: "Baratza",
+    models: [
+      { name: "Encore", dial: "number", placeholder: "15" },
+      { name: "Encore ESP", dial: "number", placeholder: "15" },
+      { name: "Virtuoso+", dial: "number", placeholder: "15" },
+      { name: "Sette 270", dial: "number", placeholder: "10" },
+      { name: "Vario+", dial: "number", placeholder: "5A" },
+    ],
+  },
+  {
+    brand: "Eureka",
+    models: [
+      { name: "Mignon Specialita", dial: "number", placeholder: "3.5" },
+      { name: "Mignon Silenzio", dial: "number", placeholder: "3.5" },
+      { name: "Mignon XL", dial: "number", placeholder: "3.5" },
+      { name: "Atom 75", dial: "number", placeholder: "3.5" },
+    ],
+  },
+  {
+    brand: "Mazzer",
+    models: [
+      { name: "Mini", dial: "number", placeholder: "10" },
+      { name: "Super Jolly", dial: "number", placeholder: "10" },
+      { name: "Philos", dial: "number", placeholder: "10" },
+    ],
+  },
+  {
+    brand: "Mahlkönig",
+    models: [
+      { name: "EK43", dial: "number", placeholder: "6" },
+      { name: "EK43 S", dial: "number", placeholder: "6" },
+      { name: "E65S", dial: "number", placeholder: "6" },
+      { name: "X54", dial: "number", placeholder: "6" },
+    ],
+  },
+  {
+    brand: "Weber Workshops",
+    models: [
+      { name: "EG-1", dial: "number", placeholder: "3.5" },
+      { name: "Key", dial: "number", placeholder: "3.5" },
+    ],
+  },
+  {
+    brand: "Varia",
+    models: [
+      { name: "VS3", dial: "clicks", placeholder: "20" },
+      { name: "VS6", dial: "number", placeholder: "3.5" },
+    ],
+  },
+  {
+    brand: "Wilfa",
+    models: [
+      { name: "Uniform", dial: "number", placeholder: "15" },
+      { name: "Svart", dial: "number", placeholder: "15" },
+    ],
+  },
+  {
+    brand: "Hario",
+    models: [
+      { name: "Skerton Pro", dial: "clicks", placeholder: "8" },
+      { name: "Mini Mill Slim", dial: "clicks", placeholder: "8" },
+    ],
+  },
+  {
+    brand: "Porlex",
+    models: [
+      { name: "Mini II", dial: "clicks", placeholder: "8" },
+      { name: "Tall II", dial: "clicks", placeholder: "8" },
+    ],
+  },
+  {
+    brand: "Generic",
+    models: [
+      { name: "Micron setting", dial: "microns", placeholder: "800" },
+      { name: "Dial number", dial: "number", placeholder: "6.2" },
+      { name: "Clicks", dial: "clicks", placeholder: "20" },
+    ],
+  },
+];
+
+export function grinderModels(brand: string): GrinderModel[] {
+  return GRINDER_BRANDS.find((b) => b.brand === brand)?.models ?? [];
+}
+
+export function grinderModelOf(brew: BrewMethod): GrinderModel | undefined {
+  return grinderModels(brew.grinderBrand).find((m) => m.name === brew.grinderModel);
+}
 
 /** Unit shown after the dial value, e.g. "24 clicks" or "800 µm". */
 export const DIAL_UNIT: Record<DialKind, string> = {
@@ -58,9 +199,11 @@ export const DIAL_UNIT: Record<DialKind, string> = {
 };
 
 export function grinderOf(brew: BrewMethod): { name: string; dial: DialKind } {
-  const preset = GRINDERS[brew.grinderId];
-  if (preset) return { name: preset.name, dial: preset.dial };
-  return { name: (brew.grinder ?? "").trim(), dial: "number" };
+  const name = [brew.grinderBrand, brew.grinderModel]
+    .map((s) => (s ?? "").trim())
+    .filter(Boolean)
+    .join(" ");
+  return { name, dial: grinderModelOf(brew)?.dial ?? "number" };
 }
 
 /** "Comandante C40 · 24 clicks" — empty when nothing is set. */
@@ -523,8 +666,8 @@ export function emptyBrew(name = ""): BrewMethod {
     waterTempC: "",
     doseG: "",
     yieldG: "",
-    grinderId: "",
-    grinder: "",
+    grinderBrand: "",
+    grinderModel: "",
     grind: "",
     totalTime: "",
     steps: [emptyStep()],
@@ -572,6 +715,23 @@ export function emptyLabel(): CoffeeLabel {
 }
 
 /** Fill in anything a stored record is missing so old rows keep working. */
+/**
+ * Splits a legacy single-field grinder name ("Comandante C40") into brand and
+ * model, so labels saved before the two-step picker keep working.
+ */
+function splitLegacyGrinder(name: string): { grinderBrand: string; grinderModel: string } {
+  const legacy = (name ?? "").trim();
+  if (!legacy) return { grinderBrand: "", grinderModel: "" };
+  for (const b of GRINDER_BRANDS) {
+    if (legacy.toLowerCase().startsWith(b.brand.toLowerCase())) {
+      const rest = legacy.slice(b.brand.length).trim();
+      const model = b.models.find((m) => m.name.toLowerCase() === rest.toLowerCase());
+      return { grinderBrand: b.brand, grinderModel: model ? model.name : rest };
+    }
+  }
+  return { grinderBrand: "", grinderModel: legacy };
+}
+
 export function normalizeLabel(raw: Partial<CoffeeLabel> & { id: string }): CoffeeLabel {
   const base = emptyLabel();
   const brews = Array.isArray(raw.brews) && raw.brews.length ? raw.brews : base.brews;
@@ -579,11 +739,22 @@ export function normalizeLabel(raw: Partial<CoffeeLabel> & { id: string }): Coff
     ...base,
     ...raw,
     tastingNotes: Array.isArray(raw.tastingNotes) ? raw.tastingNotes : [],
-    brews: brews.slice(0, MAX_BREWS).map((b) => ({
-      ...emptyBrew(),
-      ...b,
-      steps: Array.isArray(b.steps) && b.steps.length ? b.steps : [emptyStep()],
-    })),
+    brews: brews.slice(0, MAX_BREWS).map((b) => {
+      const legacy = b as Partial<BrewMethod> & { grinder?: string };
+      const grinder =
+        legacy.grinderBrand || legacy.grinderModel
+          ? {
+              grinderBrand: legacy.grinderBrand ?? "",
+              grinderModel: legacy.grinderModel ?? "",
+            }
+          : splitLegacyGrinder(legacy.grinder ?? "");
+      return {
+        ...emptyBrew(),
+        ...b,
+        ...grinder,
+        steps: Array.isArray(b.steps) && b.steps.length ? b.steps : [emptyStep()],
+      };
+    }),
   };
 }
 

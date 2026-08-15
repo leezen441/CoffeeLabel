@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import {
   type BrewMethod,
-  GRINDERS,
+  GRINDER_BRANDS,
   METHOD_PRESETS,
   emptyStep,
+  grinderModelOf,
+  grinderModels,
   ratioOf,
 } from "@/lib/types";
 
@@ -23,6 +26,9 @@ export default function BrewEditor({
   onRemove: () => void;
   onMove: (dir: -1 | 1) => void;
 }) {
+  const [customBrand, setCustomBrand] = useState(false);
+  const [customModel, setCustomModel] = useState(false);
+
   const set = <K extends keyof BrewMethod>(key: K, value: BrewMethod[K]) =>
     onChange({ ...brew, [key]: value });
 
@@ -52,9 +58,16 @@ export default function BrewEditor({
   };
 
   const ratio = ratioOf(brew);
-  const preset = GRINDERS[brew.grinderId];
-  const dialWord = preset
-    ? { clicks: "Clicks", number: "Dial number", microns: "Microns (µm)" }[preset.dial]
+  const knownBrand = GRINDER_BRANDS.some((b) => b.brand === brew.grinderBrand);
+  const models = grinderModels(brew.grinderBrand);
+  const model = grinderModelOf(brew);
+  const knownModel = models.some((m) => m.name === brew.grinderModel);
+  // a custom brand has no model list, so its model is always free text
+  const showBrandInput = customBrand || (!!brew.grinderBrand && !knownBrand);
+  const showModelInput =
+    customModel || !knownBrand || (!!brew.grinderModel && !knownModel);
+  const dialWord = model
+    ? { clicks: "Clicks", number: "Dial number", microns: "Microns (µm)" }[model.dial]
     : "Dial setting";
 
   return (
@@ -138,50 +151,89 @@ export default function BrewEditor({
         </label>
       </div>
 
-      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
         <label className="field">
-          <span>Grinder</span>
+          <span>Grinder brand</span>
           <select
             className="select"
-            value={brew.grinderId || "__custom"}
+            value={knownBrand ? brew.grinderBrand : brew.grinderBrand ? "__custom" : ""}
             onChange={(e) => {
               const v = e.target.value;
+              // switching brand clears the model — the old one won't exist here
               if (v === "__custom") {
-                onChange({ ...brew, grinderId: "", grinder: brew.grinder });
+                setCustomBrand(true);
+                onChange({ ...brew, grinderBrand: "", grinderModel: "" });
               } else {
-                onChange({ ...brew, grinderId: v, grinder: GRINDERS[v].name });
+                setCustomBrand(false);
+                onChange({ ...brew, grinderBrand: v, grinderModel: "" });
               }
             }}
           >
-            {Object.entries(GRINDERS).map(([k, g]) => (
-              <option key={k} value={k}>
-                {g.name}
+            <option value="">— None —</option>
+            {GRINDER_BRANDS.map((b) => (
+              <option key={b.brand} value={b.brand}>
+                {b.brand}
               </option>
             ))}
             <option value="__custom">Other…</option>
           </select>
+          {showBrandInput && (
+            <input
+              className="input mt-2"
+              placeholder="Type the brand"
+              value={brew.grinderBrand}
+              onChange={(e) => set("grinderBrand", e.target.value)}
+            />
+          )}
         </label>
+
+        <label className="field">
+          <span>Model</span>
+          {/* Only a known brand has a model list; otherwise it is free text. */}
+          {knownBrand && (
+            <select
+              className="select"
+              value={knownModel ? brew.grinderModel : brew.grinderModel ? "__custom" : ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "__custom") {
+                  setCustomModel(true);
+                  set("grinderModel", "");
+                } else {
+                  setCustomModel(false);
+                  set("grinderModel", v);
+                }
+              }}
+            >
+              <option value="">— None —</option>
+              {models.map((m) => (
+                <option key={m.name} value={m.name}>
+                  {m.name}
+                </option>
+              ))}
+              <option value="__custom">Other…</option>
+            </select>
+          )}
+          {showModelInput && (
+            <input
+              className={`input ${knownBrand ? "mt-2" : ""}`}
+              placeholder="Type the model"
+              value={brew.grinderModel}
+              onChange={(e) => set("grinderModel", e.target.value)}
+            />
+          )}
+        </label>
+
         <label className="field">
           <span>{dialWord}</span>
           <input
             className="input"
             inputMode="decimal"
-            placeholder={preset ? preset.placeholder : "6.2"}
+            placeholder={model ? model.placeholder : "6.2"}
             value={brew.grind}
             onChange={(e) => set("grind", e.target.value)}
           />
         </label>
-        {!brew.grinderId && (
-          <label className="field sm:col-span-2">
-            <span>Grinder name</span>
-            <input
-              className="input"
-              placeholder="Type your grinder"
-              value={brew.grinder}
-              onChange={(e) => set("grinder", e.target.value)}
-            />
-          </label>
-        )}
       </div>
 
       {ratio && (

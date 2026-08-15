@@ -10,6 +10,8 @@ import {
   addDays,
   bestBefore,
   daysSince,
+  dialLabel,
+  grinderOf,
   formatDate,
   formatDateRange,
   restWindow,
@@ -182,14 +184,19 @@ export default function BrewGuide({
                 <Stat theme={theme} label="Ratio" value={ratioOf(brew) || "—"} />
                 <Stat theme={theme} label="Time" value={formatTime(brew.totalTime) || "—"} />
               </div>
-              {(brew.grinder || brew.grind) && (
-                <p className="mt-4 text-sm" style={{ color: theme.muted }}>
-                  Grind{" "}
-                  {brew.grinder && <b style={{ color: theme.ink }}>{brew.grinder}</b>}
-                  {brew.grinder && brew.grind && " · "}
-                  {brew.grind && <b style={{ color: theme.ink }}>{brew.grind}</b>}
-                </p>
-              )}
+              {(() => {
+                const g = grinderOf(brew);
+                const dial = dialLabel(brew);
+                if (!g.name && !dial) return null;
+                return (
+                  <p className="mt-4 text-sm" style={{ color: theme.muted }}>
+                    Grind{" "}
+                    {g.name && <b style={{ color: theme.ink }}>{g.name}</b>}
+                    {g.name && dial && " · "}
+                    {dial && <b style={{ color: theme.ink }}>{dial}</b>}
+                  </p>
+                );
+              })()}
 
               {brew.steps.some((s) => s.text.trim()) && (
                 <ol className="mt-5 flex flex-col gap-3">

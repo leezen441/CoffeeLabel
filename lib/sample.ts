@@ -32,8 +32,8 @@ export function sampleLabel(): CoffeeLabel {
         waterTempC: "94",
         doseG: "15",
         yieldG: "250",
-        grinderId: "comandante",
-        grinder: "Comandante C40",
+        grinderBrand: "Comandante",
+        grinderModel: "C40 MK4",
         grind: "24",
         totalTime: "2:45",
         steps: [
@@ -49,8 +49,8 @@ export function sampleLabel(): CoffeeLabel {
         waterTempC: "93",
         doseG: "18",
         yieldG: "38",
-        grinderId: "df64",
-        grinder: "DF64 / Lagom",
+        grinderBrand: "DF / Lagom",
+        grinderModel: "DF64",
         grind: "1.8",
         totalTime: "28s",
         steps: [

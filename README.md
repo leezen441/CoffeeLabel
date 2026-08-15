@@ -30,12 +30,17 @@ On the sticker these four print as one row, each preceded by a small icon —
 thermometer, weight, proportion bars, clock — so the numbers read as labelled
 values instead of a run of digits. The icons scale with the label, so they are
 clearest when a sticker carries only one or two recipes.
-- **Grinder** — pick a model and the dial input relabels itself to match how that
-  grinder is actually read: *clicks* (Comandante, 1Zpresso, Timemore, Kingrinder),
-  a *dial number* (DF64/Lagom, Niche, Fellow, Baratza, Eureka) or *microns*
-  (Generic). The unit is appended for you, so the label reads
-  `GRIND  Comandante C40 · 24 clicks` or `… · 800 µm`. Choose **Other…** to type a
-  model that isn't listed.
+- **Grinder** — chosen in two steps, **brand then model**. Picking a brand filters
+  the model list to that brand's grinders, and picking a model relabels the dial
+  input to match how that grinder is actually read: *clicks* (Comandante, 1Zpresso,
+  Timemore, Kingrinder, Hario, Porlex), a *dial number* (DF/Lagom, Niche, Fellow,
+  Baratza, Eureka, Mazzer, Mahlkönig, Weber, Wilfa) or *microns* (Generic). The unit
+  is appended for you, so the label reads `GRIND  Comandante C40 MK4 · 24 clicks`.
+
+  Either level accepts **Other…** and falls back to free text, so an unlisted brand
+  or a new model is never a dead end. Labels saved before the split are migrated
+  automatically — `Comandante C40 MK4` becomes brand `Comandante`, model `C40 MK4`,
+  and anything unrecognised is kept intact as a free-text model.
 - **Brew sequence** — an ordered, reorderable list of steps, each with an optional
   timestamp (`0:45`) and an optional **cumulative water** figure (`45`, `150`, `250`)
 
@@ -49,10 +54,26 @@ falls back to the numbered list automatically, so the two can mix on one label.
 
 ### Rest & degas window
 
-With a roast date set, the label prints a **peak window** derived from the process —
-Washed 10–14, Honey 12–18, Natural and Anaerobic 14–21 days — as a bar with the
-window highlighted and a marker showing how long the bag has actually rested.
-Override the days per label, or switch the bar off.
+With a roast date set, the label prints a **peak window** as a bar with the window
+highlighted and a marker showing how long the bag has actually rested. Override the
+days per label, or switch the bar off.
+
+The window is calculated from three inputs, in order of influence:
+
+1. **Roast level** — the strongest factor. A light roast is denser and holds CO₂
+   much longer than a dark one. Filter baseline: Light 10–16 days down to Dark 3–7.
+2. **Brew method** — if any recipe on the label is a pressure brew (espresso, moka,
+   lever) the espresso window is used instead, roughly a week longer, because
+   leftover CO₂ disrupts a shot long after the same coffee tastes fine as filter.
+   With both on one label, espresso wins as the binding constraint.
+3. **Process** — shifts the result: Honey +2, Natural +3, anaerobic and other heavy
+   fermentations +5, decaf and monsooned −2, Washed is the 0 baseline.
+
+So a Light roast, espresso, Anaerobic Natural lands at day 23–33, while a Dark
+roast filter Washed is day 3–7.
+
+This is a starting point, not a measurement. Bean density, packaging and storage
+all matter too, and tasting the coffee beats any formula.
 
 The window prints as **real dates** (`24–28 Aug 2026`), not day counts: once the
 sticker is on a bag, "Day 10–14" would still need counting from the roast date.
