@@ -37,10 +37,10 @@ export function sampleLabel(): CoffeeLabel {
         grind: "24",
         totalTime: "2:45",
         steps: [
-          { id: uid(), text: "Bloom, swirl", at: "0:00", waterG: "45" },
-          { id: uid(), text: "First pour", at: "0:45", waterG: "150" },
-          { id: uid(), text: "Second pour", at: "1:20", waterG: "250" },
-          { id: uid(), text: "Drawdown complete", at: "2:45", waterG: "250" },
+          { id: uid(), text: "Bloom, swirl", startAt: "0:00", endAt: "0:45", waterG: "45" },
+          { id: uid(), text: "First pour", startAt: "0:45", endAt: "1:20", waterG: "150" },
+          { id: uid(), text: "Second pour", startAt: "1:20", endAt: "2:00", waterG: "250" },
+          { id: uid(), text: "Drawdown", startAt: "2:00", endAt: "2:45", waterG: "250" },
         ],
       },
       {
@@ -54,9 +54,9 @@ export function sampleLabel(): CoffeeLabel {
         grind: "1.8",
         totalTime: "28s",
         steps: [
-          { id: uid(), text: "Distribute and tamp level", at: "", waterG: "" },
-          { id: uid(), text: "Pre-infuse at 3 bar", at: "0:05", waterG: "" },
-          { id: uid(), text: "Full pressure to 38 g out", at: "0:28", waterG: "" },
+          { id: uid(), text: "Distribute and tamp", startAt: "", endAt: "", waterG: "" },
+          { id: uid(), text: "Pre-infuse at 3 bar", startAt: "0:00", endAt: "0:05", waterG: "" },
+          { id: uid(), text: "Full pressure to 38 g", startAt: "0:05", endAt: "0:28", waterG: "" },
         ],
       },
     ],

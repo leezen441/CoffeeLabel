@@ -4,11 +4,21 @@ export type BrewStep = {
   id: string;
   /** e.g. "Bloom 40g, swirl" */
   text: string;
-  /** optional cumulative timestamp, e.g. "0:45" */
-  at: string;
+  /** mm:ss this step begins; blank means "when the previous step ended" */
+  startAt: string;
+  /** mm:ss this step ends */
+  endAt: string;
   /** cumulative water in the brewer at the end of this step, drives the ribbon */
   waterG: string;
 };
+
+/** "0:30–1:00", "0:30", or "" — for printing, not for the timer. */
+export function stepTimeLabel(step: BrewStep): string {
+  const a = (step.startAt ?? "").trim();
+  const b = (step.endAt ?? "").trim();
+  if (a && b) return `${a}–${b}`;
+  return b || a || "";
+}
 
 export type BrewMethod = {
   id: string;
@@ -666,7 +676,7 @@ export function uid(): string {
 }
 
 export function emptyStep(): BrewStep {
-  return { id: uid(), text: "", at: "", waterG: "" };
+  return { id: uid(), text: "", startAt: "", endAt: "", waterG: "" };
 }
 
 export function emptyBrew(name = ""): BrewMethod {
@@ -729,6 +739,35 @@ export function emptyLabel(): CoffeeLabel {
  * Splits a legacy single-field grinder name ("Comandante C40") into brand and
  * model, so labels saved before the two-step picker keep working.
  */
+/**
+ * Steps used to carry one free-text `at` field. Splits it into the explicit
+ * start/end pair: "0:30-1:00" becomes 0:30 → 1:00, while a lone "0:30" becomes
+ * the *end*, leaving the start blank so it continues from the previous step —
+ * which is what those recipes meant.
+ */
+function migrateStep(s: Partial<BrewStep> & { at?: string }): BrewStep {
+  const base = emptyStep();
+  if (s.startAt !== undefined || s.endAt !== undefined) {
+    return {
+      ...base,
+      ...s,
+      startAt: s.startAt ?? "",
+      endAt: s.endAt ?? "",
+    };
+  }
+  const clock = (v: string) => {
+    const n = parseClock(v);
+    if (n === null) return "";
+    return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, "0")}`;
+  };
+  const parts = (s.at ?? "").trim().split(/\s*[-–—]\s*/);
+  const migrated =
+    parts.length >= 2
+      ? { startAt: clock(parts[0]), endAt: clock(parts[1]) }
+      : { startAt: "", endAt: clock(parts[0] ?? "") };
+  return { ...base, ...s, ...migrated };
+}
+
 /** Brands that were once stored under a different name. */
 function remapBrand(brand: string, model: string): string {
   if (brand === "DF / Lagom") return /^lagom/i.test(model) ? "Option-O" : "DF";
@@ -767,11 +806,12 @@ export function normalizeLabel(raw: Partial<CoffeeLabel> & { id: string }): Coff
               grinderModel: legacy.grinderModel ?? "",
             }
           : splitLegacyGrinder(legacy.grinder ?? "");
+      const rawSteps = Array.isArray(b.steps) && b.steps.length ? b.steps : [emptyStep()];
       return {
         ...emptyBrew(),
         ...b,
         ...grinder,
-        steps: Array.isArray(b.steps) && b.steps.length ? b.steps : [emptyStep()],
+        steps: rawSteps.map(migrateStep),
       };
     }),
   };
@@ -816,25 +856,17 @@ export function brewTimeline(brew: BrewMethod): {
 
   for (const s of brew.steps) {
     if (!s.text?.trim()) continue;
-    const raw = (s.at ?? "").trim();
-    const parts = raw.split(/\s*[-–—]\s*/).map((p) => parseClock(p));
-    let start: number | null = null;
-    let end: number | null = null;
-
-    if (parts.length >= 2 && parts[0] !== null) {
-      start = parts[0];
-      end = parts[1];
-    } else if (parts.length === 1 && parts[0] !== null) {
-      start = prevEnd;
-      end = parts[0];
-    }
+    const parsedStart = parseClock(s.startAt ?? "");
+    const end = parseClock(s.endAt ?? "");
+    // A blank start means "carry on from the previous step".
+    const start = parsedStart ?? (end !== null ? prevEnd : null);
     if (end !== null) prevEnd = end;
 
     steps.push({
       id: s.id,
       text: s.text,
       waterG: s.waterG ?? "",
-      raw,
+      raw: stepTimeLabel(s),
       start,
       end,
     });
@@ -880,7 +912,7 @@ export function ribbonBlocks(brew: BrewMethod): RibbonBlock[] {
       share: added / total,
       addedG: added,
       totalG: s.n,
-      at: s.at,
+      at: stepTimeLabel(s),
       text: s.text,
     };
   });

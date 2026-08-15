@@ -275,6 +275,12 @@ export default function StickerViewer({
           {saving ? "Rendering…" : "Save image"}
         </button>
         <Link
+          href={`/b/${label.id}`}
+          className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20"
+        >
+          Brew guide
+        </Link>
+        <Link
           href={`/editor/${label.id}`}
           className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20"
         >

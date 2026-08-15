@@ -22,6 +22,7 @@ import {
   formatWeight,
   labelTitle,
   ratioOf,
+  stepTimeLabel,
 } from "@/lib/types";
 
 export default function BrewGuide({
@@ -234,12 +235,12 @@ export default function BrewGuide({
                             {formatWeight(step.waterG)}
                           </span>
                         )}
-                        {step.at && (
+                        {stepTimeLabel(step) && (
                           <span
                             className="pt-1 font-mono text-xs whitespace-nowrap"
                             style={{ color: theme.muted }}
                           >
-                            {formatTime(step.at)}
+                            {stepTimeLabel(step)}
                           </span>
                         )}
                       </li>

@@ -34,7 +34,7 @@ export default function BrewEditor({
 
   const setStep = (
     id: string,
-    patch: Partial<{ text: string; at: string; waterG: string }>,
+    patch: Partial<{ text: string; startAt: string; endAt: string; waterG: string }>,
   ) =>
     onChange({
       ...brew,
@@ -250,8 +250,12 @@ export default function BrewEditor({
       </p>
 
       <div className="mt-3">
-        <div className="mb-1.5 flex items-center justify-between">
+        <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
           <span className="section-title">Brew sequence</span>
+          <span className="text-xs font-normal normal-case tracking-normal text-muted">
+            step · start · end · water — leave <b className="text-ink">start</b> blank to
+            continue from the step above
+          </span>
           <button className="btn btn-ghost text-xs" onClick={addStep}>
             + Add step
           </button>
@@ -271,11 +275,18 @@ export default function BrewEditor({
                 onChange={(e) => setStep(step.id, { text: e.target.value })}
               />
               <input
-                className="input w-20 shrink-0 text-center font-mono"
-                placeholder="0:45"
-                title="Timestamp (optional) — “min.” is added on the label automatically"
-                value={step.at}
-                onChange={(e) => setStep(step.id, { at: e.target.value })}
+                className="input w-16 shrink-0 text-center font-mono"
+                placeholder="start"
+                title="Start of this step (mm:ss). Leave blank to continue from the step above."
+                value={step.startAt}
+                onChange={(e) => setStep(step.id, { startAt: e.target.value })}
+              />
+              <input
+                className="input w-16 shrink-0 text-center font-mono"
+                placeholder="end"
+                title="End of this step (mm:ss)"
+                value={step.endAt}
+                onChange={(e) => setStep(step.id, { endAt: e.target.value })}
               />
               <input
                 className="input w-20 shrink-0 text-center font-mono"

@@ -21,6 +21,7 @@ import {
   ratioOf,
   restWindow,
   ribbonBlocks,
+  stepTimeLabel,
 } from "@/lib/types";
 
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -574,9 +575,7 @@ export default function Sticker({
                           <span className="cl-step-water">
                             {step.waterG ? formatWeight(step.waterG) : ""}
                           </span>
-                          <span className="cl-step-at">
-                            {step.at ? formatTime(step.at) : ""}
-                          </span>
+                          <span className="cl-step-at">{stepTimeLabel(step)}</span>
                         </li>
                       ))}
                     </ol>
