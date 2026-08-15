@@ -822,26 +822,94 @@ export function normalizeLabel(raw: Partial<CoffeeLabel> & { id: string }): Coff
 /** How the cup came out. Each flag votes the grind finer or coarser. */
 export type TasteFlag =
   | "sour"
-  | "bitter"
+  | "salty"
   | "weak"
+  | "bitter"
   | "harsh"
+  | "ashy"
+  | "hollow"
   | "fast"
   | "slow"
+  | "uneven"
   | "good";
 
+/**
+ * Grouped so the taste of the cup stays separate from how it ran — they are
+ * different evidence and the advisor reads them differently.
+ */
 export const TASTE_FLAGS: {
   id: TasteFlag;
   label: string;
-  /** −1 wants finer, +1 wants coarser, 0 is neutral */
-  vote: -1 | 0 | 1;
+  group: "taste" | "flow";
+  /** shown on hover so the vocabulary teaches as you use it */
+  hint: string;
 }[] = [
-  { id: "sour", label: "Sour / sharp", vote: -1 },
-  { id: "weak", label: "Weak / thin", vote: -1 },
-  { id: "fast", label: "Ran fast", vote: -1 },
-  { id: "good", label: "Just right", vote: 0 },
-  { id: "slow", label: "Ran slow", vote: 1 },
-  { id: "bitter", label: "Bitter", vote: 1 },
-  { id: "harsh", label: "Harsh / drying", vote: 1 },
+  {
+    id: "sour",
+    label: "Sour / sharp",
+    group: "taste",
+    hint: "Biting acidity that makes you wince — classic under-extraction",
+  },
+  {
+    id: "salty",
+    label: "Salty / savoury",
+    group: "taste",
+    hint: "Salts dissolve first, so savoury without sweetness means it stopped early",
+  },
+  {
+    id: "weak",
+    label: "Watery / weak",
+    group: "taste",
+    hint: "Correct flavours but dilute — usually a ratio problem, not a grind one",
+  },
+  {
+    id: "bitter",
+    label: "Bitter",
+    group: "taste",
+    hint: "Bitterness arrives late in extraction — often too much contact",
+  },
+  {
+    id: "harsh",
+    label: "Drying / astringent",
+    group: "taste",
+    hint: "Puckering, chalky finish — over-extraction, or a channelled bed",
+  },
+  {
+    id: "ashy",
+    label: "Ashy / burnt",
+    group: "taste",
+    hint: "Smoky and hollow — too hot, too long, or a dark roast pushed hard",
+  },
+  {
+    id: "hollow",
+    label: "Hollow / empty",
+    group: "taste",
+    hint: "Starts and finishes but nothing in the middle — uneven extraction",
+  },
+  {
+    id: "good",
+    label: "Sweet & balanced",
+    group: "taste",
+    hint: "Sweetness in the middle, clean finish — this is the target",
+  },
+  {
+    id: "fast",
+    label: "Ran fast",
+    group: "flow",
+    hint: "Water found it easy to get through — bed too open or too coarse",
+  },
+  {
+    id: "slow",
+    label: "Ran slow",
+    group: "flow",
+    hint: "Water struggled — too fine, too much agitation, or clogged fines",
+  },
+  {
+    id: "uneven",
+    label: "Uneven / spurty",
+    group: "flow",
+    hint: "Squirting, blonding early, or a crater in the bed — channelling",
+  },
 ];
 
 export type BrewEntry = {
@@ -873,72 +941,6 @@ export function emptyEntry(labelId: string, methodName: string): BrewEntry {
     rating: 0,
     taste: [],
     note: "",
-  };
-}
-
-/** Step size for a nudge, in that grinder's own units. */
-function dialStep(dial: DialKind): { step: number; unit: string; decimals: number } {
-  if (dial === "clicks") return { step: 1, unit: "clicks", decimals: 0 };
-  if (dial === "microns") return { step: 25, unit: "µm", decimals: 0 };
-  return { step: 0.2, unit: "", decimals: 1 };
-}
-
-export type DialAdvice = {
-  direction: "finer" | "coarser" | "hold";
-  headline: string;
-  detail: string;
-  /** suggested next dial value, when the last one was a plain number */
-  suggested: string | null;
-};
-
-/**
- * Turns the taste flags of the most recent brew into a grind adjustment.
- *
- * Votes are summed, so "sour and ran fast" pushes finer twice as hard as sour
- * alone. Assumes a lower dial number means finer, which holds for every
- * grinder in GRINDER_BRANDS.
- */
-export function dialInAdvice(
-  brew: BrewMethod,
-  last: BrewEntry | undefined,
-): DialAdvice | null {
-  if (!last || last.taste.length === 0) return null;
-
-  const votes = last.taste.reduce((sum, id) => {
-    const f = TASTE_FLAGS.find((t) => t.id === id);
-    return sum + (f?.vote ?? 0);
-  }, 0);
-
-  const { dial } = grinderOf(brew);
-  const { step, unit, decimals } = dialStep(dial);
-
-  if (votes === 0) {
-    return {
-      direction: "hold",
-      headline: "Keep the same grind",
-      detail: last.taste.includes("good")
-        ? "Last brew was on the money."
-        : "The notes pull both ways — change one thing at a time.",
-      suggested: last.grind || null,
-    };
-  }
-
-  const finer = votes < 0;
-  const magnitude = Math.min(2, Math.abs(votes));
-  const delta = step * magnitude;
-  const base = parseFloat((last.grind || "").replace(",", "."));
-  const suggested = Number.isFinite(base)
-    ? (finer ? base - delta : base + delta).toFixed(decimals)
-    : null;
-
-  const amount = `${delta.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
-  return {
-    direction: finer ? "finer" : "coarser",
-    headline: `Go ${finer ? "finer" : "coarser"} by about ${amount}`,
-    detail: last.grind
-      ? `Last brew ran at ${last.grind}${unit ? ` ${unit}` : ""}.`
-      : "No grind was recorded last time.",
-    suggested,
   };
 }
 

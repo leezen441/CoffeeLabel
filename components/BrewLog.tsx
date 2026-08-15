@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import * as store from "@/lib/store";
+import { dialIn } from "@/lib/dialIn";
 import {
   type BrewEntry,
   type BrewMethod,
   type TasteFlag,
   TASTE_FLAGS,
   THEMES,
-  dialInAdvice,
   emptyEntry,
   formatWeight,
   grinderOf,
@@ -56,7 +56,7 @@ export default function BrewLog({
   }, [refresh]);
 
   const last = entries?.[0];
-  const advice = dialInAdvice(brew, last);
+  const advice = dialIn(brew, last);
   const { dial } = grinderOf(brew);
   const dialWord = { clicks: "clicks", number: "dial", microns: "µm" }[dial];
 
@@ -64,7 +64,7 @@ export default function BrewLog({
     // Pre-fill from the recipe so a normal brew is two taps and done.
     setDraft({
       ...emptyEntry(labelId, method),
-      grind: advice?.suggested ?? brew.grind,
+      grind: advice?.suggestedGrind ?? brew.grind,
       doseG: brew.doseG,
       yieldG: brew.yieldG,
       timeText: brew.totalTime,
@@ -136,23 +136,55 @@ export default function BrewLog({
 
       {advice && !draft && (
         <div
-          className="mb-3 rounded-xl p-3"
+          className="mb-3 rounded-xl p-4"
           style={{ border: `1px solid ${theme.rule}`, background: "rgb(255 255 255 / 0.6)" }}
         >
-          <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em]"
-             style={{ color: theme.muted }}>
+          <p
+            className="text-[0.65rem] font-bold uppercase tracking-[0.12em]"
+            style={{ color: theme.muted }}
+          >
             Next time
           </p>
-          <p className="mt-0.5 font-serif text-lg font-semibold">{advice.headline}</p>
-          <p className="text-sm" style={{ color: theme.muted }}>
-            {advice.detail}
-            {advice.suggested && advice.direction !== "hold" && (
-              <>
-                {" "}
-                Try <b style={{ color: theme.ink }}>{advice.suggested}</b> {dialWord}.
-              </>
-            )}
+          <p className="mt-0.5 font-serif text-xl font-semibold">{advice.headline}</p>
+          <p className="mt-1 text-sm leading-snug" style={{ color: theme.muted }}>
+            {advice.because}
           </p>
+
+          <ol className="mt-3 flex flex-col gap-2">
+            {advice.actions.map((a, i) => (
+              <li key={i} className="flex gap-2 text-sm">
+                <span
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[0.65rem] font-bold"
+                  style={{
+                    background: i === 0 ? theme.accent : "transparent",
+                    border: i === 0 ? "none" : `1px solid ${theme.rule}`,
+                    color: i === 0 ? theme.paper : theme.muted,
+                  }}
+                >
+                  {i + 1}
+                </span>
+                <span>
+                  {a.text}
+                  {a.why && (
+                    <span className="block text-xs" style={{ color: theme.muted }}>
+                      {a.why}
+                    </span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ol>
+
+          {advice.numbers.length > 0 && (
+            <ul
+              className="mt-3 border-t pt-2 text-xs"
+              style={{ borderColor: theme.rule, color: theme.muted }}
+            >
+              {advice.numbers.map((n, i) => (
+                <li key={i}>· {n}</li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
@@ -188,32 +220,51 @@ export default function BrewLog({
             ))}
           </div>
 
-          <p
-            className="mt-3 mb-1 text-[0.6rem] font-bold uppercase tracking-[0.08em]"
-            style={{ color: theme.muted }}
-          >
-            How was it
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {TASTE_FLAGS.map((t) => {
-              const on = draft.taste.includes(t.id);
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => toggleTaste(t.id)}
-                  aria-pressed={on}
-                  className="rounded-full px-3 py-1 text-xs font-semibold"
-                  style={{
-                    background: on ? theme.accent : "transparent",
-                    border: `1px solid ${on ? theme.accent : theme.rule}`,
-                    color: on ? theme.paper : theme.muted,
-                  }}
-                >
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
+          {/* Taste and flow are separate evidence, so they are asked separately */}
+          {(
+            [
+              ["taste", "How did it taste"],
+              ["flow", "How did it run"],
+            ] as const
+          ).map(([group, heading]) => (
+            <div key={group}>
+              <p
+                className="mt-3 mb-1 text-[0.6rem] font-bold uppercase tracking-[0.08em]"
+                style={{ color: theme.muted }}
+              >
+                {heading}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {TASTE_FLAGS.filter((t) => t.group === group).map((t) => {
+                  const on = draft.taste.includes(t.id);
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => toggleTaste(t.id)}
+                      aria-pressed={on}
+                      title={t.hint}
+                      className="rounded-full px-3 py-1 text-xs font-semibold"
+                      style={{
+                        background: on ? theme.accent : "transparent",
+                        border: `1px solid ${on ? theme.accent : theme.rule}`,
+                        color: on ? theme.paper : theme.muted,
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          {draft.taste.length > 0 && (
+            <p className="mt-2 text-xs leading-snug" style={{ color: theme.muted }}>
+              {TASTE_FLAGS.filter((t) => draft.taste.includes(t.id))
+                .map((t) => `${t.label}: ${t.hint}`)
+                .join(" · ")}
+            </p>
+          )}
 
           <div className="mt-3 flex items-center gap-1">
             {[1, 2, 3, 4, 5].map((n) => (
