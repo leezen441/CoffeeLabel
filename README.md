@@ -185,6 +185,53 @@ header:
 - **This browser** — no database configured; data lives in `localStorage`. Handy for
   a quick local try, but a scanned QR code will only resolve on the same browser.
 
+## Brew timer
+
+The brew guide (`/b/[id]`, what the QR opens) has **Start brew timer** under each
+recipe. It counts up against that recipe's steps, highlights the current one,
+counts down to the next, and cues you as you go:
+
+- a soft beep and short buzz **3 seconds before** each step
+- a firmer beep and buzz **on** the step
+- a triple chime and long buzz at the end
+
+Sound is generated with the Web Audio API — no audio files, and the context is
+created from the Start tap so autoplay rules are satisfied. The screen is kept
+awake via Wake Lock while running. Elapsed time is measured against the wall
+clock rather than accumulated ticks, so it never drifts.
+
+**Vibration is Android only.** iOS Safari does not implement `navigator.vibrate`
+at any version, so iPhones get sound alone.
+
+### How the times are read
+
+Step timestamps are free text, so the timer interprets them:
+
+| Written | Read as |
+| --- | --- |
+| `0:30-1:00` | starts at 0:30, ends at 1:00 |
+| `0:30` | ends at 0:30, starting wherever the previous step finished |
+| *(blank)* | shown in the list, but never cued |
+
+A single value is treated as an end rather than a start because that is how these
+recipes are written: step 1 `0:30` means bloom for the first 30 seconds, and
+step 2 `0:30-1:00` picks up exactly there. Units (`min`, `sec`, `m.`) are ignored,
+so existing labels work untouched.
+
+## Backup
+
+At the foot of the library, **Download a copy** writes every label and every group
+to one JSON file (`bean-label-backup-YYYY-MM-DD.json`). **Restore from file** reads
+it back.
+
+Restoring **merges by id and never deletes**: an entry with a matching id is
+overwritten, anything else is left alone, so a restore can't wipe newer work.
+Groups are written before labels so each label's `groupId` still resolves. A bare
+array of labels — the shape older exports used — is accepted too.
+
+Worth doing occasionally: a free Postgres tier is not a backup, and a mis-clicked
+delete is not recoverable otherwise.
+
 ## Local development
 
 ```bash

@@ -777,6 +777,74 @@ export function normalizeLabel(raw: Partial<CoffeeLabel> & { id: string }): Coff
   };
 }
 
+/* ------------------------------- brew timer ------------------------------- */
+
+/** "1:45" → 105, "28" → 28. Units are stripped before this is called. */
+export function parseClock(token: string): number | null {
+  const t = token.replace(/[^\d:]/g, "");
+  if (!t) return null;
+  const mmss = t.match(/^(\d+):(\d{1,2})$/);
+  if (mmss) return Number(mmss[1]) * 60 + Number(mmss[2]);
+  const plain = t.match(/^\d+$/);
+  return plain ? Number(t) : null;
+}
+
+export type TimelineStep = {
+  id: string;
+  text: string;
+  waterG: string;
+  raw: string;
+  /** seconds from the start of the brew; null when no time could be read */
+  start: number | null;
+  end: number | null;
+};
+
+/**
+ * Builds a runnable timeline from the free-text timestamps.
+ *
+ * A range ("0:30-1:00") is read as start–end. A single value ("0:30") is read
+ * as the *end* of that step, so it begins where the previous one finished —
+ * which is how these labels are actually written: step 1 "0:30" means bloom for
+ * the first 30 seconds, and step 2 "0:30-1:00" picks up exactly there.
+ */
+export function brewTimeline(brew: BrewMethod): {
+  steps: TimelineStep[];
+  total: number;
+} {
+  const steps: TimelineStep[] = [];
+  let prevEnd = 0;
+
+  for (const s of brew.steps) {
+    if (!s.text?.trim()) continue;
+    const raw = (s.at ?? "").trim();
+    const parts = raw.split(/\s*[-–—]\s*/).map((p) => parseClock(p));
+    let start: number | null = null;
+    let end: number | null = null;
+
+    if (parts.length >= 2 && parts[0] !== null) {
+      start = parts[0];
+      end = parts[1];
+    } else if (parts.length === 1 && parts[0] !== null) {
+      start = prevEnd;
+      end = parts[0];
+    }
+    if (end !== null) prevEnd = end;
+
+    steps.push({
+      id: s.id,
+      text: s.text,
+      waterG: s.waterG ?? "",
+      raw,
+      start,
+      end,
+    });
+  }
+
+  const declared = parseClock((brew.totalTime ?? "").split(/\s*[-–—]\s*/).pop() ?? "");
+  const lastEnd = steps.reduce((a, s) => Math.max(a, s.end ?? 0), 0);
+  return { steps, total: Math.max(declared ?? 0, lastEnd) };
+}
+
 export type RibbonBlock = {
   id: string;
   /** share of the total pour, 0–1 — drives the block width */

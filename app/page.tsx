@@ -371,6 +371,14 @@ export default function LibraryPage() {
                     <PrinterIcon />
                   </Link>
                   <Link
+                    href={`/b/${label.id}`}
+                    title="Brew timer"
+                    aria-label={`Brew timer for ${labelTitle(label)}`}
+                    className={ACTION_CLS}
+                  >
+                    <TimerIcon />
+                  </Link>
+                  <Link
                     href={`/editor/${label.id}`}
                     title="Edit"
                     aria-label={`Edit ${labelTitle(label)}`}
@@ -650,6 +658,16 @@ function TagIcon() {
     <Svg>
       <path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2.6 12.6A2 2 0 0 1 2 11.2V4a2 2 0 0 1 2-2h7.2a2 2 0 0 1 1.4.6l8 8a2 2 0 0 1 0 2.8Z" />
       <circle cx="7.5" cy="7.5" r="1.3" />
+    </Svg>
+  );
+}
+
+function TimerIcon() {
+  return (
+    <Svg>
+      <circle cx="12" cy="13.5" r="8" />
+      <path d="M12 9.5v4l2.5 1.8" />
+      <path d="M9.5 2.5h5" />
     </Svg>
   );
 }

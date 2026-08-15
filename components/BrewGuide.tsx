@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import BrewTimer from "./BrewTimer";
 import * as store from "@/lib/store";
 import {
+  type BrewMethod,
   type CoffeeLabel,
   ROAST_LEVELS,
   THEMES,
@@ -34,6 +36,7 @@ export default function BrewGuide({
     initial ? "ready" : "loading",
   );
   const [active, setActive] = useState(0);
+  const [timing, setTiming] = useState<BrewMethod | null>(null);
 
   useEffect(() => {
     if (initial) return;
@@ -199,6 +202,16 @@ export default function BrewGuide({
               })()}
 
               {brew.steps.some((s) => s.text.trim()) && (
+                <button
+                  onClick={() => setTiming(brew)}
+                  className="mt-5 w-full rounded-xl px-4 py-3 text-base font-bold"
+                  style={{ background: theme.accent, color: theme.paper }}
+                >
+                  ▶ Start brew timer
+                </button>
+              )}
+
+              {brew.steps.some((s) => s.text.trim()) && (
                 <ol className="mt-5 flex flex-col gap-3">
                   {brew.steps
                     .filter((s) => s.text.trim())
@@ -249,6 +262,10 @@ export default function BrewGuide({
           </Link>
         </div>
       </div>
+
+      {timing && (
+        <BrewTimer brew={timing} theme={theme} onClose={() => setTiming(null)} />
+      )}
     </div>
   );
 }
