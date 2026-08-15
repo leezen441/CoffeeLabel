@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { makeT, useLang } from "@/lib/i18n";
 import {
   type BrewMethod,
   THEMES,
@@ -25,6 +26,7 @@ export default function BrewTimer({
   theme: (typeof THEMES)[keyof typeof THEMES];
   onClose: () => void;
 }) {
+  const tr = makeT(useLang());
   const { steps, total } = brewTimeline(brew);
   /** only steps with a real start time can be cued */
   const cues = steps
@@ -188,7 +190,7 @@ export default function BrewTimer({
             className="text-xs font-bold uppercase tracking-[0.18em]"
             style={{ color: theme.accent }}
           >
-            Brew timer
+            {tr("timerTitle")}
           </p>
           <p className="truncate font-serif text-2xl font-semibold">
             {brew.name || "Method"}
@@ -212,7 +214,7 @@ export default function BrewTimer({
           {mmss(elapsed)}
         </p>
         <p className="mt-1 font-mono text-sm" style={{ color: theme.muted }}>
-          {total > 0 ? `of ${mmss(total)}` : "no total set"}
+          {total > 0 ? `${tr("ofTotal")} ${mmss(total)}` : tr("noTotal")}
         </p>
 
         <div
@@ -228,12 +230,12 @@ export default function BrewTimer({
         <div className="mt-6 w-full max-w-md text-center">
           {done ? (
             <p className="font-serif text-2xl font-semibold" style={{ color: theme.accent }}>
-              Brew complete
+              {tr("brewComplete")}
             </p>
           ) : (
             <>
               <p className="font-serif text-xl font-semibold">
-                {steps[currentIndex]?.text || "Ready"}
+                {steps[currentIndex]?.text || tr("readyWord")}
               </p>
               {steps[currentIndex]?.waterG && (
                 <p className="mt-0.5 font-mono text-sm" style={{ color: theme.muted }}>
@@ -242,7 +244,7 @@ export default function BrewTimer({
               )}
               {next && (
                 <p className="mt-2 font-mono text-sm" style={{ color: theme.muted }}>
-                  next in {Math.max(0, Math.ceil((next.start as number) - elapsed))}s ·{" "}
+                  {tr("nextIn")} {Math.max(0, Math.ceil((next.start as number) - elapsed))}s ·{" "}
                   {next.text}
                 </p>
               )}
@@ -287,7 +289,7 @@ export default function BrewTimer({
             className="rounded-full px-8 py-3 text-base font-bold"
             style={{ background: theme.accent, color: theme.paper }}
           >
-            {elapsed > 0 && !done ? "Resume" : "Start"}
+            {elapsed > 0 && !done ? tr("resume") : tr("start")}
           </button>
         ) : (
           <button
@@ -295,7 +297,7 @@ export default function BrewTimer({
             className="rounded-full px-8 py-3 text-base font-bold"
             style={{ border: `2px solid ${theme.accent}`, color: theme.accent }}
           >
-            Pause
+            {tr("pause")}
           </button>
         )}
         <button
@@ -303,13 +305,12 @@ export default function BrewTimer({
           className="rounded-full px-6 py-3 text-base font-semibold"
           style={{ border: `1px solid ${theme.rule}`, color: theme.muted }}
         >
-          Reset
+          {tr("reset")}
         </button>
       </div>
 
       <p className="pb-4 text-center text-xs" style={{ color: theme.muted }}>
-        Beeps and vibrates {PRE_ALERT}s before each step, then again on the step.
-        Vibration is Android only — iPhone gets sound.
+        {tr("timerFooter")}
       </p>
     </div>
   );

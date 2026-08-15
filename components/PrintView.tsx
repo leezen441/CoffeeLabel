@@ -3,6 +3,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Sticker from "./Sticker";
+import LangToggle from "./LangToggle";
+import { type MsgKey, makeT, sizeHint, sizeName, useLang } from "@/lib/i18n";
 import * as store from "@/lib/store";
 import { saveStickerImage } from "@/lib/saveImage";
 import { useOrigin } from "@/lib/useOrigin";
@@ -24,10 +26,10 @@ const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayout
 
 type SheetId = "a4" | "letter" | "exact";
 
-const SHEETS: Record<SheetId, { name: string; w: number; h: number; margin: number }> = {
-  a4: { name: "A4 sheet (210 × 297 mm)", w: 210, h: 297, margin: 8 },
-  letter: { name: "US Letter (216 × 279 mm)", w: 216, h: 279, margin: 8 },
-  exact: { name: "Label printer — one per page", w: 0, h: 0, margin: 0 },
+const SHEETS: Record<SheetId, { key: MsgKey; w: number; h: number; margin: number }> = {
+  a4: { key: "sheetA4", w: 210, h: 297, margin: 8 },
+  letter: { key: "sheetLetter", w: 216, h: 279, margin: 8 },
+  exact: { key: "sheetExact", w: 0, h: 0, margin: 0 },
 };
 
 export default function PrintView({ id }: { id: string }) {
@@ -39,6 +41,8 @@ export default function PrintView({ id }: { id: string }) {
   const [guides, setGuides] = useState(true);
   const [variant, setVariant] = useState<"full" | "brew">("full");
   const origin = useOrigin();
+  const lang = useLang();
+  const tr = makeT(lang);
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
@@ -59,7 +63,7 @@ export default function PrintView({ id }: { id: string }) {
         console.info("Label saved as PNG");
       }
     } catch (err) {
-      alert(`Could not save the image: ${String(err)}`);
+      alert(`${tr("saveImageFailed")} ${String(err)}`);
     } finally {
       setSaving(false);
     }
@@ -139,16 +143,16 @@ export default function PrintView({ id }: { id: string }) {
   if (missing) {
     return (
       <div className="mx-auto max-w-md px-5 py-24 text-center">
-        <h1 className="font-serif text-2xl font-semibold">Label not found</h1>
+        <h1 className="font-serif text-2xl font-semibold">{tr("labelNotFound")}</h1>
         <Link href="/" className="btn btn-primary mt-5">
-          Back to library
+          {tr("backToLibrary")}
         </Link>
       </div>
     );
   }
 
   if (!label || !size || !grid) {
-    return <p className="px-5 py-10 text-sm text-muted">Loading…</p>;
+    return <p className="px-5 py-10 text-sm text-muted">{tr("loading")}</p>;
   }
 
   const pageStyle =
@@ -215,26 +219,27 @@ export default function PrintView({ id }: { id: string }) {
       <header className="no-print sticky top-0 z-20 border-b border-line bg-card">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-5 py-3">
           <Link href={`/editor/${label.id}`} className="btn btn-ghost">
-            ← Editor
+            ← {tr("editorWord")}
           </Link>
           <h1 className="mr-auto truncate font-serif text-lg font-semibold">
-            Print · {labelTitle(label)}
+            {tr("printTitle")} · {labelTitle(label)}
           </h1>
+          <LangToggle />
           <button className="btn" onClick={saveImage} disabled={saving}>
-            {saving ? "Rendering…" : "Save image"}
+            {saving ? tr("rendering") : tr("saveImage")}
           </button>
           <button className="btn btn-primary" onClick={() => window.print()}>
-            Print
+            {tr("print")}
           </button>
         </div>
       </header>
 
       <div className="no-print mx-auto max-w-6xl px-5 pt-5">
         <div className="panel mb-3 p-4">
-          <h2 className="section-title mb-3">Sticker</h2>
+          <h2 className="section-title mb-3">{tr("secSticker")}</h2>
           <div className="grid gap-3 sm:grid-cols-4">
             <label className="field">
-              <span>Size</span>
+              <span>{tr("fSize")}</span>
               <select
                 className="select"
                 value={label.size}
@@ -242,25 +247,25 @@ export default function PrintView({ id }: { id: string }) {
               >
                 {(Object.keys(SIZES) as SizeId[]).map((k) => (
                   <option key={k} value={k}>
-                    {SIZES[k].name}
+                    {sizeName(k, SIZES[k].name, lang)}
                   </option>
                 ))}
               </select>
             </label>
             <label className="field">
-              <span>Layout</span>
+              <span>{tr("fLayout")}</span>
               <select
                 className="select"
                 value={label.layout}
                 onChange={(e) => update({ layout: e.target.value as LayoutId })}
               >
-                <option value="full">Full — numbered steps</option>
-                <option value="ribbon">Ribbon — pour timeline</option>
-                <option value="compact">Compact — specs only</option>
+                <option value="full">{tr("layoutFull")}</option>
+                <option value="ribbon">{tr("layoutRibbon")}</option>
+                <option value="compact">{tr("layoutCompact")}</option>
               </select>
             </label>
             <label className="field">
-              <span>Colour</span>
+              <span>{tr("fColour")}</span>
               <select
                 className="select"
                 value={label.theme}
@@ -274,7 +279,7 @@ export default function PrintView({ id }: { id: string }) {
               </select>
             </label>
             <label className="field">
-              <span>QR code</span>
+              <span>{tr("fQr")}</span>
               <span className="flex h-[38px] items-center gap-2">
                 <input
                   type="checkbox"
@@ -282,7 +287,7 @@ export default function PrintView({ id }: { id: string }) {
                   onChange={(e) => update({ showQr: e.target.checked })}
                 />
                 <span className="text-sm font-normal normal-case tracking-normal text-ink">
-                  Print a QR code
+                  {tr("printQr")}
                 </span>
               </span>
             </label>
@@ -290,7 +295,7 @@ export default function PrintView({ id }: { id: string }) {
             {label.size === "custom" && (
               <div className="grid grid-cols-2 gap-3 sm:col-span-2">
                 <label className="field">
-                  <span>Width (mm)</span>
+                  <span>{tr("fWidthMm")}</span>
                   <input
                     type="number"
                     min={MIN_MM}
@@ -302,7 +307,7 @@ export default function PrintView({ id }: { id: string }) {
                   />
                 </label>
                 <label className="field">
-                  <span>Height (mm)</span>
+                  <span>{tr("fHeightMm")}</span>
                   <input
                     type="number"
                     min={MIN_MM}
@@ -318,27 +323,27 @@ export default function PrintView({ id }: { id: string }) {
           </div>
           <p className="mt-2 text-xs text-muted">
             {label.size === "custom"
-              ? `Custom — between ${MIN_MM} and ${MAX_MM} mm on each side`
-              : SIZES[label.size].hint}
+              ? `${tr("customBetween")} ${MIN_MM}–${MAX_MM} ${tr("mmEachSide")}`
+              : sizeHint(label.size, SIZES[label.size].hint, lang)}
             {" · "}
-            Changes are saved to the label
+            {tr("savedToLabel")}
           </p>
         </div>
 
         <div className="panel grid gap-3 p-4 sm:grid-cols-5">
           <label className="field">
-            <span>Content</span>
+            <span>{tr("fContent")}</span>
             <select
               className="select"
               value={variant}
               onChange={(e) => setVariant(e.target.value as "full" | "brew")}
             >
-              <option value="full">Full label</option>
-              <option value="brew">Brew guide only</option>
+              <option value="full">{tr("fullLabel")}</option>
+              <option value="brew">{tr("brewOnly")}</option>
             </select>
           </label>
           <label className="field">
-            <span>Paper</span>
+            <span>{tr("fPaper")}</span>
             <select
               className="select"
               value={sheet}
@@ -346,13 +351,13 @@ export default function PrintView({ id }: { id: string }) {
             >
               {(Object.keys(SHEETS) as SheetId[]).map((k) => (
                 <option key={k} value={k}>
-                  {SHEETS[k].name}
+                  {tr(SHEETS[k].key)}
                 </option>
               ))}
             </select>
           </label>
           <label className="field">
-            <span>Copies</span>
+            <span>{tr("fCopies")}</span>
             <input
               type="number"
               min={1}
@@ -365,7 +370,7 @@ export default function PrintView({ id }: { id: string }) {
             />
           </label>
           <label className="field">
-            <span>Gap (mm)</span>
+            <span>{tr("fGapMm")}</span>
             <input
               type="number"
               min={0}
@@ -377,7 +382,7 @@ export default function PrintView({ id }: { id: string }) {
             />
           </label>
           <label className="field">
-            <span>Cut guides</span>
+            <span>{tr("fCutGuides")}</span>
             <span className="flex h-[38px] items-center gap-2">
               <input
                 type="checkbox"
@@ -385,33 +390,25 @@ export default function PrintView({ id }: { id: string }) {
                 onChange={(e) => setGuides(e.target.checked)}
               />
               <span className="text-sm font-normal normal-case tracking-normal text-ink">
-                Show dashed outline
+                {tr("showDashed")}
               </span>
             </span>
           </label>
         </div>
 
         <p className="mt-3 text-xs text-muted">
-          Sticker {size.name} · {grid.cols} × {grid.rows} per page ·{" "}
-          {grid.pages} page{grid.pages === 1 ? "" : "s"}.
+          {tr("stickerWord")} {size.name} · {grid.cols} × {grid.rows} {tr("perPage")} ·{" "}
+          {grid.pages} {grid.pages === 1 ? tr("pageWord") : tr("pagesWord")}.
         </p>
         <div className="mt-2 rounded-lg border border-line bg-brand-soft/50 px-3 py-2 text-xs text-muted">
-          <b className="text-ink">In the browser print dialog → More settings:</b>
+          <b className="text-ink">{tr("printTipsTitle")}</b>
           <ul className="mt-1 list-disc space-y-0.5 pl-4">
+            <li>{tr("tipHeaders")}</li>
             <li>
-              Untick <b className="text-ink">Headers and footers</b> — otherwise the browser
-              prints the date and page URL in the corners
+              <b className="text-ink">{tr("tipMargins")}</b>
             </li>
-            <li>
-              <b className="text-ink">Margins: None</b>
-            </li>
-            <li>
-              <b className="text-ink">Scale: 100%</b> — not &ldquo;Fit to page&rdquo;, which
-              breaks the millimetre sizing
-            </li>
-            <li>
-              Enable <b className="text-ink">Background graphics</b> so the colours print
-            </li>
+            <li>{tr("tipScale")}</li>
+            <li>{tr("tipBackground")}</li>
           </ul>
         </div>
       </div>

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import BrewLog from "./BrewLog";
 import BrewTimer from "./BrewTimer";
+import LangToggle from "./LangToggle";
+import { makeT, useLang } from "@/lib/i18n";
 import * as store from "@/lib/store";
 import {
   type BrewMethod,
@@ -41,6 +43,8 @@ export default function BrewGuide({
   const [active, setActive] = useState(0);
   const [timing, setTiming] = useState<BrewMethod | null>(null);
   const [factor, setFactor] = useState(1);
+  const lang = useLang();
+  const tr = makeT(lang);
 
   useEffect(() => {
     if (initial) return;
@@ -55,19 +59,16 @@ export default function BrewGuide({
   }, [id, initial]);
 
   if (state === "loading") {
-    return <p className="px-5 py-10 text-sm text-muted">Loading…</p>;
+    return <p className="px-5 py-10 text-sm text-muted">{tr("loading")}</p>;
   }
 
   if (state === "missing" || !label) {
     return (
       <div className="mx-auto max-w-md px-5 py-24 text-center">
-        <h1 className="font-serif text-2xl font-semibold">Brew guide not found</h1>
-        <p className="mt-2 text-sm text-muted">
-          This label is not in the database — it may only exist in the browser it was
-          created in.
-        </p>
+        <h1 className="font-serif text-2xl font-semibold">{tr("guideNotFound")}</h1>
+        <p className="mt-2 text-sm text-muted">{tr("guideNotFoundBody")}</p>
         <Link href="/" className="btn btn-primary mt-5">
-          Go to library
+          {tr("goToLibrary")}
         </Link>
       </div>
     );
@@ -90,15 +91,28 @@ export default function BrewGuide({
   const originBits = [label.variety, label.process, label.origin].filter(Boolean);
   const altitude = (label.altitude ?? "").trim();
 
+  /** Write a dialled-in recipe back over the stored one, by id. */
+  async function applyBrew(next: BrewMethod) {
+    const updated = {
+      ...label!,
+      brews: label!.brews.map((b) => (b.id === next.id ? next : b)),
+    };
+    setLabel(updated);
+    await store.saveLabel(updated);
+  }
+
   return (
     <div className="flex-1" style={{ background: theme.paper, color: theme.ink }}>
       <div className="mx-auto max-w-xl px-5 py-8">
-        <p
-          className="text-xs font-bold uppercase tracking-[0.18em]"
-          style={{ color: theme.accent }}
-        >
-          {label.roaster || "Brew guide"}
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <p
+            className="text-xs font-bold uppercase tracking-[0.18em]"
+            style={{ color: theme.accent }}
+          >
+            {label.roaster || tr("brewGuide")}
+          </p>
+          <LangToggle tone={theme} />
+        </div>
         <h1 className="mt-1 font-serif text-4xl leading-tight font-semibold">
           {labelTitle(label)}
         </h1>
@@ -136,13 +150,13 @@ export default function BrewGuide({
           </span>
           {label.roastDate && (
             <span style={{ color: theme.muted }}>
-              Roasted <b style={{ color: theme.ink }}>{formatDate(label.roastDate)}</b>
-              {age !== null && age >= 0 && ` · ${age} days ago`}
+              {tr("roasted")} <b style={{ color: theme.ink }}>{formatDate(label.roastDate)}</b>
+              {age !== null && age >= 0 && ` · ${age} ${tr("daysAgo")}`}
             </span>
           )}
           {label.netWeight && (
             <span style={{ color: theme.muted }}>
-              Net <b style={{ color: theme.ink }}>{formatWeight(label.netWeight)}</b>
+              {tr("net")} <b style={{ color: theme.ink }}>{formatWeight(label.netWeight)}</b>
             </span>
           )}
         </div>
@@ -155,8 +169,8 @@ export default function BrewGuide({
 
         {bb && (
           <p className="mt-1 text-xs" style={{ color: theme.muted }}>
-            Best before {formatDate(bb)}
-            {restDates && <> · Peak {restDates}</>}
+            {tr("bestBefore")} {formatDate(bb)}
+            {restDates && <> · {tr("peak")} {restDates}</>}
           </p>
         )}
 
@@ -188,7 +202,7 @@ export default function BrewGuide({
                   className="text-[0.65rem] font-bold uppercase tracking-[0.12em]"
                   style={{ color: theme.muted }}
                 >
-                  Batch
+                  {tr("batch")}
                 </span>
                 {[0.5, 1, 1.5, 2, 3].map((f) => (
                   <button
@@ -207,20 +221,20 @@ export default function BrewGuide({
                 ))}
                 {factor !== 1 && (
                   <span className="text-xs" style={{ color: theme.muted }}>
-                    dose, yield and every pour scaled — the saved recipe is unchanged
+                    {tr("batchNote")}
                   </span>
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <Stat theme={theme} label="Water" value={brew.waterTempC ? `${brew.waterTempC}°C` : "—"} />
+                <Stat theme={theme} label={tr("water")} value={brew.waterTempC ? `${brew.waterTempC}°C` : "—"} />
                 <Stat
                   theme={theme}
-                  label="Dose → Yield"
+                  label={tr("doseYield")}
                   value={formatDoseYield(brew.doseG, brew.yieldG) || "—"}
                 />
-                <Stat theme={theme} label="Ratio" value={ratioOf(brew) || "—"} />
-                <Stat theme={theme} label="Time" value={formatTime(brew.totalTime) || "—"} />
+                <Stat theme={theme} label={tr("ratio")} value={ratioOf(brew) || "—"} />
+                <Stat theme={theme} label={tr("time")} value={formatTime(brew.totalTime) || "—"} />
               </div>
               {(() => {
                 const g = grinderOf(brew);
@@ -228,7 +242,7 @@ export default function BrewGuide({
                 if (!g.name && !dial) return null;
                 return (
                   <p className="mt-4 text-sm" style={{ color: theme.muted }}>
-                    Grind{" "}
+                    {tr("grind")}{" "}
                     {g.name && <b style={{ color: theme.ink }}>{g.name}</b>}
                     {g.name && dial && " · "}
                     {dial && <b style={{ color: theme.ink }}>{dial}</b>}
@@ -242,7 +256,7 @@ export default function BrewGuide({
                   className="mt-5 w-full rounded-xl px-4 py-3 text-base font-bold"
                   style={{ background: theme.accent, color: theme.paper }}
                 >
-                  ▶ Start brew timer
+                  {tr("startTimer")}
                 </button>
               )}
 
@@ -285,17 +299,25 @@ export default function BrewGuide({
           </>
         )}
 
-        {rawBrew && <BrewLog labelId={label.id} brew={rawBrew} theme={theme} />}
+        {rawBrew && (
+          <BrewLog
+            labelId={label.id}
+            brew={rawBrew}
+            theme={theme}
+            onStart={setTiming}
+            onApply={applyBrew}
+          />
+        )}
 
         <div className="mt-10 flex gap-2 text-sm">
           <Link href={`/editor/${label.id}`} className="btn">
-            Edit
+            {tr("edit")}
           </Link>
           <Link href={`/print/${label.id}`} className="btn">
-            Print
+            {tr("print")}
           </Link>
           <Link href="/" className="btn btn-ghost">
-            Library
+            {tr("library")}
           </Link>
         </div>
       </div>

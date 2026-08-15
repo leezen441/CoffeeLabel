@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { makeT, useLang } from "@/lib/i18n";
 import {
   type BrewMethod,
   GRINDER_BRANDS,
@@ -28,6 +29,7 @@ export default function BrewEditor({
 }) {
   const [customBrand, setCustomBrand] = useState(false);
   const [customModel, setCustomModel] = useState(false);
+  const tr = makeT(useLang());
 
   const set = <K extends keyof BrewMethod>(key: K, value: BrewMethod[K]) =>
     onChange({ ...brew, [key]: value });
@@ -67,8 +69,12 @@ export default function BrewEditor({
   const showModelInput =
     customModel || !knownBrand || (!!brew.grinderModel && !knownModel);
   const dialWord = model
-    ? { clicks: "Clicks", number: "Dial number", microns: "Microns (µm)" }[model.dial]
-    : "Dial setting";
+    ? {
+        clicks: tr("dialClicks"),
+        number: tr("dialNumber"),
+        microns: tr("dialMicrons"),
+      }[model.dial]
+    : tr("dialSetting");
 
   return (
     <div className="rounded-xl border border-line bg-paper/50 p-3">
@@ -79,13 +85,13 @@ export default function BrewEditor({
         <input
           className="input min-w-0 flex-1 font-semibold"
           list="method-presets"
-          placeholder="Brew method (e.g. Espresso)"
+          placeholder={tr("methodPlaceholder")}
           value={brew.name}
           onChange={(e) => set("name", e.target.value)}
         />
         <button
           className="btn btn-ghost px-2"
-          title="Move up"
+          title={tr("moveUp")}
           onClick={() => onMove(-1)}
           disabled={index === 0}
         >
@@ -93,7 +99,7 @@ export default function BrewEditor({
         </button>
         <button
           className="btn btn-ghost px-2"
-          title="Move down"
+          title={tr("moveDown")}
           onClick={() => onMove(1)}
           disabled={index === total - 1}
         >
@@ -101,7 +107,7 @@ export default function BrewEditor({
         </button>
         <button
           className="btn btn-ghost btn-danger px-2"
-          title="Remove method"
+          title={tr("removeMethod")}
           onClick={onRemove}
         >
           ✕
@@ -110,7 +116,7 @@ export default function BrewEditor({
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <label className="field">
-          <span>Water °C</span>
+          <span>{tr("fWaterC")}</span>
           <input
             className="input"
             inputMode="decimal"
@@ -120,7 +126,7 @@ export default function BrewEditor({
           />
         </label>
         <label className="field">
-          <span>Dose g</span>
+          <span>{tr("fDoseG")}</span>
           <input
             className="input"
             inputMode="decimal"
@@ -130,7 +136,7 @@ export default function BrewEditor({
           />
         </label>
         <label className="field">
-          <span>Yield g</span>
+          <span>{tr("fYieldG")}</span>
           <input
             className="input"
             inputMode="decimal"
@@ -140,11 +146,11 @@ export default function BrewEditor({
           />
         </label>
         <label className="field">
-          <span>Time</span>
+          <span>{tr("fTime")}</span>
           <input
             className="input"
             placeholder="2:15"
-            title="Just the time — “min.” is added on the label automatically"
+            title={tr("timeHint")}
             value={brew.totalTime}
             onChange={(e) => set("totalTime", e.target.value)}
           />
@@ -153,7 +159,7 @@ export default function BrewEditor({
 
       <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
         <label className="field">
-          <span>Grinder brand</span>
+          <span>{tr("fGrinderBrand")}</span>
           <select
             className="select"
             value={knownBrand ? brew.grinderBrand : brew.grinderBrand ? "__custom" : ""}
@@ -169,18 +175,18 @@ export default function BrewEditor({
               }
             }}
           >
-            <option value="">— None —</option>
+            <option value="">{tr("noneDash")}</option>
             {GRINDER_BRANDS.map((b) => (
               <option key={b.brand} value={b.brand}>
                 {b.brand}
               </option>
             ))}
-            <option value="__custom">Other…</option>
+            <option value="__custom">{tr("otherDots")}</option>
           </select>
           {showBrandInput && (
             <input
               className="input mt-2"
-              placeholder="Type the brand"
+              placeholder={tr("typeBrand")}
               value={brew.grinderBrand}
               onChange={(e) => set("grinderBrand", e.target.value)}
             />
@@ -188,7 +194,7 @@ export default function BrewEditor({
         </label>
 
         <label className="field">
-          <span>Model</span>
+          <span>{tr("fModel")}</span>
           {/* Only a known brand has a model list; otherwise it is free text. */}
           {knownBrand && (
             <select
@@ -205,19 +211,19 @@ export default function BrewEditor({
                 }
               }}
             >
-              <option value="">— None —</option>
+              <option value="">{tr("noneDash")}</option>
               {models.map((m) => (
                 <option key={m.name} value={m.name}>
                   {m.name}
                 </option>
               ))}
-              <option value="__custom">Other…</option>
+              <option value="__custom">{tr("otherDots")}</option>
             </select>
           )}
           {showModelInput && (
             <input
               className={`input ${knownBrand ? "mt-2" : ""}`}
-              placeholder="Type the model"
+              placeholder={tr("typeModel")}
               value={brew.grinderModel}
               onChange={(e) => set("grinderModel", e.target.value)}
             />
@@ -238,26 +244,27 @@ export default function BrewEditor({
 
       {ratio && (
         <p className="mt-2 font-mono text-xs text-muted">
-          Ratio <b className="text-ink">{ratio}</b>
+          {tr("ratio")} <b className="text-ink">{ratio}</b>
         </p>
       )}
 
       <p className="mt-2 text-xs text-muted">
-        Units are added automatically — <b className="text-ink">g.</b> on weights and{" "}
-        <b className="text-ink">min.</b> on times, so type just{" "}
-        <span className="font-mono">18.2</span> or <span className="font-mono">2:15</span>.
-        Typing your own unit (<span className="font-mono">28s</span>) overrides it.
+        {tr("unitsHint")} <b className="text-ink">g.</b> {tr("unitsHintWeights")}{" "}
+        <b className="text-ink">min.</b> {tr("unitsHintTail")}{" "}
+        <span className="font-mono">18.2</span> / <span className="font-mono">2:15</span>.{" "}
+        {tr("unitsHintOverride")} (<span className="font-mono">28s</span>){" "}
+        {tr("unitsHintOverrideTail")}
       </p>
 
       <div className="mt-3">
         <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-          <span className="section-title">Brew sequence</span>
+          <span className="section-title">{tr("brewSequence")}</span>
           <span className="text-xs font-normal normal-case tracking-normal text-muted">
-            step · start · end · water — leave <b className="text-ink">start</b> blank to
-            continue from the step above
+            {tr("seqHintA")} <b className="text-ink">{tr("startWord")}</b>{" "}
+            {tr("seqHintB")}
           </span>
           <button className="btn btn-ghost text-xs" onClick={addStep}>
-            + Add step
+            {tr("addStep")}
           </button>
         </div>
         <div className="flex flex-col gap-1.5">
@@ -276,7 +283,7 @@ export default function BrewEditor({
                 <input
                   className="input min-w-0 flex-1"
                   placeholder={
-                    i === 0 ? "Bloom 45 g, swirl gently" : "Next pour / action…"
+                    i === 0 ? tr("stepFirstPlaceholder") : tr("stepNextPlaceholder")
                   }
                   value={step.text}
                   onChange={(e) => setStep(step.id, { text: e.target.value })}
@@ -284,29 +291,29 @@ export default function BrewEditor({
               </div>
               <input
                 className="input w-14 shrink-0 text-center font-mono sm:w-16"
-                placeholder="start"
-                title="Start of this step (mm:ss). Leave blank to continue from the step above."
+                placeholder={tr("startWord")}
+                title={tr("startHint")}
                 value={step.startAt}
                 onChange={(e) => setStep(step.id, { startAt: e.target.value })}
               />
               <input
                 className="input w-14 shrink-0 text-center font-mono sm:w-16"
-                placeholder="end"
-                title="End of this step (mm:ss)"
+                placeholder={tr("endWord")}
+                title={tr("endHint")}
                 value={step.endAt}
                 onChange={(e) => setStep(step.id, { endAt: e.target.value })}
               />
               <input
                 className="input w-16 shrink-0 text-center font-mono sm:w-20"
                 inputMode="decimal"
-                placeholder="water g"
-                title="Total water in the brewer after this step — drives the pour ribbon"
+                placeholder={tr("waterG")}
+                title={tr("waterHint")}
                 value={step.waterG}
                 onChange={(e) => setStep(step.id, { waterG: e.target.value })}
               />
               <button
                 className="btn btn-ghost ml-auto px-1 sm:ml-0 sm:px-1.5"
-                title="Move up"
+                title={tr("moveUp")}
                 onClick={() => moveStep(i, -1)}
                 disabled={i === 0}
               >
@@ -314,7 +321,7 @@ export default function BrewEditor({
               </button>
               <button
                 className="btn btn-ghost px-1 sm:px-1.5"
-                title="Move down"
+                title={tr("moveDown")}
                 onClick={() => moveStep(i, 1)}
                 disabled={i === brew.steps.length - 1}
               >
@@ -322,7 +329,7 @@ export default function BrewEditor({
               </button>
               <button
                 className="btn btn-ghost btn-danger px-1 sm:px-1.5"
-                title="Remove step"
+                title={tr("removeStep")}
                 onClick={() => removeStep(step.id)}
                 disabled={brew.steps.length <= 1}
               >

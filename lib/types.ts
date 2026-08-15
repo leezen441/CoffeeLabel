@@ -840,75 +840,99 @@ export type TasteFlag =
 export const TASTE_FLAGS: {
   id: TasteFlag;
   label: string;
+  labelTh: string;
   group: "taste" | "flow";
   /** shown on hover so the vocabulary teaches as you use it */
   hint: string;
+  hintTh: string;
 }[] = [
   {
     id: "sour",
     label: "Sour / sharp",
     group: "taste",
     hint: "Biting acidity that makes you wince — classic under-extraction",
+    labelTh: "เปรี้ยว / แหลม",
+    hintTh: "เปรี้ยวจนสะดุ้ง — สัญญาณคลาสสิกของการสกัดไม่ถึง",
   },
   {
     id: "salty",
     label: "Salty / savoury",
     group: "taste",
     hint: "Salts dissolve first, so savoury without sweetness means it stopped early",
+    labelTh: "เค็ม / คาว",
+    hintTh: "เกลือละลายออกมาก่อน เค็มโดยไม่หวานแปลว่าสกัดหยุดเร็วเกินไป",
   },
   {
     id: "weak",
     label: "Watery / weak",
     group: "taste",
     hint: "Correct flavours but dilute — usually a ratio problem, not a grind one",
+    labelTh: "จืด / บาง",
+    hintTh: "รสถูกแต่เจือจาง — มักเป็นเรื่องอัตราส่วน ไม่ใช่เบอร์บด",
   },
   {
     id: "bitter",
     label: "Bitter",
     group: "taste",
     hint: "Bitterness arrives late in extraction — often too much contact",
+    labelTh: "ขม",
+    hintTh: "ความขมออกมาช่วงท้ายของการสกัด — มักเพราะน้ำสัมผัสผงนานไป",
   },
   {
     id: "harsh",
     label: "Drying / astringent",
     group: "taste",
     hint: "Puckering, chalky finish — over-extraction, or a channelled bed",
+    labelTh: "ฝาด / ฝืดลิ้น",
+    hintTh: "ฝาดติดลิ้น — สกัดเกิน หรือชั้นกาแฟไม่สม่ำเสมอ",
   },
   {
     id: "ashy",
     label: "Ashy / burnt",
     group: "taste",
     hint: "Smoky and hollow — too hot, too long, or a dark roast pushed hard",
+    labelTh: "ไหม้ / เขม่า",
+    hintTh: "กลิ่นควันและรสกลวง — น้ำร้อนไป นานไป หรือคั่วเข้มแล้วดันแรงเกิน",
   },
   {
     id: "hollow",
     label: "Hollow / empty",
     group: "taste",
     hint: "Starts and finishes but nothing in the middle — uneven extraction",
+    labelTh: "กลวง / ไม่มีกลาง",
+    hintTh: "มีต้นมีท้ายแต่กลางหาย — สกัดไม่สม่ำเสมอ",
   },
   {
     id: "good",
     label: "Sweet & balanced",
     group: "taste",
     hint: "Sweetness in the middle, clean finish — this is the target",
+    labelTh: "หวาน สมดุล",
+    hintTh: "หวานกลางลิ้น จบสะอาด — นี่คือเป้าหมาย",
   },
   {
     id: "fast",
     label: "Ran fast",
     group: "flow",
     hint: "Water found it easy to get through — bed too open or too coarse",
+    labelTh: "ไหลเร็ว",
+    hintTh: "น้ำผ่านง่ายเกินไป — ชั้นกาแฟโปร่งหรือบดหยาบไป",
   },
   {
     id: "slow",
     label: "Ran slow",
     group: "flow",
     hint: "Water struggled — too fine, too much agitation, or clogged fines",
+    labelTh: "ไหลช้า",
+    hintTh: "น้ำผ่านยาก — บดละเอียดไป กวนมากไป หรือผงละเอียดอุดตัน",
   },
   {
     id: "uneven",
     label: "Uneven / spurty",
     group: "flow",
     hint: "Squirting, blonding early, or a crater in the bed — channelling",
+    labelTh: "ไหลไม่สม่ำเสมอ",
+    hintTh: "พุ่งเป็นสาย ซีดเร็ว หรือผิวหน้าเป็นหลุม — channelling",
   },
 ];
 

@@ -8,6 +8,8 @@ import StickerViewer from "@/components/StickerViewer";
 import { sampleLabel } from "@/lib/sample";
 import * as store from "@/lib/store";
 import type { StorageMode } from "@/lib/store";
+import LangToggle from "@/components/LangToggle";
+import { type MsgKey, makeT, useLang } from "@/lib/i18n";
 import { useOrigin } from "@/lib/useOrigin";
 import {
   type CoffeeLabel,
@@ -42,6 +44,7 @@ export default function LibraryPage() {
   );
   const fileRef = useRef<HTMLInputElement>(null);
   const origin = useOrigin();
+  const tr = makeT(useLang());
 
   const refresh = useCallback(
     () =>
@@ -120,10 +123,10 @@ export default function LibraryPage() {
     });
 
   async function addGroup() {
-    const name = prompt("Group name")?.trim();
+    const name = prompt(tr("groupNamePrompt"))?.trim();
     if (!name) return;
     if (groups.some((g) => g.name.toLowerCase() === name.toLowerCase())) {
-      alert(`A group called "${name}" already exists.`);
+      alert(`${tr("aGroupCalled")} "${name}" ${tr("groupExists")}`);
       return;
     }
     setBusy(true);
@@ -160,10 +163,10 @@ export default function LibraryPage() {
       const { labels: l, groups: g } = await store.importBackup(parsed);
       await refresh();
       alert(
-        `Restored ${l} label${l === 1 ? "" : "s"} and ${g} group${g === 1 ? "" : "s"}.`,
+        `${tr("restoredWord")} ${l} ${tr("labelsWord")} · ${g} ${tr("groupsWord")}`,
       );
     } catch (err) {
-      alert(`That file could not be restored: ${String(err)}`);
+      alert(`${tr("restoreFailed")} ${String(err)}`);
     } finally {
       setBusy(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -185,8 +188,8 @@ export default function LibraryPage() {
   async function removeGroup(group: LabelGroup) {
     const n = counts.get(group.id) ?? 0;
     const msg = n
-      ? `Delete the group "${group.name}"? Its ${n} label${n === 1 ? "" : "s"} will be kept but become ungrouped.`
-      : `Delete the group "${group.name}"?`;
+      ? `${tr("deleteGroupQ")} "${group.name}"? ${tr("deleteGroupKeep")} (${n})`
+      : `${tr("deleteGroupQ")} "${group.name}"?`;
     if (!confirm(msg)) return;
     setBusy(true);
     try {
@@ -240,7 +243,7 @@ export default function LibraryPage() {
   }
 
   async function remove(label: CoffeeLabel) {
-    if (!confirm(`Delete "${labelTitle(label)}"? This cannot be undone.`)) return;
+    if (!confirm(`${tr("deleteLabelQ")} "${labelTitle(label)}"? ${tr("cannotUndo")}`)) return;
     setBusy(true);
     try {
       await store.deleteLabel(label.id);
@@ -258,15 +261,16 @@ export default function LibraryPage() {
             <Logo />
             <div>
               <h1 className="font-serif text-xl leading-tight font-semibold">Bean Label</h1>
-              <p className="text-xs text-muted">Coffee sticker studio</p>
+              <p className="text-xs text-muted">{tr("appTagline")}</p>
             </div>
           </div>
-          <StorageBadge mode={mode} />
+          <StorageBadge mode={mode} tr={tr} />
+          <LangToggle />
           <button className="btn" onClick={addGroup} disabled={busy}>
-            + Group
+            {tr("newGroup")}
           </button>
           <button className="btn btn-primary" onClick={createNew} disabled={busy}>
-            + New label
+            {tr("newLabel")}
           </button>
         </div>
       </header>
@@ -275,7 +279,7 @@ export default function LibraryPage() {
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <input
             className="input max-w-xs"
-            placeholder="Search coffee, roaster, origin…"
+            placeholder={tr("searchPlaceholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -283,18 +287,18 @@ export default function LibraryPage() {
             className="select w-auto"
             value={scope}
             onChange={(e) => setScope(e.target.value)}
-            title="Limit the search to one group"
+            title={tr("limitSearch")}
           >
-            <option value="">Search all groups</option>
+            <option value="">{tr("searchAllGroups")}</option>
             {groups.map((g) => (
               <option key={g.id} value={g.id}>
-                Search in {g.name}
+                {tr("searchIn")} {g.name}
               </option>
             ))}
           </select>
           {labels && (
             <span className="text-xs text-muted">
-              {filtered.length} of {labels.length} label{labels.length === 1 ? "" : "s"}
+              {filtered.length} {tr("ofLabels")} {labels.length} {tr("labelsWord")}
             </span>
           )}
         </div>
@@ -304,10 +308,10 @@ export default function LibraryPage() {
           <div className="mb-3 flex flex-wrap items-center gap-1.5">
             {(
               [
-                ["all", "All", labels.length],
-                ["peak", "Drinking now", readyCounts.peak],
-                ["resting", "Resting", readyCounts.resting],
-                ["past", "Past peak", readyCounts.past],
+                ["all", tr("all"), labels.length],
+                ["peak", tr("drinkingNow"), readyCounts.peak],
+                ["resting", tr("resting"), readyCounts.resting],
+                ["past", tr("pastPeak"), readyCounts.past],
               ] as const
             ).map(([key, text, count]) => {
               const on = ready === key;
@@ -347,7 +351,7 @@ export default function LibraryPage() {
             ))}
             {(counts.get(UNGROUPED) ?? 0) > 0 && (
               <GroupChip
-                name="Ungrouped"
+                name={tr("ungrouped")}
                 color="#8b7a68"
                 count={counts.get(UNGROUPED) ?? 0}
                 on={active.has(UNGROUPED)}
@@ -359,30 +363,29 @@ export default function LibraryPage() {
                 className="btn btn-ghost text-xs"
                 onClick={() => setActive(new Set())}
               >
-                Clear filter
+                {tr("clearFilter")}
               </button>
             )}
           </div>
         )}
 
-        {labels === null && <p className="text-sm text-muted">Loading…</p>}
+        {labels === null && <p className="text-sm text-muted">{tr("loading")}</p>}
 
         {labels && labels.length === 0 && (
           <div className="panel flex flex-col items-center gap-4 px-6 py-16 text-center">
             <Logo big />
             <div>
-              <h2 className="font-serif text-2xl font-semibold">No labels yet</h2>
+              <h2 className="font-serif text-2xl font-semibold">{tr("noLabelsYet")}</h2>
               <p className="mt-1 max-w-md text-sm text-muted">
-                Create a sticker with your roaster details, roast level and up to five brew
-                recipes — then print it and stick it on the bag.
+                {tr("emptyBlurb")}
               </p>
             </div>
             <div className="flex gap-2">
               <button className="btn btn-primary" onClick={createNew} disabled={busy}>
-                Create your first label
+                {tr("createFirst")}
               </button>
               <button className="btn" onClick={addSample} disabled={busy}>
-                Load a sample
+                {tr("loadSample")}
               </button>
             </div>
           </div>
@@ -418,8 +421,10 @@ export default function LibraryPage() {
                       title={`${meta.label} · day ${r.age} of ${r.from}–${r.to}`}
                     >
                       {r.status === "resting"
-                        ? `${r.daysToPeak}d to go`
-                        : meta.short}
+                        ? tr("daysToGoPre") + r.daysToPeak + tr("daysToGo")
+                        : r.status === "peak"
+                          ? tr("ready")
+                          : tr("pastPeak")}
                     </span>
                   );
                 })()}
@@ -428,7 +433,7 @@ export default function LibraryPage() {
                 <div className="absolute right-3 top-3 z-10 flex flex-col gap-1.5">
                   <Link
                     href={`/print/${label.id}`}
-                    title="Print stickers"
+                    title={tr("printStickers")}
                     aria-label={`Print ${labelTitle(label)}`}
                     className={ACTION_CLS}
                   >
@@ -436,7 +441,7 @@ export default function LibraryPage() {
                   </Link>
                   <Link
                     href={`/b/${label.id}`}
-                    title="Brew timer"
+                    title={tr("brewTimer")}
                     aria-label={`Brew timer for ${labelTitle(label)}`}
                     className={ACTION_CLS}
                   >
@@ -444,7 +449,7 @@ export default function LibraryPage() {
                   </Link>
                   <Link
                     href={`/editor/${label.id}`}
-                    title="Edit"
+                    title={tr("edit")}
                     aria-label={`Edit ${labelTitle(label)}`}
                     className={ACTION_CLS}
                   >
@@ -454,7 +459,7 @@ export default function LibraryPage() {
                     const g = groups.find((x) => x.id === label.groupId);
                     return (
                       <button
-                        title={g ? `Group: ${g.name}` : "Move to group"}
+                        title={g ? `${tr("groupColon")} ${g.name}` : tr("moveToGroup")}
                         aria-label={`Move ${labelTitle(label)} to a group`}
                         className={ACTION_CLS}
                         style={g ? { color: g.color, borderColor: g.color } : undefined}
@@ -468,7 +473,7 @@ export default function LibraryPage() {
                     );
                   })()}
                   <button
-                    title="Duplicate"
+                    title={tr("duplicate")}
                     aria-label={`Duplicate ${labelTitle(label)}`}
                     className={ACTION_CLS}
                     onClick={() => duplicate(label)}
@@ -477,7 +482,7 @@ export default function LibraryPage() {
                     <CopyIcon />
                   </button>
                   <button
-                    title="Delete"
+                    title={tr("del")}
                     aria-label={`Delete ${labelTitle(label)}`}
                     className={`${ACTION_CLS} hover:!border-[var(--danger)] hover:!text-[var(--danger)]`}
                     onClick={() => remove(label)}
@@ -495,20 +500,20 @@ export default function LibraryPage() {
         {labels && (
           <footer className="mt-10 border-t border-line pt-4 text-xs text-muted">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <span className="font-semibold uppercase tracking-[0.1em]">Backup</span>
+              <span className="font-semibold uppercase tracking-[0.1em]">{tr("backup")}</span>
               <button
                 className="underline underline-offset-2 hover:text-brand disabled:opacity-50"
                 onClick={exportBackup}
                 disabled={busy || !labels.length}
               >
-                Download a copy
+                {tr("downloadCopy")}
               </button>
               <button
                 className="underline underline-offset-2 hover:text-brand"
                 onClick={() => fileRef.current?.click()}
                 disabled={busy}
               >
-                Restore from file
+                {tr("restoreFile")}
               </button>
               <input
                 ref={fileRef}
@@ -521,8 +526,7 @@ export default function LibraryPage() {
                 }}
               />
               <span className="opacity-70">
-                Saves every label and group as one JSON file. Restoring merges by id —
-                nothing is deleted.
+                {tr("backupBlurb")}
               </span>
             </div>
           </footer>
@@ -542,10 +546,10 @@ export default function LibraryPage() {
             style={{ left: menu.x, top: menu.y, transform: "translateX(-100%)" }}
           >
             <p className="truncate px-3 py-1.5 text-xs text-muted">
-              Move to group
+              {tr("moveToGroup")}
             </p>
             <GroupOption
-              name="No group"
+              name={tr("noGroup")}
               color="#8b7a68"
               on={!menu.label.groupId}
               onSelect={() => moveToGroup(menu.label, "")}
@@ -579,16 +583,18 @@ export default function LibraryPage() {
   );
 }
 
-function StorageBadge({ mode }: { mode: StorageMode | null }) {
+function StorageBadge({
+  mode,
+  tr,
+}: {
+  mode: StorageMode | null;
+  tr: (key: MsgKey) => string;
+}) {
   if (!mode) return null;
   const cloud = mode === "cloud";
   return (
     <span
-      title={
-        cloud
-          ? "Labels are saved to your Postgres database"
-          : "No DATABASE_URL set — labels are saved in this browser only"
-      }
+      title={cloud ? tr("storageCloud") : tr("storageLocal")}
       className="inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs font-semibold"
       style={{ color: cloud ? "#2E6B4B" : "#8A5A2B" }}
     >
@@ -596,7 +602,7 @@ function StorageBadge({ mode }: { mode: StorageMode | null }) {
         className="h-1.5 w-1.5 rounded-full"
         style={{ background: cloud ? "#2E6B4B" : "#C89B4A" }}
       />
-      {cloud ? "Database" : "This browser"}
+      {cloud ? tr("databaseWord") : tr("thisBrowser")}
     </span>
   );
 }

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import BrewEditor from "./BrewEditor";
+import LangToggle from "./LangToggle";
+import { type MsgKey, makeT, useLang } from "@/lib/i18n";
 import * as store from "@/lib/store";
 import {
   type BrewMethod,
@@ -30,6 +32,7 @@ export default function LabelEditor({ id }: { id: string }) {
   const [noteDraft, setNoteDraft] = useState("");
   const [groups, setGroups] = useState<LabelGroup[]>([]);
   const [customProcess, setCustomProcess] = useState(false);
+  const tr = makeT(useLang());
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dirty = useRef(false);
@@ -84,18 +87,18 @@ export default function LabelEditor({ id }: { id: string }) {
   if (missing) {
     return (
       <div className="mx-auto max-w-md px-5 py-24 text-center">
-        <h1 className="font-serif text-2xl font-semibold">Label not found</h1>
+        <h1 className="font-serif text-2xl font-semibold">{tr("labelNotFound")}</h1>
         <p className="mt-2 text-sm text-muted">
-          It may have been deleted, or saved in a different browser.
+          {tr("labelNotFoundBody")}
         </p>
         <Link href="/" className="btn btn-primary mt-5">
-          Back to library
+          {tr("backToLibrary")}
         </Link>
       </div>
     );
   }
 
-  if (!label) return <p className="px-5 py-10 text-sm text-muted">Loading…</p>;
+  if (!label) return <p className="px-5 py-10 text-sm text-muted">{tr("loading")}</p>;
 
   const setBrew = (i: number, next: BrewMethod) =>
     update({ brews: label.brews.map((b, j) => (j === i ? next : b)) });
@@ -136,17 +139,18 @@ export default function LabelEditor({ id }: { id: string }) {
       <header className="sticky top-0 z-20 border-b border-line bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-5 py-3">
           <Link href="/" className="btn btn-ghost">
-            ← Library
+            ← {tr("library")}
           </Link>
           <h1 className="mr-auto truncate font-serif text-lg font-semibold">
             {labelTitle(label)}
           </h1>
-          <SaveIndicator state={saveState} />
+          <LangToggle />
+          <SaveIndicator state={saveState} tr={tr} />
           <Link href={`/b/${label.id}`} className="btn" target="_blank">
-            Brew guide
+            {tr("brewGuide")}
           </Link>
           <Link href={`/print/${label.id}`} className="btn btn-primary">
-            Print stickers
+            {tr("printStickers")}
           </Link>
         </div>
       </header>
@@ -155,10 +159,10 @@ export default function LabelEditor({ id }: { id: string }) {
         {/* Sticker appearance and preview live on the print page. */}
         <div className="flex flex-col gap-5">
           <section className="panel p-4">
-            <h2 className="section-title mb-3">The coffee</h2>
+            <h2 className="section-title mb-3">{tr("secCoffee")}</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="field">
-                <span>Roaster / shop name</span>
+                <span>{tr("fRoaster")}</span>
                 <input
                   className="input"
                   placeholder="Roots Coffee Roasters"
@@ -167,7 +171,7 @@ export default function LabelEditor({ id }: { id: string }) {
                 />
               </label>
               <label className="field">
-                <span>Coffee name</span>
+                <span>{tr("fCoffeeName")}</span>
                 <input
                   className="input"
                   placeholder="Ethiopia Guji Uraga"
@@ -176,7 +180,7 @@ export default function LabelEditor({ id }: { id: string }) {
                 />
               </label>
               <label className="field">
-                <span>Variety</span>
+                <span>{tr("fVariety")}</span>
                 <input
                   className="input"
                   placeholder="Heirloom, Geisha, SL28…"
@@ -185,7 +189,7 @@ export default function LabelEditor({ id }: { id: string }) {
                 />
               </label>
               <label className="field">
-                <span>Process</span>
+                <span>{tr("fProcess")}</span>
                 <select
                   className="select"
                   value={knownProcess ? label.process : "__custom"}
@@ -195,32 +199,32 @@ export default function LabelEditor({ id }: { id: string }) {
                     setCustomProcess(v === "__custom");
                   }}
                 >
-                  <option value="">— None —</option>
+                  <option value="">{tr("noneDash")}</option>
                   {PROCESS_GROUPS.map((g) => (
                     <optgroup key={g.group} label={g.group}>
                       {g.items.map((p) => (
                         <option key={p.name} value={p.name}>
                           {p.name}
                           {p.restBias !== 0
-                            ? ` (${p.restBias > 0 ? "+" : ""}${p.restBias}d rest)`
+                            ? ` (${p.restBias > 0 ? "+" : ""}${p.restBias}${tr("dRest")})`
                             : ""}
                         </option>
                       ))}
                     </optgroup>
                   ))}
-                  <option value="__custom">Other…</option>
+                  <option value="__custom">{tr("otherDots")}</option>
                 </select>
                 {(customProcess || (!knownProcess && label.process)) && (
                   <input
                     className="input mt-2"
-                    placeholder="Type the process"
+                    placeholder={tr("typeProcess")}
                     value={label.process}
                     onChange={(e) => update({ process: e.target.value })}
                   />
                 )}
               </label>
               <label className="field">
-                <span>Origin</span>
+                <span>{tr("fOrigin")}</span>
                 <input
                   className="input"
                   placeholder="Guji, Ethiopia"
@@ -229,7 +233,7 @@ export default function LabelEditor({ id }: { id: string }) {
                 />
               </label>
               <label className="field">
-                <span>Altitude</span>
+                <span>{tr("fAltitude")}</span>
                 <input
                   className="input"
                   placeholder="2,050 masl"
@@ -238,13 +242,13 @@ export default function LabelEditor({ id }: { id: string }) {
                 />
               </label>
               <label className="field">
-                <span>Group</span>
+                <span>{tr("fGroup")}</span>
                 <select
                   className="select"
                   value={label.groupId}
                   onChange={(e) => update({ groupId: e.target.value })}
                 >
-                  <option value="">No group</option>
+                  <option value="">{tr("noGroup")}</option>
                   {groups.map((g) => (
                     <option key={g.id} value={g.id}>
                       {g.name}
@@ -253,19 +257,19 @@ export default function LabelEditor({ id }: { id: string }) {
                 </select>
                 <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-muted">
                   {groups.length
-                    ? "Filter by this in the library"
-                    : "Create groups from the library with + Group"}
+                    ? tr("filterByThis")
+                    : tr("createGroupsHint")}
                 </span>
               </label>
             </div>
           </section>
 
           <section className="panel p-4">
-            <h2 className="section-title mb-3">Roast</h2>
+            <h2 className="section-title mb-3">{tr("secRoast")}</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <span className="mb-2 block text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted">
-                  Roast level
+                  {tr("fRoastLevel")}
                 </span>
                 <div className="flex items-center gap-1">
                   {([1, 2, 3, 4, 5] as RoastLevel[]).map((n) => (
@@ -309,7 +313,7 @@ export default function LabelEditor({ id }: { id: string }) {
 
               <div className="grid grid-cols-2 gap-3">
                 <label className="field">
-                  <span>Roast date</span>
+                  <span>{tr("fRoastDate")}</span>
                   <input
                     type="date"
                     className="input"
@@ -318,7 +322,7 @@ export default function LabelEditor({ id }: { id: string }) {
                   />
                 </label>
                 <label className="field">
-                  <span>Best before (days)</span>
+                  <span>{tr("fBestBeforeDays")}</span>
                   <input
                     type="number"
                     min={0}
@@ -330,7 +334,7 @@ export default function LabelEditor({ id }: { id: string }) {
                   />
                 </label>
                 <label className="field col-span-2">
-                  <span>Net weight</span>
+                  <span>{tr("fNetWeight")}</span>
                   <input
                     className="input"
                     placeholder="250"
@@ -338,7 +342,7 @@ export default function LabelEditor({ id }: { id: string }) {
                     onChange={(e) => update({ netWeight: e.target.value })}
                   />
                   <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-muted">
-                    <b className="text-ink">g.</b> is added automatically
+                    <b className="text-ink">g.</b> {tr("gAuto")}
                   </span>
                 </label>
               </div>
@@ -346,7 +350,7 @@ export default function LabelEditor({ id }: { id: string }) {
 
             <div className="mt-4 grid gap-3 border-t border-line pt-4 sm:grid-cols-2">
               <label className="field">
-                <span>Roast indicator</span>
+                <span>{tr("fRoastIndicator")}</span>
                 <select
                   className="select"
                   value={label.roastDisplay}
@@ -354,13 +358,13 @@ export default function LabelEditor({ id }: { id: string }) {
                     update({ roastDisplay: e.target.value as "beans" | "scale" })
                   }
                 >
-                  <option value="scale">Segmented scale</option>
-                  <option value="beans">Coffee beans</option>
+                  <option value="scale">{tr("segScale")}</option>
+                  <option value="beans">{tr("coffeeBeans")}</option>
                 </select>
               </label>
 
               <div className="field">
-                <span>Rest / degas window</span>
+                <span>{tr("fRestWindow")}</span>
                 <label className="flex h-[38px] items-center gap-2 text-sm">
                   <input
                     type="checkbox"
@@ -368,7 +372,7 @@ export default function LabelEditor({ id }: { id: string }) {
                     onChange={(e) => update({ showRest: e.target.checked })}
                   />
                   <span className="font-normal normal-case tracking-normal text-ink">
-                    Show peak window bar
+                    {tr("showPeakBar")}
                   </span>
                 </label>
               </div>
@@ -378,44 +382,42 @@ export default function LabelEditor({ id }: { id: string }) {
                   <p className="text-xs text-muted">
                     <b className="text-ink">{rest.basis}</b> →{" "}
                     <b className="text-ink">
-                      Day {rest.from}–{rest.to}
+                      {tr("dayWord")} {rest.from}–{rest.to}
                     </b>{" "}
-                    after roasting
+                    {tr("afterRoasting")}
                   </p>
                   <div className="mt-2 grid grid-cols-2 gap-3">
                     <label className="field">
-                      <span>Rest from (days)</span>
+                      <span>{tr("fRestFrom")}</span>
                       <input
                         type="number"
                         min={0}
                         className="input"
-                        placeholder="auto"
+                        placeholder={tr("autoWord")}
                         value={label.restFrom || ""}
                         onChange={(e) => update({ restFrom: Number(e.target.value) || 0 })}
                       />
                     </label>
                     <label className="field">
-                      <span>Rest to (days)</span>
+                      <span>{tr("fRestTo")}</span>
                       <input
                         type="number"
                         min={0}
                         className="input"
-                        placeholder="auto"
+                        placeholder={tr("autoWord")}
                         value={label.restTo || ""}
                         onChange={(e) => update({ restTo: Number(e.target.value) || 0 })}
                       />
                     </label>
                   </div>
                   <p className="mt-1 text-xs text-muted">
-                    Leave both blank to calculate it: roast level sets the base (light
-                    rests longest), espresso adds about a week over filter, and the
-                    process shifts it further. A guide only — tasting beats any formula.
+                    {tr("restHelp")}
                   </p>
                 </div>
               )}
 
               <div className="field sm:col-span-2">
-                <span>Single-dose tracker</span>
+                <span>{tr("fDoseTracker")}</span>
                 <div className="flex flex-wrap items-center gap-3">
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -424,13 +426,13 @@ export default function LabelEditor({ id }: { id: string }) {
                       onChange={(e) => update({ showDoseBoxes: e.target.checked })}
                     />
                     <span className="font-normal normal-case tracking-normal text-ink">
-                      Print tick boxes
+                      {tr("printTickBoxes")}
                     </span>
                   </label>
                   {label.showDoseBoxes && (
                     <label className="flex items-center gap-2 text-sm">
                       <span className="font-normal normal-case tracking-normal text-muted">
-                        How many
+                        {tr("howMany")}
                       </span>
                       <input
                         type="number"
@@ -453,7 +455,7 @@ export default function LabelEditor({ id }: { id: string }) {
 
           <section className="panel p-4">
             <h2 className="section-title mb-3">
-              Tasting notes ({label.tastingNotes.length}/{MAX_NOTES})
+              {tr("secNotes")} ({label.tastingNotes.length}/{MAX_NOTES})
             </h2>
             <div className="flex flex-wrap items-center gap-2">
               {label.tastingNotes.map((note) => (
@@ -494,7 +496,7 @@ export default function LabelEditor({ id }: { id: string }) {
                     }}
                   />
                   <button className="btn" onClick={addNote} disabled={!noteDraft.trim()}>
-                    Add
+                    {tr("addWord")}
                   </button>
                 </span>
               )}
@@ -503,7 +505,7 @@ export default function LabelEditor({ id }: { id: string }) {
             {label.tastingNotes.length < MAX_NOTES && (
               <>
                 <p className="mt-3 mb-1.5 text-xs text-muted">
-                  Quick pick — each family carries its SCA colour onto the label
+                  {tr("quickPick")}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {FLAVOR_FAMILIES.filter(
@@ -531,14 +533,14 @@ export default function LabelEditor({ id }: { id: string }) {
           <section className="panel p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="section-title">
-                Brew methods ({label.brews.length}/{MAX_BREWS})
+                {tr("secBrews")} ({label.brews.length}/{MAX_BREWS})
               </h2>
               <button
                 className="btn"
                 onClick={addBrew}
                 disabled={label.brews.length >= MAX_BREWS}
               >
-                + Add method
+                {tr("addMethod")}
               </button>
             </div>
             <div className="flex flex-col gap-3">
@@ -555,7 +557,7 @@ export default function LabelEditor({ id }: { id: string }) {
               ))}
               {label.brews.length === 0 && (
                 <p className="text-sm text-muted">
-                  No brew methods yet — add up to {MAX_BREWS}.
+                  {tr("noBrewsYet")} {MAX_BREWS}.
                 </p>
               )}
             </div>
@@ -567,12 +569,18 @@ export default function LabelEditor({ id }: { id: string }) {
   );
 }
 
-function SaveIndicator({ state }: { state: SaveState }) {
+function SaveIndicator({
+  state,
+  tr,
+}: {
+  state: SaveState;
+  tr: (key: MsgKey) => string;
+}) {
   const map: Record<SaveState, { text: string; color: string }> = {
     idle: { text: "", color: "" },
-    saving: { text: "Saving…", color: "var(--muted)" },
-    saved: { text: "All changes saved", color: "#2E6B4B" },
-    error: { text: "Save failed", color: "var(--danger)" },
+    saving: { text: tr("saving"), color: "var(--muted)" },
+    saved: { text: tr("allSaved"), color: "#2E6B4B" },
+    error: { text: tr("saveFailed"), color: "var(--danger)" },
   };
   const { text, color } = map[state];
   if (!text) return null;

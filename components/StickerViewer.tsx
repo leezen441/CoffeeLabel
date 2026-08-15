@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { makeT, useLang } from "@/lib/i18n";
 import Sticker from "./Sticker";
 import { saveStickerImage } from "@/lib/saveImage";
 import { type CoffeeLabel, labelSize, labelTitle } from "@/lib/types";
@@ -223,6 +224,7 @@ export default function StickerViewer({
     }
   };
 
+  const tr = makeT(useLang());
   const pct = Math.round(zoom * 100);
 
   return (
@@ -237,7 +239,9 @@ export default function StickerViewer({
         <div className="mr-auto min-w-0">
           <p className="truncate font-serif text-lg font-semibold">{labelTitle(label)}</p>
           <p className="text-xs opacity-70">
-            {size.name} · {label.layout === "compact" ? "Compact" : "Full"} layout
+            {size.name} ·{" "}
+            {label.layout === "compact" ? tr("compactWord") : tr("fullWord")}{" "}
+            {tr("layoutWord")}
           </p>
         </div>
 
@@ -246,7 +250,7 @@ export default function StickerViewer({
             className="h-8 w-8 rounded text-lg leading-none hover:bg-white/15"
             onClick={() => nudge(0.8)}
             disabled={zoom <= MIN_ZOOM}
-            aria-label="Zoom out"
+            aria-label={tr("zoomOut")}
           >
             −
           </button>
@@ -255,7 +259,7 @@ export default function StickerViewer({
             className="h-8 w-8 rounded text-lg leading-none hover:bg-white/15"
             onClick={() => nudge(1.25)}
             disabled={zoom >= MAX_ZOOM}
-            aria-label="Zoom in"
+            aria-label={tr("zoomIn")}
           >
             +
           </button>
@@ -263,7 +267,7 @@ export default function StickerViewer({
             className="h-8 rounded px-2 text-xs font-semibold hover:bg-white/15"
             onClick={reset}
           >
-            Fit
+            {tr("fitWord")}
           </button>
         </div>
 
@@ -272,30 +276,30 @@ export default function StickerViewer({
           disabled={saving}
           className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20 disabled:opacity-50"
         >
-          {saving ? "Rendering…" : "Save image"}
+          {saving ? tr("rendering") : tr("saveImage")}
         </button>
         <Link
           href={`/b/${label.id}`}
           className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20"
         >
-          Brew guide
+          {tr("brewGuide")}
         </Link>
         <Link
           href={`/editor/${label.id}`}
           className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20"
         >
-          Edit
+          {tr("edit")}
         </Link>
         <Link
           href={`/print/${label.id}`}
           className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20"
         >
-          Print
+          {tr("print")}
         </Link>
         <button
           className="h-9 w-9 rounded-lg bg-white/10 text-lg leading-none hover:bg-white/20"
           onClick={onClose}
-          aria-label="Close preview"
+          aria-label={tr("closePreview")}
         >
           ✕
         </button>
@@ -337,7 +341,7 @@ export default function StickerViewer({
       </div>
 
       <p className="px-4 pb-3 text-center text-xs text-white/50">
-        Pinch or scroll to zoom · drag to move · double-tap to toggle · Esc to close
+        {tr("viewerHint")}
       </p>
 
       {/* Offscreen, unscaled and non-live — this is what "Save image" renders. */}
