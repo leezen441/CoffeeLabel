@@ -506,7 +506,9 @@ body {
 .cl-brew-head {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  /* stretch, not flex-start: flex-start shrinks the specs row to its text and
+     leaves most of the label empty on the right */
+  align-items: stretch;
   gap: calc(0.5 * var(--u));
 }
 
@@ -520,6 +522,8 @@ body {
 .cl-specs {
   display: flex;
   align-items: center;
+  /* spread the four values across the label rather than bunching them left */
+  justify-content: space-between;
   /* wider gap between values than inside one, so each icon binds to its number */
   gap: calc(2.4 * var(--u) * var(--specs-fit, 1));
   /*
