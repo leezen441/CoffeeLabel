@@ -206,6 +206,14 @@ export default function BrewGuide({
                         <span className="flex-1 pt-0.5 text-[0.95rem] leading-snug">
                           {step.text}
                         </span>
+                        {step.waterG && (
+                          <span
+                            className="pt-1 font-mono text-xs whitespace-nowrap"
+                            style={{ color: theme.ink }}
+                          >
+                            {formatWeight(step.waterG)}
+                          </span>
+                        )}
                         {step.at && (
                           <span
                             className="pt-1 font-mono text-xs whitespace-nowrap"

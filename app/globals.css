@@ -602,10 +602,25 @@ body {
 
 .cl-step {
   display: flex;
+  align-items: baseline;
   gap: calc(1 * var(--u));
   font-size: calc(2.8 * var(--u));
   line-height: 1.25;
   color: var(--cl-ink);
+}
+
+/* the text takes the slack so water and time line up on the right edge */
+.cl-step-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.cl-step-water {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--cl-ink);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .cl-step-n {

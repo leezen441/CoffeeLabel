@@ -568,7 +568,12 @@ export default function Sticker({
                       {steps.map((step, i) => (
                         <li key={step.id} className="cl-step">
                           <span className="cl-step-n">{i + 1}.</span>
-                          <span>{step.text}</span>
+                          <span className="cl-step-text">{step.text}</span>
+                          {step.waterG && (
+                            <span className="cl-step-water">
+                              {formatWeight(step.waterG)}
+                            </span>
+                          )}
                           {step.at && (
                             <span className="cl-step-at">{formatTime(step.at)}</span>
                           )}
