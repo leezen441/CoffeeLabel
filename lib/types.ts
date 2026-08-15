@@ -817,6 +817,191 @@ export function normalizeLabel(raw: Partial<CoffeeLabel> & { id: string }): Coff
   };
 }
 
+/* ------------------------------- brew log -------------------------------- */
+
+/** How the cup came out. Each flag votes the grind finer or coarser. */
+export type TasteFlag =
+  | "sour"
+  | "bitter"
+  | "weak"
+  | "harsh"
+  | "fast"
+  | "slow"
+  | "good";
+
+export const TASTE_FLAGS: {
+  id: TasteFlag;
+  label: string;
+  /** −1 wants finer, +1 wants coarser, 0 is neutral */
+  vote: -1 | 0 | 1;
+}[] = [
+  { id: "sour", label: "Sour / sharp", vote: -1 },
+  { id: "weak", label: "Weak / thin", vote: -1 },
+  { id: "fast", label: "Ran fast", vote: -1 },
+  { id: "good", label: "Just right", vote: 0 },
+  { id: "slow", label: "Ran slow", vote: 1 },
+  { id: "bitter", label: "Bitter", vote: 1 },
+  { id: "harsh", label: "Harsh / drying", vote: 1 },
+];
+
+export type BrewEntry = {
+  id: string;
+  labelId: string;
+  /** snapshot, so the entry survives the method being renamed or removed */
+  methodName: string;
+  brewedAt: string;
+  grind: string;
+  doseG: string;
+  yieldG: string;
+  timeText: string;
+  /** 0 = unrated, otherwise 1–5 */
+  rating: number;
+  taste: TasteFlag[];
+  note: string;
+};
+
+export function emptyEntry(labelId: string, methodName: string): BrewEntry {
+  return {
+    id: uid(),
+    labelId,
+    methodName,
+    brewedAt: new Date().toISOString(),
+    grind: "",
+    doseG: "",
+    yieldG: "",
+    timeText: "",
+    rating: 0,
+    taste: [],
+    note: "",
+  };
+}
+
+/** Step size for a nudge, in that grinder's own units. */
+function dialStep(dial: DialKind): { step: number; unit: string; decimals: number } {
+  if (dial === "clicks") return { step: 1, unit: "clicks", decimals: 0 };
+  if (dial === "microns") return { step: 25, unit: "µm", decimals: 0 };
+  return { step: 0.2, unit: "", decimals: 1 };
+}
+
+export type DialAdvice = {
+  direction: "finer" | "coarser" | "hold";
+  headline: string;
+  detail: string;
+  /** suggested next dial value, when the last one was a plain number */
+  suggested: string | null;
+};
+
+/**
+ * Turns the taste flags of the most recent brew into a grind adjustment.
+ *
+ * Votes are summed, so "sour and ran fast" pushes finer twice as hard as sour
+ * alone. Assumes a lower dial number means finer, which holds for every
+ * grinder in GRINDER_BRANDS.
+ */
+export function dialInAdvice(
+  brew: BrewMethod,
+  last: BrewEntry | undefined,
+): DialAdvice | null {
+  if (!last || last.taste.length === 0) return null;
+
+  const votes = last.taste.reduce((sum, id) => {
+    const f = TASTE_FLAGS.find((t) => t.id === id);
+    return sum + (f?.vote ?? 0);
+  }, 0);
+
+  const { dial } = grinderOf(brew);
+  const { step, unit, decimals } = dialStep(dial);
+
+  if (votes === 0) {
+    return {
+      direction: "hold",
+      headline: "Keep the same grind",
+      detail: last.taste.includes("good")
+        ? "Last brew was on the money."
+        : "The notes pull both ways — change one thing at a time.",
+      suggested: last.grind || null,
+    };
+  }
+
+  const finer = votes < 0;
+  const magnitude = Math.min(2, Math.abs(votes));
+  const delta = step * magnitude;
+  const base = parseFloat((last.grind || "").replace(",", "."));
+  const suggested = Number.isFinite(base)
+    ? (finer ? base - delta : base + delta).toFixed(decimals)
+    : null;
+
+  const amount = `${delta.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
+  return {
+    direction: finer ? "finer" : "coarser",
+    headline: `Go ${finer ? "finer" : "coarser"} by about ${amount}`,
+    detail: last.grind
+      ? `Last brew ran at ${last.grind}${unit ? ` ${unit}` : ""}.`
+      : "No grind was recorded last time.",
+    suggested,
+  };
+}
+
+/* -------------------------------- scaling -------------------------------- */
+
+/** Multiplies a numeric field, keeping blanks blank and units intact. */
+export function scaleAmount(value: string, factor: number): string {
+  const v = (value ?? "").trim();
+  if (!v || factor === 1) return v;
+  const n = parseFloat(v.replace(",", "."));
+  if (!Number.isFinite(n)) return v;
+  const scaled = n * factor;
+  // keep one decimal only when it actually adds something
+  const text = scaled >= 100 ? String(Math.round(scaled)) : scaled.toFixed(1).replace(/\.0$/, "");
+  return v.replace(/[\d.,]+/, text);
+}
+
+/** A whole recipe at a different size — display only, never saved. */
+export function scaleBrew(brew: BrewMethod, factor: number): BrewMethod {
+  if (factor === 1) return brew;
+  return {
+    ...brew,
+    doseG: scaleAmount(brew.doseG, factor),
+    yieldG: scaleAmount(brew.yieldG, factor),
+    steps: brew.steps.map((s) => ({ ...s, waterG: scaleAmount(s.waterG, factor) })),
+  };
+}
+
+/* ------------------------------ rest status ------------------------------ */
+
+export type RestStatus = "unknown" | "resting" | "peak" | "past";
+
+export const REST_STATUS_META: Record<
+  RestStatus,
+  { label: string; color: string; short: string }
+> = {
+  unknown: { label: "No roast date", color: "#8b7a68", short: "—" },
+  resting: { label: "Still resting", color: "#B07C1E", short: "Resting" },
+  peak: { label: "Drinking now", color: "#2E6B4B", short: "Ready" },
+  past: { label: "Past peak", color: "#A4302A", short: "Past peak" },
+};
+
+/**
+ * Where a bag sits against its own peak window today. Uses the same
+ * roast-level × brew-method × process calculation the label prints.
+ */
+export function restStatus(label: CoffeeLabel): {
+  status: RestStatus;
+  age: number | null;
+  from: number;
+  to: number;
+  /** days until the window opens, or 0 once it has */
+  daysToPeak: number;
+} {
+  const { from, to } = restWindow(label);
+  const age = daysSince(label.roastDate);
+  if (age === null || age < 0) {
+    return { status: "unknown", age, from, to, daysToPeak: 0 };
+  }
+  const status: RestStatus = age < from ? "resting" : age <= to ? "peak" : "past";
+  return { status, age, from, to, daysToPeak: Math.max(0, from - age) };
+}
+
 /* ------------------------------- brew timer ------------------------------- */
 
 /** "1:45" → 105, "28" → 28. Units are stripped before this is called. */

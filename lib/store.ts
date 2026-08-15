@@ -1,4 +1,4 @@
-import type { CoffeeLabel, LabelGroup } from "./types";
+import type { BrewEntry, CoffeeLabel, LabelGroup } from "./types";
 import { normalizeLabel } from "./types";
 
 export type StorageMode = "cloud" | "local";
@@ -146,6 +146,61 @@ export async function deleteGroup(id: string): Promise<void> {
   writeLocal(touched);
 }
 
+/* ------------------------------- brew log ------------------------------- */
+
+const LS_ENTRIES = "coffee-entries/v1";
+
+function readLocalEntries(): BrewEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(LS_ENTRIES) ?? "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalEntries(entries: BrewEntry[]): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(LS_ENTRIES, JSON.stringify(entries));
+}
+
+const byNewest = (a: BrewEntry, b: BrewEntry) => (a.brewedAt < b.brewedAt ? 1 : -1);
+
+export async function listEntries(labelId?: string): Promise<BrewEntry[]> {
+  if ((await storageMode()) === "cloud") {
+    const qs = labelId ? `?labelId=${encodeURIComponent(labelId)}` : "";
+    const res = await fetch(`/api/entries${qs}`, { cache: "no-store" });
+    if (res.ok) return (await res.json()).entries as BrewEntry[];
+  }
+  const all = readLocalEntries().sort(byNewest);
+  return labelId ? all.filter((e) => e.labelId === labelId) : all;
+}
+
+export async function saveEntry(entry: BrewEntry): Promise<BrewEntry> {
+  if ((await storageMode()) === "cloud") {
+    const res = await fetch("/api/entries", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(entry),
+    });
+    if (res.ok) return (await res.json()).entry as BrewEntry;
+    throw new Error(`Save brew failed (${res.status})`);
+  }
+  const rest = readLocalEntries().filter((e) => e.id !== entry.id);
+  writeLocalEntries([entry, ...rest].sort(byNewest));
+  return entry;
+}
+
+export async function deleteEntry(id: string): Promise<void> {
+  if ((await storageMode()) === "cloud") {
+    const res = await fetch(`/api/entries/${id}`, { method: "DELETE" });
+    if (res.ok) return;
+    throw new Error(`Delete brew failed (${res.status})`);
+  }
+  writeLocalEntries(readLocalEntries().filter((e) => e.id !== id));
+}
+
 /* ------------------------------- backup ------------------------------- */
 
 export type Backup = {
@@ -154,16 +209,22 @@ export type Backup = {
   exportedAt: string;
   groups: LabelGroup[];
   labels: CoffeeLabel[];
+  entries?: BrewEntry[];
 };
 
 export async function exportBackup(): Promise<Backup> {
-  const [labels, groups] = await Promise.all([listLabels(), listGroups()]);
+  const [labels, groups, entries] = await Promise.all([
+    listLabels(),
+    listGroups(),
+    listEntries(),
+  ]);
   return {
     app: "bean-label",
     version: 1,
     exportedAt: new Date().toISOString(),
     groups,
     labels,
+    entries,
   };
 }
 
@@ -174,10 +235,11 @@ export async function exportBackup(): Promise<Backup> {
  */
 export async function importBackup(
   raw: unknown,
-): Promise<{ labels: number; groups: number }> {
+): Promise<{ labels: number; groups: number; entries: number }> {
   const data = raw as Partial<Backup> | CoffeeLabel[];
   const groups = Array.isArray(data) ? [] : (data.groups ?? []);
   const labels = Array.isArray(data) ? data : (data.labels ?? []);
+  const entries = Array.isArray(data) ? [] : (data.entries ?? []);
   if (!Array.isArray(labels)) throw new Error("No labels found in that file");
 
   let g = 0;
@@ -192,7 +254,13 @@ export async function importBackup(
     await saveLabel(normalizeLabel(label));
     l += 1;
   }
-  return { labels: l, groups: g };
+  let e = 0;
+  for (const entry of entries) {
+    if (!entry?.id || !entry?.labelId) continue;
+    await saveEntry(entry);
+    e += 1;
+  }
+  return { labels: l, groups: g, entries: e };
 }
 
 export async function importLabels(labels: CoffeeLabel[]): Promise<number> {

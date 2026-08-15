@@ -12,9 +12,12 @@ import { useOrigin } from "@/lib/useOrigin";
 import {
   type CoffeeLabel,
   type LabelGroup,
+  type RestStatus,
+  REST_STATUS_META,
   emptyGroup,
   emptyLabel,
   labelTitle,
+  restStatus,
   uid,
 } from "@/lib/types";
 
@@ -30,6 +33,7 @@ export default function LibraryPage() {
   /** "" = search everything, otherwise restrict the text search to one group */
   const [scope, setScope] = useState("");
   const [active, setActive] = useState<Set<string>>(new Set());
+  const [ready, setReady] = useState<"all" | RestStatus>("all");
   const [busy, setBusy] = useState(false);
   const [viewing, setViewing] = useState<CoffeeLabel | null>(null);
   /** open "move to group" popover, anchored to the card's tag button */
@@ -89,13 +93,23 @@ export default function LibraryPage() {
     return labels.filter((l) => {
       if (active.size > 0 && !active.has(groupOf(l))) return false;
       if (scope && l.groupId !== scope) return false;
+      if (ready !== "all" && restStatus(l).status !== ready) return false;
       if (!q) return true;
       return [l.coffeeName, l.roaster, l.variety, l.origin, l.process, ...l.tastingNotes]
         .join(" ")
         .toLowerCase()
         .includes(q);
     });
-  }, [labels, query, active, scope, groupOf]);
+  }, [labels, query, active, scope, ready, groupOf]);
+
+  const readyCounts = useMemo(() => {
+    const m = { peak: 0, resting: 0, past: 0 };
+    (labels ?? []).forEach((l) => {
+      const s = restStatus(l).status;
+      if (s in m) m[s as keyof typeof m] += 1;
+    });
+    return m;
+  }, [labels]);
 
   const toggleGroup = (id: string) =>
     setActive((prev) => {
@@ -285,6 +299,39 @@ export default function LibraryPage() {
           )}
         </div>
 
+        {/* Which bags are actually drinkable today */}
+        {labels && labels.length > 0 && (
+          <div className="mb-3 flex flex-wrap items-center gap-1.5">
+            {(
+              [
+                ["all", "All", labels.length],
+                ["peak", "Drinking now", readyCounts.peak],
+                ["resting", "Resting", readyCounts.resting],
+                ["past", "Past peak", readyCounts.past],
+              ] as const
+            ).map(([key, text, count]) => {
+              const on = ready === key;
+              const color =
+                key === "all" ? "var(--brand)" : REST_STATUS_META[key].color;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setReady(key)}
+                  aria-pressed={on}
+                  className="rounded-full border px-3 py-1 text-xs font-semibold transition"
+                  style={{
+                    background: on ? color : "transparent",
+                    borderColor: on ? color : "var(--line)",
+                    color: on ? "#fff" : "var(--muted)",
+                  }}
+                >
+                  {text} <span className="tabular-nums opacity-80">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {(groups.length > 0 || (counts.get(UNGROUPED) ?? 0) > 0) && (
           <div className="mb-5 flex flex-wrap items-center gap-2">
             {groups.map((g) => (
@@ -359,6 +406,23 @@ export default function LibraryPage() {
                     qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
                   />
                 </button>
+
+                {(() => {
+                  const r = restStatus(label);
+                  if (r.status === "unknown") return null;
+                  const meta = REST_STATUS_META[r.status];
+                  return (
+                    <span
+                      className="absolute left-3 top-3 z-10 rounded-full px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.06em] text-white shadow-sm"
+                      style={{ background: meta.color }}
+                      title={`${meta.label} · day ${r.age} of ${r.from}–${r.to}`}
+                    >
+                      {r.status === "resting"
+                        ? `${r.daysToPeak}d to go`
+                        : meta.short}
+                    </span>
+                  );
+                })()}
 
                 {/* Siblings of the thumbnail button — interactive elements cannot nest. */}
                 <div className="absolute right-3 top-3 z-10 flex flex-col gap-1.5">

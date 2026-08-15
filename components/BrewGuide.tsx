@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import BrewLog from "./BrewLog";
 import BrewTimer from "./BrewTimer";
 import * as store from "@/lib/store";
 import {
@@ -22,6 +23,7 @@ import {
   formatWeight,
   labelTitle,
   ratioOf,
+  scaleBrew,
   stepTimeLabel,
 } from "@/lib/types";
 
@@ -38,6 +40,7 @@ export default function BrewGuide({
   );
   const [active, setActive] = useState(0);
   const [timing, setTiming] = useState<BrewMethod | null>(null);
+  const [factor, setFactor] = useState(1);
 
   useEffect(() => {
     if (initial) return;
@@ -72,7 +75,9 @@ export default function BrewGuide({
 
   const theme = THEMES[label.theme] ?? THEMES.espresso;
   const brews = label.brews.filter((b) => b.name || b.steps.some((s) => s.text));
-  const brew = brews[Math.min(active, brews.length - 1)];
+  const rawBrew = brews[Math.min(active, brews.length - 1)];
+  // Scaling is presentational — the stored recipe is never touched.
+  const brew = rawBrew ? scaleBrew(rawBrew, factor) : rawBrew;
   const age = daysSince(label.roastDate);
   const bb = bestBefore(label.roastDate, label.bestBeforeDays);
   const rest = restWindow(label);
@@ -178,6 +183,35 @@ export default function BrewGuide({
               className="mt-4 rounded-2xl p-5"
               style={{ border: `1px solid ${theme.rule}`, background: "rgb(255 255 255 / 0.6)" }}
             >
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span
+                  className="text-[0.65rem] font-bold uppercase tracking-[0.12em]"
+                  style={{ color: theme.muted }}
+                >
+                  Batch
+                </span>
+                {[0.5, 1, 1.5, 2, 3].map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFactor(f)}
+                    aria-pressed={factor === f}
+                    className="rounded-full px-3 py-1 text-xs font-bold transition"
+                    style={{
+                      background: factor === f ? theme.accent : "transparent",
+                      border: `1px solid ${factor === f ? theme.accent : theme.rule}`,
+                      color: factor === f ? theme.paper : theme.muted,
+                    }}
+                  >
+                    {f}×
+                  </button>
+                ))}
+                {factor !== 1 && (
+                  <span className="text-xs" style={{ color: theme.muted }}>
+                    dose, yield and every pour scaled — the saved recipe is unchanged
+                  </span>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <Stat theme={theme} label="Water" value={brew.waterTempC ? `${brew.waterTempC}°C` : "—"} />
                 <Stat
@@ -250,6 +284,8 @@ export default function BrewGuide({
             </div>
           </>
         )}
+
+        {rawBrew && <BrewLog labelId={label.id} brew={rawBrew} theme={theme} />}
 
         <div className="mt-10 flex gap-2 text-sm">
           <Link href={`/editor/${label.id}`} className="btn">

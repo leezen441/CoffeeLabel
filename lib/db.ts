@@ -1,5 +1,5 @@
 import { neon } from "@neondatabase/serverless";
-import type { CoffeeLabel, LabelGroup } from "./types";
+import type { BrewEntry, CoffeeLabel, LabelGroup } from "./types";
 import { normalizeLabel } from "./types";
 
 /**
@@ -51,6 +51,18 @@ async function ensureSchema(): Promise<void> {
           data        JSONB NOT NULL,
           created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
         )
+      `;
+      await sql`
+        CREATE TABLE IF NOT EXISTS coffee_entries (
+          id          TEXT PRIMARY KEY,
+          label_id    TEXT NOT NULL,
+          data        JSONB NOT NULL,
+          brewed_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+      `;
+      await sql`
+        CREATE INDEX IF NOT EXISTS coffee_entries_label_idx
+        ON coffee_entries (label_id, brewed_at DESC)
       `;
     })().catch((err) => {
       // Let the next call retry rather than caching a failure forever.
@@ -126,6 +138,43 @@ export async function saveGroup(group: LabelGroup): Promise<LabelGroup> {
     ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data
   `;
   return group;
+}
+
+/* ------------------------------- brew log -------------------------------- */
+
+type EntryRow = { id: string; data: BrewEntry };
+
+export async function listEntries(labelId?: string): Promise<BrewEntry[]> {
+  await ensureSchema();
+  const sql = client();
+  const rows = (labelId
+    ? await sql`
+        SELECT id, data FROM coffee_entries
+        WHERE label_id = ${labelId} ORDER BY brewed_at DESC
+      `
+    : await sql`
+        SELECT id, data FROM coffee_entries ORDER BY brewed_at DESC LIMIT 500
+      `) as EntryRow[];
+  return rows.map((r) => ({ ...r.data, id: r.id }));
+}
+
+export async function saveEntry(entry: BrewEntry): Promise<BrewEntry> {
+  await ensureSchema();
+  const sql = client();
+  await sql`
+    INSERT INTO coffee_entries (id, label_id, data, brewed_at)
+    VALUES (${entry.id}, ${entry.labelId}, ${JSON.stringify(entry)}::jsonb,
+            ${entry.brewedAt})
+    ON CONFLICT (id) DO UPDATE
+      SET data = EXCLUDED.data, brewed_at = EXCLUDED.brewed_at
+  `;
+  return entry;
+}
+
+export async function deleteEntry(id: string): Promise<void> {
+  await ensureSchema();
+  const sql = client();
+  await sql`DELETE FROM coffee_entries WHERE id = ${id}`;
 }
 
 /** Removes the group and clears it from any label that referenced it. */
