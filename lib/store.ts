@@ -146,6 +146,55 @@ export async function deleteGroup(id: string): Promise<void> {
   writeLocal(touched);
 }
 
+/* ------------------------------- backup ------------------------------- */
+
+export type Backup = {
+  app: "bean-label";
+  version: 1;
+  exportedAt: string;
+  groups: LabelGroup[];
+  labels: CoffeeLabel[];
+};
+
+export async function exportBackup(): Promise<Backup> {
+  const [labels, groups] = await Promise.all([listLabels(), listGroups()]);
+  return {
+    app: "bean-label",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    groups,
+    labels,
+  };
+}
+
+/**
+ * Restores a backup by upsert — nothing is deleted, and anything with the same
+ * id is overwritten. Groups go first so the labels' groupId still resolves.
+ * Also accepts a bare array of labels, the shape older exports used.
+ */
+export async function importBackup(
+  raw: unknown,
+): Promise<{ labels: number; groups: number }> {
+  const data = raw as Partial<Backup> | CoffeeLabel[];
+  const groups = Array.isArray(data) ? [] : (data.groups ?? []);
+  const labels = Array.isArray(data) ? data : (data.labels ?? []);
+  if (!Array.isArray(labels)) throw new Error("No labels found in that file");
+
+  let g = 0;
+  for (const group of groups) {
+    if (!group?.id || !group?.name) continue;
+    await saveGroup(group);
+    g += 1;
+  }
+  let l = 0;
+  for (const label of labels) {
+    if (!label?.id) continue;
+    await saveLabel(normalizeLabel(label));
+    l += 1;
+  }
+  return { labels: l, groups: g };
+}
+
 export async function importLabels(labels: CoffeeLabel[]): Promise<number> {
   let count = 0;
   for (const raw of labels) {

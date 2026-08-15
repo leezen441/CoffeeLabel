@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import StickerScaler from "@/components/StickerScaler";
@@ -36,6 +36,7 @@ export default function LibraryPage() {
   const [menu, setMenu] = useState<{ label: CoffeeLabel; x: number; y: number } | null>(
     null,
   );
+  const fileRef = useRef<HTMLInputElement>(null);
   const origin = useOrigin();
 
   const refresh = useCallback(
@@ -117,6 +118,41 @@ export default function LibraryPage() {
       await refresh();
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function exportBackup() {
+    setBusy(true);
+    try {
+      const data = await store.exportBackup();
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `bean-label-backup-${data.exportedAt.slice(0, 10)}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function restoreBackup(file: File) {
+    setBusy(true);
+    try {
+      const parsed = JSON.parse(await file.text());
+      const { labels: l, groups: g } = await store.importBackup(parsed);
+      await refresh();
+      alert(
+        `Restored ${l} label${l === 1 ? "" : "s"} and ${g} group${g === 1 ? "" : "s"}.`,
+      );
+    } catch (err) {
+      alert(`That file could not be restored: ${String(err)}`);
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
@@ -381,6 +417,43 @@ export default function LibraryPage() {
               </article>
             ))}
           </div>
+        )}
+
+        {/* Tucked at the foot of the page — needed, but not every day. */}
+        {labels && (
+          <footer className="mt-10 border-t border-line pt-4 text-xs text-muted">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <span className="font-semibold uppercase tracking-[0.1em]">Backup</span>
+              <button
+                className="underline underline-offset-2 hover:text-brand disabled:opacity-50"
+                onClick={exportBackup}
+                disabled={busy || !labels.length}
+              >
+                Download a copy
+              </button>
+              <button
+                className="underline underline-offset-2 hover:text-brand"
+                onClick={() => fileRef.current?.click()}
+                disabled={busy}
+              >
+                Restore from file
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void restoreBackup(f);
+                }}
+              />
+              <span className="opacity-70">
+                Saves every label and group as one JSON file. Restoring merges by id —
+                nothing is deleted.
+              </span>
+            </div>
+          </footer>
         )}
       </main>
 
