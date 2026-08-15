@@ -90,7 +90,9 @@ export const GRINDER_BRANDS: { brand: string; models: GrinderModel[] }[] = [
   {
     brand: "Option-O",
     models: [
+      { name: "Lagom 01", dial: "clicks", placeholder: "12" },
       { name: "Lagom Mini", dial: "number", placeholder: "3.5" },
+      { name: "Lagom Casa 65", dial: "number", placeholder: "6.2" },
       { name: "Lagom P64", dial: "number", placeholder: "3.5" },
       { name: "Lagom P100", dial: "number", placeholder: "3.5" },
     ],
