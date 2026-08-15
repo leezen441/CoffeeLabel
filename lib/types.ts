@@ -259,14 +259,35 @@ export function flavorColor(note: string): string {
 
 /* --------------------------- rest / degas window --------------------------- */
 
-const REST_RULES: { match: RegExp; from: number; to: number; label: string }[] = [
-  { match: /anaerobic|carbonic|macerat|ferment/i, from: 14, to: 21, label: "Anaerobic" },
-  { match: /natural|dry\s*process/i, from: 14, to: 21, label: "Natural" },
-  { match: /honey|pulped/i, from: 12, to: 18, label: "Honey" },
-  { match: /washed|wet/i, from: 10, to: 14, label: "Washed" },
-];
+/**
+ * Base resting days by roast level. Roast level is the strongest driver: a
+ * light roast is denser and holds CO2 far longer than a dark one. Pressure
+ * brewing is the second driver — leftover CO2 disrupts an espresso shot long
+ * after the same coffee tastes fine through a filter.
+ */
+const REST_BY_ROAST: Record<
+  RoastLevel,
+  { filter: [number, number]; espresso: [number, number] }
+> = {
+  1: { filter: [10, 16], espresso: [18, 28] },
+  2: { filter: [8, 14], espresso: [15, 24] },
+  3: { filter: [6, 12], espresso: [12, 20] },
+  4: { filter: [5, 9], espresso: [9, 16] },
+  5: { filter: [3, 7], espresso: [6, 12] },
+};
 
-/** Recommended resting days, derived from the process unless overridden. */
+const ESPRESSO_RE = /espresso|moka|lever|piston/i;
+
+/** True when any recipe on the label is a pressure brew. */
+export function hasEspresso(label: CoffeeLabel): boolean {
+  return label.brews.some((b) => ESPRESSO_RE.test(b.name ?? ""));
+}
+
+/**
+ * Recommended resting days from roast level × brew method × process, unless
+ * the label overrides it. When a label carries both espresso and filter
+ * recipes the espresso window wins, since it is the binding constraint.
+ */
 export function restWindow(label: CoffeeLabel): {
   from: number;
   to: number;
@@ -276,9 +297,23 @@ export function restWindow(label: CoffeeLabel): {
   if (label.restFrom > 0 && label.restTo > 0) {
     return { from: label.restFrom, to: label.restTo, auto: false, basis: "Custom" };
   }
-  const rule = REST_RULES.find((r) => r.match.test(label.process ?? ""));
-  if (rule) return { from: rule.from, to: rule.to, auto: true, basis: rule.label };
-  return { from: 10, to: 14, auto: true, basis: "Default" };
+
+  const level = (REST_BY_ROAST[label.roastLevel] ?? REST_BY_ROAST[3]);
+  const espresso = hasEspresso(label);
+  const [baseFrom, baseTo] = espresso ? level.espresso : level.filter;
+  const bias = processBias(label.process);
+
+  const from = Math.max(1, baseFrom + bias);
+  const to = Math.max(from + 1, baseTo + bias);
+
+  const parts = [
+    `${ROAST_LEVELS[label.roastLevel]?.name ?? "Medium"} roast`,
+    espresso ? "espresso" : "filter",
+  ];
+  if (bias !== 0 && label.process.trim()) {
+    parts.push(`${label.process.trim()} ${bias > 0 ? "+" : ""}${bias}d`);
+  }
+  return { from, to, auto: true, basis: parts.join(" · ") };
 }
 
 export const METHOD_PRESETS = [
@@ -294,14 +329,89 @@ export const METHOD_PRESETS = [
   "Siphon",
 ] as const;
 
-export const PROCESS_PRESETS = [
-  "Washed",
-  "Natural",
-  "Honey",
-  "Anaerobic",
-  "Wet Hulled",
-  "Carbonic Maceration",
-] as const;
+/**
+ * Processing methods, grouped for the picker. `restBias` shifts the resting
+ * window: the more fermentation a coffee has seen, the longer it wants to
+ * degas. Washed is the baseline at 0.
+ */
+export type ProcessOption = { name: string; restBias: number };
+
+export const PROCESS_GROUPS: { group: string; items: ProcessOption[] }[] = [
+  {
+    group: "Washed",
+    items: [
+      { name: "Washed", restBias: 0 },
+      { name: "Fully Washed", restBias: 0 },
+      { name: "Double Washed", restBias: 0 },
+      { name: "Semi-Washed", restBias: 0 },
+      { name: "Wet Hulled (Giling Basah)", restBias: 0 },
+    ],
+  },
+  {
+    group: "Honey / Pulped Natural",
+    items: [
+      { name: "Honey", restBias: 2 },
+      { name: "White Honey", restBias: 1 },
+      { name: "Yellow Honey", restBias: 2 },
+      { name: "Red Honey", restBias: 2 },
+      { name: "Black Honey", restBias: 3 },
+      { name: "Pulped Natural", restBias: 2 },
+    ],
+  },
+  {
+    group: "Natural",
+    items: [
+      { name: "Natural", restBias: 3 },
+      { name: "Dry Natural", restBias: 3 },
+      { name: "Monsooned", restBias: -2 },
+    ],
+  },
+  {
+    group: "Fermented / Experimental",
+    items: [
+      { name: "Anaerobic Natural", restBias: 5 },
+      { name: "Anaerobic Washed", restBias: 5 },
+      { name: "Carbonic Maceration", restBias: 5 },
+      { name: "Lactic Fermentation", restBias: 5 },
+      { name: "Yeast Fermentation", restBias: 5 },
+      { name: "Co-Fermented", restBias: 5 },
+      { name: "Barrel Aged", restBias: 5 },
+      { name: "Thermal Shock", restBias: 4 },
+      { name: "Infused", restBias: 5 },
+    ],
+  },
+  {
+    group: "Decaf",
+    items: [
+      { name: "Swiss Water Decaf", restBias: -2 },
+      { name: "Sugarcane EA Decaf", restBias: -2 },
+      { name: "CO₂ Decaf", restBias: -2 },
+    ],
+  },
+];
+
+export const PROCESS_OPTIONS: ProcessOption[] = PROCESS_GROUPS.flatMap((g) => g.items);
+
+/** Fallback keyword matching, so free-typed legacy values still get a bias. */
+const PROCESS_KEYWORDS: { match: RegExp; bias: number }[] = [
+  { match: /anaerobic|carbonic|macerat|lactic|yeast|co-?ferment|barrel|infus/i, bias: 5 },
+  { match: /thermal/i, bias: 4 },
+  { match: /natural|dry\s*process/i, bias: 3 },
+  { match: /black\s*honey/i, bias: 3 },
+  { match: /honey|pulped/i, bias: 2 },
+  { match: /decaf|swiss water|sugarcane|monsoon/i, bias: -2 },
+  { match: /washed|wet/i, bias: 0 },
+];
+
+export function processBias(process: string): number {
+  const p = (process ?? "").trim();
+  if (!p) return 0;
+  const exact = PROCESS_OPTIONS.find((o) => o.name.toLowerCase() === p.toLowerCase());
+  if (exact) return exact.restBias;
+  // Compound entries like "Barrel Aged, Natural" take the strongest match.
+  const hits = PROCESS_KEYWORDS.filter((k) => k.match.test(p)).map((k) => k.bias);
+  return hits.length ? Math.max(...hits) : 0;
+}
 
 export const THEMES: Record<
   ThemeId,

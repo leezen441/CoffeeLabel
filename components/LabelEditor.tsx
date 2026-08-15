@@ -12,7 +12,8 @@ import {
   FLAVOR_FAMILIES,
   MAX_BREWS,
   MAX_NOTES,
-  PROCESS_PRESETS,
+  PROCESS_GROUPS,
+  PROCESS_OPTIONS,
   ROAST_LEVELS,
   emptyBrew,
   flavorColor,
@@ -28,6 +29,7 @@ export default function LabelEditor({ id }: { id: string }) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [noteDraft, setNoteDraft] = useState("");
   const [groups, setGroups] = useState<LabelGroup[]>([]);
+  const [customProcess, setCustomProcess] = useState(false);
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dirty = useRef(false);
@@ -115,6 +117,7 @@ export default function LabelEditor({ id }: { id: string }) {
   };
 
   const rest = restWindow(label);
+  const knownProcess = PROCESS_OPTIONS.some((p) => p.name === label.process);
 
   const addNote = () => {
     const value = noteDraft.trim();
@@ -183,18 +186,38 @@ export default function LabelEditor({ id }: { id: string }) {
               </label>
               <label className="field">
                 <span>Process</span>
-                <input
-                  className="input"
-                  list="process-presets"
-                  placeholder="Washed"
-                  value={label.process}
-                  onChange={(e) => update({ process: e.target.value })}
-                />
-                <datalist id="process-presets">
-                  {PROCESS_PRESETS.map((p) => (
-                    <option key={p} value={p} />
+                <select
+                  className="select"
+                  value={knownProcess ? label.process : "__custom"}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    update({ process: v === "__custom" ? "" : v });
+                    setCustomProcess(v === "__custom");
+                  }}
+                >
+                  <option value="">— None —</option>
+                  {PROCESS_GROUPS.map((g) => (
+                    <optgroup key={g.group} label={g.group}>
+                      {g.items.map((p) => (
+                        <option key={p.name} value={p.name}>
+                          {p.name}
+                          {p.restBias !== 0
+                            ? ` (${p.restBias > 0 ? "+" : ""}${p.restBias}d rest)`
+                            : ""}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
-                </datalist>
+                  <option value="__custom">Other…</option>
+                </select>
+                {(customProcess || (!knownProcess && label.process)) && (
+                  <input
+                    className="input mt-2"
+                    placeholder="Type the process"
+                    value={label.process}
+                    onChange={(e) => update({ process: e.target.value })}
+                  />
+                )}
               </label>
               <label className="field">
                 <span>Origin</span>
@@ -353,11 +376,11 @@ export default function LabelEditor({ id }: { id: string }) {
               {label.showRest && (
                 <div className="sm:col-span-2 rounded-lg border border-line bg-paper/60 p-3">
                   <p className="text-xs text-muted">
-                    From process <b className="text-ink">{label.process || "—"}</b> →{" "}
+                    <b className="text-ink">{rest.basis}</b> →{" "}
                     <b className="text-ink">
                       Day {rest.from}–{rest.to}
                     </b>{" "}
-                    ({rest.auto ? `${rest.basis} default` : "custom"})
+                    after roasting
                   </p>
                   <div className="mt-2 grid grid-cols-2 gap-3">
                     <label className="field">
@@ -384,8 +407,9 @@ export default function LabelEditor({ id }: { id: string }) {
                     </label>
                   </div>
                   <p className="mt-1 text-xs text-muted">
-                    Leave both blank to follow the process automatically — Washed 10–14,
-                    Honey 12–18, Natural &amp; Anaerobic 14–21 days.
+                    Leave both blank to calculate it: roast level sets the base (light
+                    rests longest), espresso adds about a week over filter, and the
+                    process shifts it further. A guide only — tasting beats any formula.
                   </p>
                 </div>
               )}
