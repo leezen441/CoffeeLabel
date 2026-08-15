@@ -49,7 +49,7 @@ export function sampleLabel(): CoffeeLabel {
         waterTempC: "93",
         doseG: "18",
         yieldG: "38",
-        grinderBrand: "DF / Lagom",
+        grinderBrand: "DF",
         grinderModel: "DF64",
         grind: "1.8",
         totalTime: "28s",

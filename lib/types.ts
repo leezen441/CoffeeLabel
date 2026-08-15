@@ -77,14 +77,22 @@ export const GRINDER_BRANDS: { brand: string; models: GrinderModel[] }[] = [
     ],
   },
   {
-    brand: "DF / Lagom",
+    brand: "DF",
     models: [
       { name: "DF54", dial: "number", placeholder: "6.2" },
       { name: "DF64", dial: "number", placeholder: "6.2" },
       { name: "DF64 Gen 2", dial: "number", placeholder: "6.2" },
+      { name: "DF64V", dial: "number", placeholder: "6.2" },
       { name: "DF83", dial: "number", placeholder: "6.2" },
-      { name: "Lagom P64", dial: "number", placeholder: "3.5" },
+      { name: "DF83V", dial: "number", placeholder: "6.2" },
+    ],
+  },
+  {
+    brand: "Option-O",
+    models: [
       { name: "Lagom Mini", dial: "number", placeholder: "3.5" },
+      { name: "Lagom P64", dial: "number", placeholder: "3.5" },
+      { name: "Lagom P100", dial: "number", placeholder: "3.5" },
     ],
   },
   {
@@ -719,6 +727,12 @@ export function emptyLabel(): CoffeeLabel {
  * Splits a legacy single-field grinder name ("Comandante C40") into brand and
  * model, so labels saved before the two-step picker keep working.
  */
+/** Brands that were once stored under a different name. */
+function remapBrand(brand: string, model: string): string {
+  if (brand === "DF / Lagom") return /^lagom/i.test(model) ? "Option-O" : "DF";
+  return brand;
+}
+
 function splitLegacyGrinder(name: string): { grinderBrand: string; grinderModel: string } {
   const legacy = (name ?? "").trim();
   if (!legacy) return { grinderBrand: "", grinderModel: "" };
@@ -744,7 +758,10 @@ export function normalizeLabel(raw: Partial<CoffeeLabel> & { id: string }): Coff
       const grinder =
         legacy.grinderBrand || legacy.grinderModel
           ? {
-              grinderBrand: legacy.grinderBrand ?? "",
+              grinderBrand: remapBrand(
+                legacy.grinderBrand ?? "",
+                legacy.grinderModel ?? "",
+              ),
               grinderModel: legacy.grinderModel ?? "",
             }
           : splitLegacyGrinder(legacy.grinder ?? "");
