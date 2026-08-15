@@ -591,50 +591,61 @@ body {
   flex-shrink: 0;
 }
 
+/*
+ * The brew sequence is a four-column table: no. | step | water | time.
+ * One grid for the whole list keeps the columns aligned across every row —
+ * as separate flex rows each line sized itself and the numbers came out ragged.
+ */
 .cl-steps {
   margin: 0;
   padding: 0;
   list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: calc(0.3 * var(--u));
-}
-
-.cl-step {
-  display: flex;
-  align-items: baseline;
-  gap: calc(1 * var(--u));
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  column-gap: calc(1.4 * var(--u));
+  row-gap: 0;
   font-size: calc(2.8 * var(--u));
   line-height: 1.25;
   color: var(--cl-ink);
 }
 
-/* the text takes the slack so water and time line up on the right edge */
-.cl-step-text {
-  flex: 1;
+/* contents, so each span becomes a cell of the shared grid */
+.cl-step {
+  display: contents;
+}
+
+.cl-step > * {
+  padding-top: calc(0.55 * var(--u));
+  padding-bottom: calc(0.55 * var(--u));
+  border-top: max(0.5px, calc(0.12 * var(--u))) solid var(--cl-rule);
   min-width: 0;
 }
 
-.cl-step-water {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  color: var(--cl-ink);
-  flex-shrink: 0;
-  white-space: nowrap;
+/* no rule above the first row — it already sits under the grind line */
+.cl-steps > .cl-step:first-child > * {
+  border-top: none;
 }
 
 .cl-step-n {
   font-family: var(--font-mono);
   font-weight: 700;
   color: var(--cl-accent);
-  flex-shrink: 0;
-  min-width: calc(3.2 * var(--u));
+  white-space: nowrap;
+}
+
+.cl-step-water {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--cl-ink);
+  white-space: nowrap;
+  text-align: right;
 }
 
 .cl-step-at {
   font-family: var(--font-mono);
   color: var(--cl-muted);
-  flex-shrink: 0;
+  white-space: nowrap;
+  text-align: right;
 }
 
 .cl-foot {

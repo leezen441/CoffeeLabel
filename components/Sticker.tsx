@@ -566,17 +566,17 @@ export default function Sticker({
                     steps.length > 0 && (
                     <ol className="cl-steps">
                       {steps.map((step, i) => (
+                        // Every cell is always emitted, empty or not, so the
+                        // grid columns stay aligned down the whole table.
                         <li key={step.id} className="cl-step">
                           <span className="cl-step-n">{i + 1}.</span>
                           <span className="cl-step-text">{step.text}</span>
-                          {step.waterG && (
-                            <span className="cl-step-water">
-                              {formatWeight(step.waterG)}
-                            </span>
-                          )}
-                          {step.at && (
-                            <span className="cl-step-at">{formatTime(step.at)}</span>
-                          )}
+                          <span className="cl-step-water">
+                            {step.waterG ? formatWeight(step.waterG) : ""}
+                          </span>
+                          <span className="cl-step-at">
+                            {step.at ? formatTime(step.at) : ""}
+                          </span>
                         </li>
                       ))}
                     </ol>
