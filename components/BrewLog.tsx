@@ -314,8 +314,12 @@ export default function BrewLog({
                       formatDoseYield(proposed.doseG, proposed.yieldG),
                       proposed.doseG !== brew.doseG || proposed.yieldG !== brew.yieldG,
                     ],
-                    [tr("ratio"), ratioOf(proposed), false],
-                    [tr("time"), formatTime(proposed.totalTime), false],
+                    [tr("ratio"), ratioOf(proposed), ratioOf(proposed) !== ratioOf(brew)],
+                    [
+                      tr("time"),
+                      formatTime(proposed.totalTime),
+                      proposed.totalTime !== brew.totalTime,
+                    ],
                   ] as const
                 )
                   .filter(([, value]) => value)

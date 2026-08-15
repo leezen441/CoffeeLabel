@@ -28,9 +28,12 @@ import {
  *     follows. So flow is read as evidence, never prescribed directly.
  */
 
-export type BrewFamily = "espresso" | "pourover" | "immersion";
+export type BrewFamily = "espresso" | "pourover" | "immersion" | "cold";
 
 export function methodFamily(name: string): BrewFamily {
+  // Cold first: "cold brew" would otherwise fall through to the pourover
+  // default and be judged against a three-minute drawdown.
+  if (/cold\s*brew|cold[\s-]?drip|kyoto|toddy|nitro/i.test(name)) return "cold";
   if (/espresso|moka|lever|piston|flair|robot/i.test(name)) return "espresso";
   if (/aeropress|french|press|clever|immersion|steep|cupping|siphon/i.test(name)) {
     return "immersion";
@@ -58,21 +61,81 @@ const FLAG_MEANING: Record<
   good: { under: 0, over: 0, strength: 0, uneven: 0 },
 };
 
-/** Typical windows, used only to comment on what was logged. */
+/**
+ * `time` is the wide window — outside it, the run is worth remarking on.
+ * `aim` is the tighter one the advice actually steers toward, and is what
+ * `timeLabel` describes.
+ */
 const TARGETS: Record<
   BrewFamily,
-  { time: [number, number]; ratio: [number, number]; timeLabel: string }
+  {
+    time: [number, number];
+    aim: [number, number];
+    ratio: [number, number];
+    timeLabel: string;
+  }
 > = {
-  espresso: { time: [22, 36], ratio: [1.5, 2.6], timeLabel: "25–32 s" },
-  pourover: { time: [150, 240], ratio: [14, 18], timeLabel: "2:30–3:30" },
-  immersion: { time: [0, 0], ratio: [13, 18], timeLabel: "" },
+  espresso: { time: [22, 36], aim: [25, 32], ratio: [1.5, 2.6], timeLabel: "25–32 s" },
+  pourover: { time: [150, 240], aim: [150, 210], ratio: [14, 18], timeLabel: "2:30–3:30" },
+  immersion: { time: [0, 0], aim: [0, 0], ratio: [13, 18], timeLabel: "" },
+  // Steep length is the lever here, not flow time, so there is no time window
+  // at all. The ratio band is wide on purpose: 1:8 concentrate and 1:17
+  // ready-to-drink are both correct, just different drinks.
+  cold: { time: [0, 0], aim: [0, 0], ratio: [8, 17], timeLabel: "" },
 };
+
+/** A family only gets time advice when it actually has a time window. */
+const hasTimeWindow = (family: BrewFamily) => TARGETS[family].time[1] > 0;
+
+/** Seconds written the way this recipe already writes them. */
+function formatSeconds(seconds: number, sample: string): string {
+  const mmss = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+  if ((sample ?? "").includes(":")) return mmss;
+  if (/^\s*\d+\s*s/i.test(sample ?? "")) return `${seconds}s`;
+  return seconds < 60 ? `${seconds}s` : mmss;
+}
+
+/**
+ * The time the next brew should land on — never a lever in itself. It is only
+ * offered when the grind is already moving the flow in that direction, so it
+ * reads as "expect this", not "force this".
+ */
+function timeTarget(
+  family: BrewFamily,
+  seconds: number | null,
+  direction: Advice["grindDirection"],
+  sample: string,
+): string | null {
+  if (!hasTimeWindow(family) || direction === "hold" || seconds === null) return null;
+  const [low, high] = TARGETS[family].aim;
+  if (direction === "finer" && seconds < low) return formatSeconds(low, sample);
+  if (direction === "coarser" && seconds > high) return formatSeconds(high, sample);
+  return null;
+}
 
 /** Water temperature nudged by a few degrees, capped at boiling. */
 function tempPlus(value: string, degrees: number): string | null {
   const n = parseFloat((value ?? "").replace(",", "."));
   if (!Number.isFinite(n)) return null;
   return String(Math.min(100, Math.round(n + degrees)));
+}
+
+/**
+ * A dial setting only means something above zero — when a step would take the
+ * grinder past its own floor there is no number to suggest, and the written
+ * advice ("go finer") has to carry it instead.
+ */
+function dialValue(value: number, decimals: number): string | null {
+  if (!Number.isFinite(value) || value <= 0) return null;
+  // Rounding can land on zero even when the raw number was positive.
+  const text = value.toFixed(decimals);
+  return parseFloat(text) > 0 ? text : null;
+}
+
+/** "2 clicks", but "1 click". */
+function withUnit(value: string, unit: string): string {
+  if (!unit) return value;
+  return `${value} ${parseFloat(value) === 1 ? unit.replace(/s$/, "") : unit}`;
 }
 
 function dialStep(dial: DialKind): { step: number; unit: string; decimals: number } {
@@ -85,7 +148,7 @@ export type AdviceAction = { text: string; why?: string };
 
 /** A single value the advice would change, ready to be written into the recipe. */
 export type AdviceChange = {
-  field: "grind" | "waterTempC" | "doseG" | "yieldG";
+  field: "grind" | "waterTempC" | "doseG" | "yieldG" | "totalTime";
   label: string;
   from: string;
   to: string;
@@ -154,6 +217,19 @@ export function applyChanges(brew: BrewMethod, changes: AdviceChange[]): BrewMet
       text: scaleGramsInText(s.text, factor),
     }));
   }
+
+  // A longer total is drawdown, not a longer pour: the schedule stays put and
+  // only the step that used to finish at the old total now finishes later.
+  const oldTotal = parseClock(brew.totalTime ?? "");
+  const newTotal = parseClock(next.totalTime ?? "");
+  if (oldTotal !== null && newTotal !== null && oldTotal !== newTotal) {
+    for (let i = next.steps.length - 1; i >= 0; i--) {
+      const end = parseClock(next.steps[i].endAt ?? "");
+      if (end === null) continue;
+      if (end === oldTotal) next.steps[i] = { ...next.steps[i], endAt: next.totalTime };
+      break;
+    }
+  }
   return next;
 }
 
@@ -175,7 +251,14 @@ export function dialIn(
     temp: L(lang, "Water °C", "อุณหภูมิน้ำ °C"),
     dose: L(lang, "Dose", "ผงกาแฟ"),
     yield: L(lang, "Yield", "น้ำหนักที่ได้"),
+    time: L(lang, "Time (target)", "เวลา (เป้าหมาย)"),
   };
+  const TIME_WHY = (finer: boolean) =>
+    L(
+      lang,
+      `a ${finer ? "finer" : "coarser"} grind ${finer ? "slows" : "speeds"} the flow — expect to land here, don't force it`,
+      `บด${finer ? "ละเอียด" : "หยาบ"}ขึ้นแล้วน้ำจะไหล${finer ? "ช้า" : "เร็ว"}ลง — เป็นผลที่ควรได้ ไม่ใช่ค่าที่ต้องฝืน`,
+    );
 
   let under = 0;
   let over = 0;
@@ -219,7 +302,7 @@ export function dialIn(
       );
     }
   }
-  if (seconds !== null && family !== "immersion") {
+  if (seconds !== null && hasTimeWindow(family)) {
     const shown = last.timeText || (lang === "th" ? "เวลานี้" : "That");
     if (seconds < t.time[0]) {
       numbers.push(
@@ -296,20 +379,47 @@ export function dialIn(
               ),
             },
           ]
-        : [
-            {
-              text: L(
-                lang,
-                "Stir once at the start so nothing floats dry",
-                "คนหนึ่งครั้งตอนเริ่ม อย่าให้มีผงลอยแห้ง",
-              ),
-              why: L(
-                lang,
-                "immersion only works if all the grounds are actually wetted",
-                "การแช่จะได้ผลก็ต่อเมื่อผงทุกส่วนเปียกน้ำจริง",
-              ),
-            },
-          ];
+        : family === "cold"
+          ? [
+              {
+                text: L(
+                  lang,
+                  "Wet everything at the start and push the floating crust under",
+                  "ทำให้ผงเปียกทั่วตั้งแต่แรก แล้วกดชั้นผงที่ลอยให้จมน้ำ",
+                ),
+                why: L(
+                  lang,
+                  "cold water never wets grounds by itself — a dry raft on top steeps nothing for hours",
+                  "น้ำเย็นไม่ทำให้ผงเปียกเองเลย ชั้นผงที่ลอยแห้งอยู่ด้านบนจะไม่ถูกสกัดเลยตลอดหลายชั่วโมง",
+                ),
+              },
+              {
+                text: L(
+                  lang,
+                  "Filter slowly and never squeeze the bag or the grounds",
+                  "กรองช้าๆ และอย่าบีบถุงหรือคั้นผงกาแฟ",
+                ),
+                why: L(
+                  lang,
+                  "squeezing pushes out the bitter, silty end that the long steep carefully avoided",
+                  "การบีบจะดันส่วนที่ขมและตะกอนออกมา ซึ่งเป็นสิ่งที่การแช่นานๆ พยายามเลี่ยงอยู่",
+                ),
+              },
+            ]
+          : [
+              {
+                text: L(
+                  lang,
+                  "Stir once at the start so nothing floats dry",
+                  "คนหนึ่งครั้งตอนเริ่ม อย่าให้มีผงลอยแห้ง",
+                ),
+                why: L(
+                  lang,
+                  "immersion only works if all the grounds are actually wetted",
+                  "การแช่จะได้ผลก็ต่อเมื่อผงทุกส่วนเปียกน้ำจริง",
+                ),
+              },
+            ];
 
   /* ---------- 1. uneven extraction wins over everything ---------- */
   const contradictory = under > 0 && over > 0;
@@ -326,9 +436,9 @@ export function dialIn(
       direction = ranFast ? "finer" : "coarser";
       const base = parseFloat((last.grind || "").replace(",", "."));
       suggested = Number.isFinite(base)
-        ? (ranFast ? base - step : base + step).toFixed(decimals)
+        ? dialValue(ranFast ? base - step : base + step, decimals)
         : null;
-      const amount = suggested ? `${suggested}${unit ? ` ${unit}` : ""}` : "";
+      const amount = suggested ? withUnit(suggested, unit) : "";
       actions.push({
         text: L(
           lang,
@@ -383,6 +493,13 @@ export function dialIn(
                   `ไหล${ranFast ? "เร็ว" : "ช้า"} — ขยับ 1 ขั้น`,
                 ),
               ),
+              change(
+                "totalTime",
+                FIELD.time,
+                brew.totalTime,
+                timeTarget(family, seconds, direction, brew.totalTime),
+                TIME_WHY(direction === "finer"),
+              ),
             ].filter((c): c is AdviceChange => c !== null),
     };
   }
@@ -390,10 +507,26 @@ export function dialIn(
   /* ---------- 2. strength only ---------- */
   if (strength > 0 && under === 0 && over === 0) {
     // Cut the water, keep the coffee: same extraction, more of it per sip.
-    const targetRatio = t.ratio[0] + 0.5;
+    //
+    // The step is proportional (about 12%) rather than a jump to the bottom of
+    // the band — 1:8 concentrate and 1:2 espresso live on very different
+    // scales, and one big move teaches you nothing anyway. It is also never
+    // looser than the saved recipe: if the cup was watery because the pour
+    // overshot the recipe, the fix is to brew the recipe, not to rewrite it.
+    const recipeDose = parseFloat(brew.doseG);
+    const recipeYield = parseFloat(brew.yieldG);
+    const recipeRatio =
+      Number.isFinite(recipeDose) && Number.isFinite(recipeYield) && recipeDose > 0
+        ? recipeYield / recipeDose
+        : null;
+    let targetRatio = t.ratio[0] + 0.5;
+    if (ratio !== null) targetRatio = Math.max(targetRatio, ratio * 0.88);
+    if (recipeRatio !== null) targetRatio = Math.min(targetRatio, recipeRatio);
+    // Computed from the recipe's own dose, since that is what gets written back.
+    const baseDose = Number.isFinite(recipeDose) ? recipeDose : dose;
     const newYield =
-      ratio !== null && ratio > targetRatio && Number.isFinite(dose)
-        ? String(Math.round(dose * targetRatio))
+      ratio !== null && ratio > targetRatio && Number.isFinite(baseDose)
+        ? String(Math.round(baseDose * targetRatio))
         : null;
     return {
       headline: L(lang, "Tighten the ratio, not the grind", "ปรับอัตราส่วน ไม่ใช่เบอร์บด"),
@@ -408,8 +541,8 @@ export function dialIn(
             ratio !== null
               ? L(
                   lang,
-                  `Pull the ratio in from 1:${ratio.toFixed(1)} toward 1:${(t.ratio[0] + 0.5).toFixed(1)}`,
-                  `ลดอัตราส่วนจาก 1:${ratio.toFixed(1)} มาทาง 1:${(t.ratio[0] + 0.5).toFixed(1)}`,
+                  `Pull the ratio in from 1:${ratio.toFixed(1)} toward 1:${targetRatio.toFixed(1)}`,
+                  `ลดอัตราส่วนจาก 1:${ratio.toFixed(1)} มาทาง 1:${targetRatio.toFixed(1)}`,
                 )
               : L(lang, "Use more coffee, or less water", "เพิ่มผงกาแฟ หรือลดน้ำ"),
           why: L(
@@ -449,11 +582,11 @@ export function dialIn(
     const delta = step * magnitude;
     const base = parseFloat((last.grind || "").replace(",", "."));
     const suggested = Number.isFinite(base)
-      ? (finer ? base - delta : base + delta).toFixed(decimals)
+      ? dialValue(finer ? base - delta : base + delta, decimals)
       : null;
-    const amount = `${delta.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
+    const amount = withUnit(delta.toFixed(decimals), unit);
 
-    const tryText = suggested ? `${suggested}${unit ? ` ${unit}` : ""}` : "";
+    const tryText = suggested ? withUnit(suggested, unit) : "";
     const actions: AdviceAction[] = [
       {
         text: L(
@@ -474,7 +607,37 @@ export function dialIn(
             ),
       },
     ];
-    if (finer) {
+    if (family === "cold") {
+      // Heat is not available and there is no flow to slow down — steep length
+      // is the lever that does the work in a cold brew.
+      actions.push(
+        finer
+          ? {
+              text: L(
+                lang,
+                "Or leave it to steep 4–6 hours longer — the bigger lever here",
+                "หรือแช่ต่ออีก 4–6 ชั่วโมง — เป็นตัวแปรที่มีผลมากกว่า",
+              ),
+              why: L(
+                lang,
+                "cold water extracts slowly, so time does the job heat does in a hot brew",
+                "น้ำเย็นสกัดช้า เวลาจึงทำหน้าที่แทนความร้อนในการชงแบบร้อน",
+              ),
+            }
+          : {
+              text: L(
+                lang,
+                "Or cut the steep by 3–4 hours",
+                "หรือลดเวลาแช่ลง 3–4 ชั่วโมง",
+              ),
+              why: L(
+                lang,
+                "past about 18 hours you mostly add bitterness and silt, not sweetness",
+                "เลย 18 ชั่วโมงไปแล้ว สิ่งที่เพิ่มขึ้นคือความขมและตะกอน ไม่ใช่ความหวาน",
+              ),
+            },
+      );
+    } else if (finer) {
       actions.push({
         text: L(
           lang,
@@ -547,9 +710,16 @@ export function dialIn(
             `${finer ? "ละเอียด" : "หยาบ"}ขึ้น ${amount}`,
           ),
         ),
-        // Only offered when grinding finer: heat lifts extraction without
-        // choking the flow. Off by default — it is the plan B, not the plan.
-        finer
+        change(
+          "totalTime",
+          FIELD.time,
+          brew.totalTime,
+          timeTarget(family, seconds, finer ? "finer" : "coarser", brew.totalTime),
+          TIME_WHY(finer),
+        ),
+        // Only offered when grinding finer, and never for a cold brew where
+        // there is no heat to raise. Off by default — plan B, not the plan.
+        finer && family !== "cold"
           ? change(
               "waterTempC",
               FIELD.temp,
