@@ -262,34 +262,42 @@ export default function BrewEditor({
         </div>
         <div className="flex flex-col gap-1.5">
           {brew.steps.map((step, i) => (
-            <div key={step.id} className="flex items-center gap-1.5">
-              <span className="w-5 shrink-0 text-center font-mono text-xs text-muted">
-                {i + 1}.
-              </span>
+            /* Wraps on a phone: the step text takes its own line and the
+               numbers sit on the next, otherwise everything is squeezed to
+               nothing and the text box becomes untypable. */
+            <div
+              key={step.id}
+              className="flex flex-wrap items-center gap-1.5 rounded-lg border border-line p-1.5 sm:border-0 sm:p-0"
+            >
+              <div className="flex min-w-0 basis-full items-center gap-1.5 sm:flex-1 sm:basis-0">
+                <span className="w-5 shrink-0 text-center font-mono text-xs text-muted">
+                  {i + 1}.
+                </span>
+                <input
+                  className="input min-w-0 flex-1"
+                  placeholder={
+                    i === 0 ? "Bloom 45 g, swirl gently" : "Next pour / action…"
+                  }
+                  value={step.text}
+                  onChange={(e) => setStep(step.id, { text: e.target.value })}
+                />
+              </div>
               <input
-                className="input min-w-0 flex-1"
-                placeholder={
-                  i === 0 ? "Bloom 45 g, swirl gently" : "Next pour / action…"
-                }
-                value={step.text}
-                onChange={(e) => setStep(step.id, { text: e.target.value })}
-              />
-              <input
-                className="input w-16 shrink-0 text-center font-mono"
+                className="input w-14 shrink-0 text-center font-mono sm:w-16"
                 placeholder="start"
                 title="Start of this step (mm:ss). Leave blank to continue from the step above."
                 value={step.startAt}
                 onChange={(e) => setStep(step.id, { startAt: e.target.value })}
               />
               <input
-                className="input w-16 shrink-0 text-center font-mono"
+                className="input w-14 shrink-0 text-center font-mono sm:w-16"
                 placeholder="end"
                 title="End of this step (mm:ss)"
                 value={step.endAt}
                 onChange={(e) => setStep(step.id, { endAt: e.target.value })}
               />
               <input
-                className="input w-20 shrink-0 text-center font-mono"
+                className="input w-16 shrink-0 text-center font-mono sm:w-20"
                 inputMode="decimal"
                 placeholder="water g"
                 title="Total water in the brewer after this step — drives the pour ribbon"
@@ -297,7 +305,7 @@ export default function BrewEditor({
                 onChange={(e) => setStep(step.id, { waterG: e.target.value })}
               />
               <button
-                className="btn btn-ghost px-1.5"
+                className="btn btn-ghost ml-auto px-1 sm:ml-0 sm:px-1.5"
                 title="Move up"
                 onClick={() => moveStep(i, -1)}
                 disabled={i === 0}
@@ -305,7 +313,7 @@ export default function BrewEditor({
                 ↑
               </button>
               <button
-                className="btn btn-ghost px-1.5"
+                className="btn btn-ghost px-1 sm:px-1.5"
                 title="Move down"
                 onClick={() => moveStep(i, 1)}
                 disabled={i === brew.steps.length - 1}
@@ -313,7 +321,7 @@ export default function BrewEditor({
                 ↓
               </button>
               <button
-                className="btn btn-ghost btn-danger px-1.5"
+                className="btn btn-ghost btn-danger px-1 sm:px-1.5"
                 title="Remove step"
                 onClick={() => removeStep(step.id)}
                 disabled={brew.steps.length <= 1}
