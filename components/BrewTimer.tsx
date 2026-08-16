@@ -33,6 +33,29 @@ export default function BrewTimer({
     .map((s, i) => ({ ...s, index: i }))
     .filter((s) => s.start !== null && s.start > 0);
 
+  /**
+   * "0:30–1:00", the same window the label prints — knowing when a step ends
+   * matters as much as knowing when it starts. A step that never wrote its own
+   * end borrows the next step's start, and the last one closes on the total.
+   */
+  function windowOf(index: number): string {
+    const s = steps[index];
+    if (!s) return "";
+    const start =
+      s.start ??
+      steps
+        .slice(0, index)
+        .reverse()
+        .find((p) => p.end !== null)?.end ??
+      null;
+    const end =
+      s.end ??
+      steps.slice(index + 1).find((n) => n.start !== null)?.start ??
+      (index === steps.length - 1 && total > 0 ? total : null);
+    if (start === null) return end === null ? "—" : mmss(end);
+    return end === null ? mmss(start) : `${mmss(start)}–${mmss(end)}`;
+  }
+
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(false);
@@ -237,15 +260,22 @@ export default function BrewTimer({
               <p className="font-serif text-xl font-semibold">
                 {steps[currentIndex]?.text || tr("readyWord")}
               </p>
-              {steps[currentIndex]?.waterG && (
+              {steps[currentIndex] && (
                 <p className="mt-0.5 font-mono text-sm" style={{ color: theme.muted }}>
-                  {formatWeight(steps[currentIndex].waterG)}
+                  {[
+                    windowOf(currentIndex),
+                    steps[currentIndex].waterG
+                      ? formatWeight(steps[currentIndex].waterG)
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join("  ·  ")}
                 </p>
               )}
               {next && (
                 <p className="mt-2 font-mono text-sm" style={{ color: theme.muted }}>
                   {tr("nextIn")} {Math.max(0, Math.ceil((next.start as number) - elapsed))}s ·{" "}
-                  {next.text}
+                  {windowOf(next.index)} · {next.text}
                 </p>
               )}
             </>
@@ -273,8 +303,8 @@ export default function BrewTimer({
                 {s.waterG && (
                   <span className="font-mono text-xs">{formatWeight(s.waterG)}</span>
                 )}
-                <span className="font-mono text-xs">
-                  {s.start === null ? "—" : mmss(s.start)}
+                <span className="font-mono text-xs whitespace-nowrap">
+                  {windowOf(i)}
                 </span>
               </li>
             );
