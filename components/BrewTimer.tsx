@@ -50,7 +50,7 @@ const VOICE_KEY = "bean-label/voice-coach";
 function coachLine(
   lang: Lang,
   step: { text: string; waterG: string },
-  kind: "now" | "next",
+  kind: "now" | "next" | "first",
 ): string {
   const text = step.text.trim();
   const g = parseFloat(step.waterG);
@@ -62,6 +62,9 @@ function coachLine(
       : "";
   if (kind === "next") {
     return lang === "th" ? `ขั้นต่อไป ${text}${water}` : `Next. ${text}${water}`;
+  }
+  if (kind === "first") {
+    return lang === "th" ? `ขั้นแรก ${text}${water}` : `First. ${text}${water}`;
   }
   return `${text}${water}`;
 }
@@ -103,8 +106,10 @@ export default function BrewTimer({
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(false);
-  /** 3 → 2 → 1 while waiting; null when idle or the clock is running. */
-  const [countdown, setCountdown] = useState<number | null>(COUNTDOWN_FROM);
+  /** Speak the first step to completion before 3-2-1. */
+  const [briefing, setBriefing] = useState(true);
+  /** 3 → 2 → 1 while waiting; null when briefing, idle, or the clock is running. */
+  const [countdown, setCountdown] = useState<number | null>(null);
   const [voice, setVoice] = useState(true);
 
   // Wall-clock based so the count never drifts, unlike accumulating ticks.
@@ -165,12 +170,20 @@ export default function BrewTimer({
   }, [beep, buzz]);
 
   const say = useCallback(
-    (text: string, delayMs = 0) => {
-      if (!voiceRef.current) return;
-      speakCoach(text, lang, delayMs);
+    (text: string, delayMs = 0, onEnd?: () => void) => {
+      if (!voiceRef.current) {
+        onEnd?.();
+        return;
+      }
+      speakCoach(text, lang, delayMs, onEnd);
     },
     [lang],
   );
+
+  const beginCountdown = useCallback(() => {
+    setBriefing(false);
+    setCountdown(COUNTDOWN_FROM);
+  }, []);
 
   /** Ticks while running and fires any cue whose moment has passed. */
   useEffect(() => {
@@ -214,7 +227,7 @@ export default function BrewTimer({
 
   /** Keep the screen awake while counting down or brewing. */
   useEffect(() => {
-    if (!running && countdown === null) return;
+    if (!running && countdown === null && !briefing) return;
     let cancelled = false;
     navigator.wakeLock
       ?.request("screen")
@@ -228,7 +241,7 @@ export default function BrewTimer({
       void wakeLock.current?.release().catch(() => {});
       wakeLock.current = null;
     };
-  }, [running, countdown]);
+  }, [running, countdown, briefing]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -255,8 +268,26 @@ export default function BrewTimer({
     void audio.current?.resume().catch(() => {});
   }, []);
 
+  /** Speak step 1 all the way through, then start 3-2-1. */
+  useEffect(() => {
+    if (!briefing) return;
+    ensureAudio();
+    const on = window.localStorage.getItem(VOICE_KEY) !== "off";
+    setVoice(on);
+    voiceRef.current = on;
+    const first = steps.find((s) => s.start === 0) ?? steps[0];
+    if (!on || !first?.text.trim()) {
+      beginCountdown();
+      return;
+    }
+    fired.current.add(`speak${first.id}`);
+    speakCoach(coachLine(lang, first, "first"), lang, 0, beginCountdown);
+  }, [briefing, beginCountdown, ensureAudio, lang]);
+
   const start = useCallback(() => {
     ensureAudio();
+    cancelSpeech();
+    setBriefing(false);
     startedAt.current = Date.now();
     setCountdown(null);
     setRunning(true);
@@ -273,6 +304,7 @@ export default function BrewTimer({
     setRunning(false);
     setDone(false);
     setElapsed(0);
+    setBriefing(false);
     setCountdown(null);
     offset.current = 0;
     fired.current.clear();
@@ -282,6 +314,7 @@ export default function BrewTimer({
   function requestStart() {
     // Resume a paused brew immediately; a fresh start gets the 3-2-1 first.
     if (elapsed > 0 && !done) start();
+    else if (voiceRef.current) setBriefing(true);
     else setCountdown(COUNTDOWN_FROM);
   }
 
@@ -296,19 +329,12 @@ export default function BrewTimer({
       beep(560, 160, 0.55);
       buzz(40);
     }
-    if (countdown === COUNTDOWN_FROM) {
-      const first = steps.find((s) => s.start === 0) ?? steps[0];
-      if (first) {
-        fired.current.add(`speak${first.id}`);
-        say(coachLine(lang, first, "now"));
-      }
-    }
     const id = window.setTimeout(() => {
       if (countdown <= 1) start();
       else setCountdown(countdown - 1);
     }, 1000);
     return () => window.clearTimeout(id);
-  }, [countdown, ensureAudio, beep, buzz, start, say, lang]);
+  }, [countdown, ensureAudio, beep, buzz, start]);
 
   // Which step is happening now: the last one whose start has passed.
   const currentIndex = steps.reduce(
@@ -317,6 +343,8 @@ export default function BrewTimer({
   );
   const next = cues.find((c) => (c.start as number) > elapsed);
   const pct = total > 0 ? Math.min(100, (elapsed / total) * 100) : 0;
+  const firstStep = steps.find((s) => s.start === 0) ?? steps[0];
+  const waiting = briefing || countdown !== null;
 
   return (
     <div
@@ -343,7 +371,10 @@ export default function BrewTimer({
             const nextOn = !voice;
             setVoice(nextOn);
             window.localStorage.setItem(VOICE_KEY, nextOn ? "on" : "off");
-            if (!nextOn) cancelSpeech();
+            if (!nextOn) {
+              cancelSpeech();
+              if (briefing) beginCountdown();
+            }
           }}
           aria-pressed={voice}
           aria-label={voice ? tr("voiceOn") : tr("voiceOff")}
@@ -367,7 +398,14 @@ export default function BrewTimer({
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center px-5">
-        {countdown !== null ? (
+        {briefing ? (
+          <p
+            className="max-w-md text-center font-serif text-3xl leading-tight font-semibold sm:text-4xl"
+            style={{ color: theme.accent }}
+          >
+            {firstStep?.text || tr("readyWord")}
+          </p>
+        ) : countdown !== null ? (
           <button
             type="button"
             onClick={start}
@@ -386,23 +424,28 @@ export default function BrewTimer({
           </p>
         )}
         <p className="mt-1 font-mono text-sm" style={{ color: theme.muted }}>
-          {countdown !== null
-            ? tr("startingIn")
-            : total > 0
-              ? `${tr("ofTotal")} ${mmss(total)}`
-              : tr("noTotal")}
+          {briefing
+            ? firstStep?.waterG
+              ? formatWeight(firstStep.waterG)
+              : tr("briefingHint")
+            : countdown !== null
+              ? tr("startingIn")
+              : total > 0
+                ? `${tr("ofTotal")} ${mmss(total)}`
+                : tr("noTotal")}
         </p>
 
         {hasRibbon ? (
           <PourRibbon
             steps={steps}
             total={total}
-            elapsed={countdown !== null ? 0 : elapsed}
+            elapsed={waiting ? 0 : elapsed}
             theme={theme}
             label={tr("pourRibbon")}
           />
         ) : (
-          countdown === null && (
+          countdown === null &&
+          !briefing && (
             <div
               className="mt-5 h-2 w-full max-w-md overflow-hidden rounded-full"
               style={{ background: theme.rule }}
@@ -416,7 +459,11 @@ export default function BrewTimer({
         )}
 
         <div className="mt-6 w-full max-w-md text-center">
-          {countdown !== null ? (
+          {briefing ? (
+            <p className="text-sm" style={{ color: theme.muted }}>
+              {tr("briefingHint")}
+            </p>
+          ) : countdown !== null ? (
             <p className="text-sm" style={{ color: theme.muted }}>
               {tr("countdownHint")}
             </p>
@@ -455,7 +502,8 @@ export default function BrewTimer({
       <div className="max-h-[34vh] overflow-y-auto px-5">
         <ol className="mx-auto flex max-w-md flex-col gap-1">
           {steps.map((s, i) => {
-            const isNow = i === currentIndex && running && !done;
+            const isNow =
+              (i === currentIndex && running && !done) || (briefing && i === 0);
             const passed = s.start !== null && elapsed >= s.start;
             return (
               <li
@@ -482,7 +530,7 @@ export default function BrewTimer({
       </div>
 
       <div className="flex items-center justify-center gap-3 px-5 py-5">
-        {countdown !== null ? (
+        {waiting ? (
           <button
             onClick={start}
             className="rounded-full px-8 py-3 text-base font-bold"

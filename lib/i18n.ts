@@ -121,6 +121,10 @@ const DICT = {
     en: "Hands off the screen — the timer starts on its own.",
     th: "ไม่ต้องแตะจอ นาฬิกาจะเริ่มเอง",
   },
+  briefingHint: {
+    en: "Listen to the first step. The 3-2-1 countdown starts when it finishes.",
+    th: "ฟังขั้นแรกให้จบ แล้วจะนับ 3 2 1",
+  },
   ofTotal: { en: "of", th: "จาก" },
   noTotal: { en: "no total set", th: "ยังไม่ได้ตั้งเวลารวม" },
   brewComplete: { en: "Brew complete", th: "ชงเสร็จแล้ว" },
