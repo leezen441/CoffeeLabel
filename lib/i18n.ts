@@ -115,6 +115,12 @@ const DICT = {
   resume: { en: "Resume", th: "ไปต่อ" },
   pause: { en: "Pause", th: "หยุดชั่วคราว" },
   reset: { en: "Reset", th: "เริ่มใหม่" },
+  startNow: { en: "Start now", th: "เริ่มเลย" },
+  startingIn: { en: "Starting in", th: "เริ่มใน" },
+  countdownHint: {
+    en: "Hands off the screen — the timer starts on its own.",
+    th: "ไม่ต้องแตะจอ นาฬิกาจะเริ่มเอง",
+  },
   ofTotal: { en: "of", th: "จาก" },
   noTotal: { en: "no total set", th: "ยังไม่ได้ตั้งเวลารวม" },
   brewComplete: { en: "Brew complete", th: "ชงเสร็จแล้ว" },

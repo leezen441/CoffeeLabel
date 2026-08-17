@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import BrewLog from "./BrewLog";
-import BrewTimer from "./BrewTimer";
+import BrewTimer, { unlockTimerAudio } from "./BrewTimer";
 import LangToggle from "./LangToggle";
 import { makeT, useLang } from "@/lib/i18n";
 import * as store from "@/lib/store";
@@ -99,6 +99,11 @@ export default function BrewGuide({
     };
     setLabel(updated);
     await store.saveLabel(updated);
+  }
+
+  function openTimer(next: BrewMethod) {
+    unlockTimerAudio();
+    setTiming(next);
   }
 
   return (
@@ -252,7 +257,7 @@ export default function BrewGuide({
 
               {brew.steps.some((s) => s.text.trim()) && (
                 <button
-                  onClick={() => setTiming(brew)}
+                  onClick={() => openTimer(brew)}
                   className="mt-5 w-full rounded-xl px-4 py-3 text-base font-bold"
                   style={{ background: theme.accent, color: theme.paper }}
                 >
@@ -304,7 +309,7 @@ export default function BrewGuide({
             labelId={label.id}
             brew={rawBrew}
             theme={theme}
-            onStart={setTiming}
+            onStart={openTimer}
             onApply={applyBrew}
           />
         )}

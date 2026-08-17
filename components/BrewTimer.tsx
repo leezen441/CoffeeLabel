@@ -11,6 +11,33 @@ import {
 
 /** Seconds of warning before a step begins. */
 const PRE_ALERT = 3;
+/** Hands-free start: one tap, then this many seconds before the clock runs. */
+const COUNTDOWN_FROM = 3;
+
+type AudioCtxCtor = typeof AudioContext;
+
+let sharedAudio: AudioContext | null = null;
+
+function audioCtor(): AudioCtxCtor | null {
+  if (typeof window === "undefined") return null;
+  return (
+    window.AudioContext ??
+    (window as unknown as { webkitAudioContext: AudioCtxCtor }).webkitAudioContext ??
+    null
+  );
+}
+
+/**
+ * Call from a tap so the browser allows sound later. The countdown itself
+ * starts from an effect, which is no longer a user gesture.
+ */
+export function unlockTimerAudio(): AudioContext | null {
+  const Ctx = audioCtor();
+  if (!Ctx) return null;
+  if (!sharedAudio || sharedAudio.state === "closed") sharedAudio = new Ctx();
+  void sharedAudio.resume().catch(() => {});
+  return sharedAudio;
+}
 
 function mmss(total: number): string {
   const s = Math.max(0, Math.floor(total));
@@ -59,6 +86,8 @@ export default function BrewTimer({
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(false);
+  /** 3 → 2 → 1 while waiting; null when idle or the clock is running. */
+  const [countdown, setCountdown] = useState<number | null>(COUNTDOWN_FROM);
 
   // Wall-clock based so the count never drifts, unlike accumulating ticks.
   const startedAt = useRef(0);
@@ -132,9 +161,9 @@ export default function BrewTimer({
     return () => clearInterval(id);
   }, [running, cues, total, cuePre, cueStep, cueDone]);
 
-  /** Keep the screen awake while a brew is actually running. */
+  /** Keep the screen awake while counting down or brewing. */
   useEffect(() => {
-    if (!running) return;
+    if (!running && countdown === null) return;
     let cancelled = false;
     navigator.wakeLock
       ?.request("screen")
@@ -148,7 +177,7 @@ export default function BrewTimer({
       void wakeLock.current?.release().catch(() => {});
       wakeLock.current = null;
     };
-  }, [running]);
+  }, [running, countdown]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -164,20 +193,23 @@ export default function BrewTimer({
     };
   }, [onClose]);
 
-  function start() {
-    // The context must be created from a gesture or the browser mutes it.
+  const ensureAudio = useCallback(() => {
+    const unlocked = unlockTimerAudio();
+    audio.current = unlocked ?? audio.current;
     if (!audio.current) {
-      const Ctx =
-        window.AudioContext ??
-        (window as unknown as { webkitAudioContext: typeof AudioContext })
-          .webkitAudioContext;
-      audio.current = new Ctx();
+      const Ctx = audioCtor();
+      if (Ctx) audio.current = new Ctx();
     }
-    void audio.current.resume().catch(() => {});
+    void audio.current?.resume().catch(() => {});
+  }, []);
+
+  const start = useCallback(() => {
+    ensureAudio();
     startedAt.current = Date.now();
+    setCountdown(null);
     setRunning(true);
     setDone(false);
-  }
+  }, [ensureAudio]);
 
   function pause() {
     offset.current = elapsed;
@@ -188,9 +220,34 @@ export default function BrewTimer({
     setRunning(false);
     setDone(false);
     setElapsed(0);
+    setCountdown(null);
     offset.current = 0;
     fired.current.clear();
   }
+
+  function requestStart() {
+    // Resume a paused brew immediately; a fresh start gets the 3-2-1 first.
+    if (elapsed > 0 && !done) start();
+    else setCountdown(COUNTDOWN_FROM);
+  }
+
+  /** Tick 3 → 2 → 1, then start the clock. Skip/reset clears this. */
+  useEffect(() => {
+    if (countdown === null) return;
+    ensureAudio();
+    if (countdown === 1) {
+      beep(880, 180);
+      buzz(80);
+    } else {
+      beep(560, 90, 0.15);
+      buzz(40);
+    }
+    const id = window.setTimeout(() => {
+      if (countdown <= 1) start();
+      else setCountdown(countdown - 1);
+    }, 1000);
+    return () => window.clearTimeout(id);
+  }, [countdown, ensureAudio, beep, buzz, start]);
 
   // Which step is happening now: the last one whose start has passed.
   const currentIndex = steps.reduce(
@@ -230,28 +287,50 @@ export default function BrewTimer({
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center px-5">
-        <p
-          className="font-mono text-7xl font-bold tabular-nums sm:text-8xl"
-          style={{ color: done ? theme.accent : theme.ink }}
-        >
-          {mmss(elapsed)}
-        </p>
+        {countdown !== null ? (
+          <button
+            type="button"
+            onClick={start}
+            aria-label={tr("startNow")}
+            className="bg-transparent p-0 font-mono text-7xl font-bold tabular-nums sm:text-8xl"
+            style={{ color: theme.accent }}
+          >
+            <span aria-live="assertive">{countdown}</span>
+          </button>
+        ) : (
+          <p
+            className="font-mono text-7xl font-bold tabular-nums sm:text-8xl"
+            style={{ color: done ? theme.accent : theme.ink }}
+          >
+            {mmss(elapsed)}
+          </p>
+        )}
         <p className="mt-1 font-mono text-sm" style={{ color: theme.muted }}>
-          {total > 0 ? `${tr("ofTotal")} ${mmss(total)}` : tr("noTotal")}
+          {countdown !== null
+            ? tr("startingIn")
+            : total > 0
+              ? `${tr("ofTotal")} ${mmss(total)}`
+              : tr("noTotal")}
         </p>
 
-        <div
-          className="mt-5 h-2 w-full max-w-md overflow-hidden rounded-full"
-          style={{ background: theme.rule }}
-        >
+        {countdown === null && (
           <div
-            className="h-full rounded-full transition-[width] duration-100"
-            style={{ width: `${pct}%`, background: theme.accent }}
-          />
-        </div>
+            className="mt-5 h-2 w-full max-w-md overflow-hidden rounded-full"
+            style={{ background: theme.rule }}
+          >
+            <div
+              className="h-full rounded-full transition-[width] duration-100"
+              style={{ width: `${pct}%`, background: theme.accent }}
+            />
+          </div>
+        )}
 
         <div className="mt-6 w-full max-w-md text-center">
-          {done ? (
+          {countdown !== null ? (
+            <p className="text-sm" style={{ color: theme.muted }}>
+              {tr("countdownHint")}
+            </p>
+          ) : done ? (
             <p className="font-serif text-2xl font-semibold" style={{ color: theme.accent }}>
               {tr("brewComplete")}
             </p>
@@ -286,7 +365,7 @@ export default function BrewTimer({
       <div className="max-h-[34vh] overflow-y-auto px-5">
         <ol className="mx-auto flex max-w-md flex-col gap-1">
           {steps.map((s, i) => {
-            const isNow = i === currentIndex && !done;
+            const isNow = i === currentIndex && running && !done;
             const passed = s.start !== null && elapsed >= s.start;
             return (
               <li
@@ -313,9 +392,17 @@ export default function BrewTimer({
       </div>
 
       <div className="flex items-center justify-center gap-3 px-5 py-5">
-        {!running ? (
+        {countdown !== null ? (
           <button
             onClick={start}
+            className="rounded-full px-8 py-3 text-base font-bold"
+            style={{ background: theme.accent, color: theme.paper }}
+          >
+            {tr("startNow")}
+          </button>
+        ) : !running ? (
+          <button
+            onClick={requestStart}
             className="rounded-full px-8 py-3 text-base font-bold"
             style={{ background: theme.accent, color: theme.paper }}
           >
