@@ -120,19 +120,28 @@ export default function BrewTimer({
     setVoice(window.localStorage.getItem(VOICE_KEY) !== "off");
   }, []);
 
-  const beep = useCallback((freq: number, ms: number, gain = 0.25) => {
+  const beep = useCallback((freq: number, ms: number, gain = 0.7) => {
     const ctx = audio.current;
     if (!ctx) return;
     const osc = ctx.createOscillator();
+    const click = ctx.createOscillator();
     const vol = ctx.createGain();
+    const clickVol = ctx.createGain();
     osc.frequency.value = freq;
-    osc.type = "sine";
-    // short fade out, otherwise the note clicks
-    vol.gain.setValueAtTime(gain, ctx.currentTime);
-    vol.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + ms / 1000);
+    osc.type = "triangle";
+    click.frequency.value = freq * 2;
+    click.type = "square";
+    const t = ctx.currentTime;
+    vol.gain.setValueAtTime(gain, t);
+    vol.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000);
+    clickVol.gain.setValueAtTime(gain * 0.22, t);
+    clickVol.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000);
     osc.connect(vol).connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + ms / 1000);
+    click.connect(clickVol).connect(ctx.destination);
+    osc.start(t);
+    click.start(t);
+    osc.stop(t + ms / 1000);
+    click.stop(t + ms / 1000);
   }, []);
 
   const buzz = useCallback((pattern: number | number[]) => {
@@ -141,17 +150,17 @@ export default function BrewTimer({
   }, []);
 
   const cueStep = useCallback(() => {
-    beep(880, 180);
+    beep(880, 260, 0.8);
     buzz(180);
   }, [beep, buzz]);
 
   const cuePre = useCallback(() => {
-    beep(560, 90, 0.15);
+    beep(560, 160, 0.55);
     buzz(60);
   }, [beep, buzz]);
 
   const cueDone = useCallback(() => {
-    [0, 220, 440].forEach((d) => setTimeout(() => beep(1046, 200), d));
+    [0, 220, 440].forEach((d) => setTimeout(() => beep(1046, 240, 0.8), d));
     buzz([180, 90, 180, 90, 320]);
   }, [beep, buzz]);
 
@@ -281,10 +290,10 @@ export default function BrewTimer({
     if (countdown === null) return;
     ensureAudio();
     if (countdown === 1) {
-      beep(880, 180);
+      beep(880, 260, 0.8);
       buzz(80);
     } else {
-      beep(560, 90, 0.15);
+      beep(560, 160, 0.55);
       buzz(40);
     }
     if (countdown === COUNTDOWN_FROM) {
