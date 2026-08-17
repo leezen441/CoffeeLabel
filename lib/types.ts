@@ -1088,6 +1088,25 @@ export function brewTimeline(brew: BrewMethod): {
   return { steps, total: Math.max(declared ?? 0, lastEnd) };
 }
 
+/** Start/end seconds for a timeline step, filling blanks from neighbours. */
+export function stepSpan(
+  steps: TimelineStep[],
+  total: number,
+  index: number,
+): { start: number | null; end: number | null } {
+  const s = steps[index];
+  if (!s) return { start: null, end: null };
+  const start =
+    s.start ??
+    [...steps.slice(0, index)].reverse().find((p) => p.end !== null)?.end ??
+    null;
+  const end =
+    s.end ??
+    steps.slice(index + 1).find((n) => n.start !== null)?.start ??
+    (index === steps.length - 1 && total > 0 ? total : null);
+  return { start, end };
+}
+
 export type RibbonBlock = {
   id: string;
   /** share of the total pour, 0–1 — drives the block width */

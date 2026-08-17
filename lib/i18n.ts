@@ -127,9 +127,12 @@ const DICT = {
   readyWord: { en: "Ready", th: "พร้อมเริ่ม" },
   nextIn: { en: "next in", th: "อีก" },
   timerFooter: {
-    en: "Beeps and vibrates 3s before each step, then again on the step. Vibration is Android only — iPhone gets sound.",
-    th: "เตือนล่วงหน้า 3 วินาทีก่อนถึงแต่ละขั้น แล้วเตือนซ้ำตอนถึง — การสั่นใช้ได้เฉพาะ Android ส่วน iPhone จะได้เฉพาะเสียง",
+    en: "Voice names each step, with a beep 3s before. Mute from the speaker. Vibration is Android only.",
+    th: "โค้ชเสียงอ่านแต่ละขั้น และบี๊บก่อน 3 วินาที ปิดเสียงพูดได้ที่ไอคอนลำโพง — การสั่นใช้ได้เฉพาะ Android",
   },
+  pourRibbon: { en: "Pour", th: "เทน้ำ" },
+  voiceOn: { en: "Voice coach on", th: "เปิดโค้ชเสียง" },
+  voiceOff: { en: "Voice coach off", th: "ปิดโค้ชเสียง" },
 
   /* brew log */
   brewLog: { en: "Brew log", th: "บันทึกการชง" },

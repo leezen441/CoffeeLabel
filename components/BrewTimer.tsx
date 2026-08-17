@@ -1,12 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { makeT, useLang } from "@/lib/i18n";
+import { makeT, useLang, type Lang } from "@/lib/i18n";
+import { cancelSpeech, speakCoach, unlockSpeech } from "@/lib/voiceCoach";
+import PourRibbon from "./PourRibbon";
 import {
   type BrewMethod,
   THEMES,
   brewTimeline,
   formatWeight,
+  ribbonBlocks,
+  stepSpan,
 } from "@/lib/types";
 
 /** Seconds of warning before a step begins. */
@@ -36,7 +40,29 @@ export function unlockTimerAudio(): AudioContext | null {
   if (!Ctx) return null;
   if (!sharedAudio || sharedAudio.state === "closed") sharedAudio = new Ctx();
   void sharedAudio.resume().catch(() => {});
+  unlockSpeech();
   return sharedAudio;
+}
+
+const VOICE_KEY = "bean-label/voice-coach";
+
+function coachLine(
+  lang: Lang,
+  step: { text: string; waterG: string },
+  kind: "now" | "next",
+): string {
+  const text = step.text.trim();
+  const g = parseFloat(step.waterG);
+  const water =
+    Number.isFinite(g) && g > 0
+      ? lang === "th"
+        ? ` ถึง ${g} กรัม`
+        : `, to ${g} grams`
+      : "";
+  if (kind === "next") {
+    return lang === "th" ? `ขั้นต่อไป ${text}${water}` : `Next. ${text}${water}`;
+  }
+  return `${text}${water}`;
 }
 
 function mmss(total: number): string {
@@ -53,12 +79,14 @@ export default function BrewTimer({
   theme: (typeof THEMES)[keyof typeof THEMES];
   onClose: () => void;
 }) {
-  const tr = makeT(useLang());
+  const lang = useLang();
+  const tr = makeT(lang);
   const { steps, total } = brewTimeline(brew);
+  const hasRibbon = ribbonBlocks(brew).length > 0;
   /** only steps with a real start time can be cued */
   const cues = steps
     .map((s, i) => ({ ...s, index: i }))
-    .filter((s) => s.start !== null && s.start > 0);
+    .filter((s) => s.start !== null);
 
   /**
    * "0:30–1:00", the same window the label prints — knowing when a step ends
@@ -66,19 +94,7 @@ export default function BrewTimer({
    * end borrows the next step's start, and the last one closes on the total.
    */
   function windowOf(index: number): string {
-    const s = steps[index];
-    if (!s) return "";
-    const start =
-      s.start ??
-      steps
-        .slice(0, index)
-        .reverse()
-        .find((p) => p.end !== null)?.end ??
-      null;
-    const end =
-      s.end ??
-      steps.slice(index + 1).find((n) => n.start !== null)?.start ??
-      (index === steps.length - 1 && total > 0 ? total : null);
+    const { start, end } = stepSpan(steps, total, index);
     if (start === null) return end === null ? "—" : mmss(end);
     return end === null ? mmss(start) : `${mmss(start)}–${mmss(end)}`;
   }
@@ -88,6 +104,7 @@ export default function BrewTimer({
   const [done, setDone] = useState(false);
   /** 3 → 2 → 1 while waiting; null when idle or the clock is running. */
   const [countdown, setCountdown] = useState<number | null>(COUNTDOWN_FROM);
+  const [voice, setVoice] = useState(true);
 
   // Wall-clock based so the count never drifts, unlike accumulating ticks.
   const startedAt = useRef(0);
@@ -95,6 +112,12 @@ export default function BrewTimer({
   const fired = useRef<Set<string>>(new Set());
   const audio = useRef<AudioContext | null>(null);
   const wakeLock = useRef<WakeLockSentinel | null>(null);
+  const voiceRef = useRef(voice);
+  voiceRef.current = voice;
+
+  useEffect(() => {
+    setVoice(window.localStorage.getItem(VOICE_KEY) !== "off");
+  }, []);
 
   const beep = useCallback((freq: number, ms: number, gain = 0.25) => {
     const ctx = audio.current;
@@ -131,6 +154,14 @@ export default function BrewTimer({
     buzz([180, 90, 180, 90, 320]);
   }, [beep, buzz]);
 
+  const say = useCallback(
+    (text: string, delayMs = 0) => {
+      if (!voiceRef.current) return;
+      speakCoach(text, lang, delayMs);
+    },
+    [lang],
+  );
+
   /** Ticks while running and fires any cue whose moment has passed. */
   useEffect(() => {
     if (!running) return;
@@ -140,26 +171,32 @@ export default function BrewTimer({
 
       for (const c of cues) {
         const at = c.start as number;
-        if (now >= at - PRE_ALERT && !fired.current.has(`pre${c.id}`)) {
+        const beepable = at > 0;
+        if (beepable && now >= at - PRE_ALERT && !fired.current.has(`pre${c.id}`)) {
           fired.current.add(`pre${c.id}`);
           // Skip the warning if we are already past the step itself.
-          if (now < at) cuePre();
+          if (now < at) {
+            cuePre();
+            say(coachLine(lang, c, "next"), 200);
+          }
         }
         if (now >= at && !fired.current.has(`cue${c.id}`)) {
           fired.current.add(`cue${c.id}`);
-          cueStep();
+          if (beepable) cueStep();
+          say(coachLine(lang, c, "now"), beepable ? 220 : 0);
         }
       }
 
       if (total > 0 && now >= total && !fired.current.has("done")) {
         fired.current.add("done");
         cueDone();
+        say(lang === "th" ? "ชงเสร็จแล้ว" : "Brew complete", 400);
         setDone(true);
         setRunning(false);
       }
     }, 100);
     return () => clearInterval(id);
-  }, [running, cues, total, cuePre, cueStep, cueDone]);
+  }, [running, cues, total, cuePre, cueStep, cueDone, say, lang]);
 
   /** Keep the screen awake while counting down or brewing. */
   useEffect(() => {
@@ -189,6 +226,7 @@ export default function BrewTimer({
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
+      cancelSpeech();
       void audio.current?.close().catch(() => {});
     };
   }, [onClose]);
@@ -205,6 +243,7 @@ export default function BrewTimer({
 
   const start = useCallback(() => {
     ensureAudio();
+    cancelSpeech();
     startedAt.current = Date.now();
     setCountdown(null);
     setRunning(true);
@@ -214,6 +253,7 @@ export default function BrewTimer({
   function pause() {
     offset.current = elapsed;
     setRunning(false);
+    cancelSpeech();
   }
 
   function reset() {
@@ -223,6 +263,7 @@ export default function BrewTimer({
     setCountdown(null);
     offset.current = 0;
     fired.current.clear();
+    cancelSpeech();
   }
 
   function requestStart() {
@@ -242,12 +283,13 @@ export default function BrewTimer({
       beep(560, 90, 0.15);
       buzz(40);
     }
+    say(String(countdown));
     const id = window.setTimeout(() => {
       if (countdown <= 1) start();
       else setCountdown(countdown - 1);
     }, 1000);
     return () => window.clearTimeout(id);
-  }, [countdown, ensureAudio, beep, buzz, start]);
+  }, [countdown, ensureAudio, beep, buzz, start, say]);
 
   // Which step is happening now: the last one whose start has passed.
   const currentIndex = steps.reduce(
@@ -276,6 +318,25 @@ export default function BrewTimer({
             {brew.name || "Method"}
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            const nextOn = !voice;
+            setVoice(nextOn);
+            window.localStorage.setItem(VOICE_KEY, nextOn ? "on" : "off");
+            if (!nextOn) cancelSpeech();
+          }}
+          aria-pressed={voice}
+          aria-label={voice ? tr("voiceOn") : tr("voiceOff")}
+          title={voice ? tr("voiceOn") : tr("voiceOff")}
+          className="flex h-10 w-10 items-center justify-center rounded-full text-lg"
+          style={{
+            border: `1px solid ${voice ? theme.accent : theme.rule}`,
+            color: voice ? theme.accent : theme.muted,
+          }}
+        >
+          {voice ? <SpeakerOnIcon /> : <SpeakerOffIcon />}
+        </button>
         <button
           onClick={onClose}
           aria-label="Close timer"
@@ -313,16 +374,27 @@ export default function BrewTimer({
               : tr("noTotal")}
         </p>
 
-        {countdown === null && (
-          <div
-            className="mt-5 h-2 w-full max-w-md overflow-hidden rounded-full"
-            style={{ background: theme.rule }}
-          >
+        {hasRibbon ? (
+          <PourRibbon
+            brew={brew}
+            steps={steps}
+            total={total}
+            elapsed={countdown !== null ? 0 : elapsed}
+            theme={theme}
+            label={tr("pourRibbon")}
+          />
+        ) : (
+          countdown === null && (
             <div
-              className="h-full rounded-full transition-[width] duration-100"
-              style={{ width: `${pct}%`, background: theme.accent }}
-            />
-          </div>
+              className="mt-5 h-2 w-full max-w-md overflow-hidden rounded-full"
+              style={{ background: theme.rule }}
+            >
+              <div
+                className="h-full rounded-full transition-[width] duration-100"
+                style={{ width: `${pct}%`, background: theme.accent }}
+              />
+            </div>
+          )
         )}
 
         <div className="mt-6 w-full max-w-md text-center">
@@ -430,5 +502,43 @@ export default function BrewTimer({
         {tr("timerFooter")}
       </p>
     </div>
+  );
+}
+
+function SpeakerOnIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 9v6h3l5 4V5L7 9H4Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M16 8.5a5 5 0 0 1 0 7"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function SpeakerOffIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 9v6h3l5 4V5L7 9H4Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M19 9l-4 6M15 9l4 6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
