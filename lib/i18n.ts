@@ -127,8 +127,8 @@ const DICT = {
   readyWord: { en: "Ready", th: "พร้อมเริ่ม" },
   nextIn: { en: "next in", th: "อีก" },
   timerFooter: {
-    en: "Voice names each step, with a beep 3s before. Mute from the speaker. Vibration is Android only.",
-    th: "โค้ชเสียงอ่านแต่ละขั้น และบี๊บก่อน 3 วินาที ปิดเสียงพูดได้ที่ไอคอนลำโพง — การสั่นใช้ได้เฉพาะ Android",
+    en: "Voice names the next step 8s early, then beeps 3s before. Mute from the speaker. Vibration is Android only.",
+    th: "โค้ชเสียงอ่านขั้นต่อไปล่วงหน้า 8 วินาที แล้วบี๊บก่อนถึง 3 วินาที ปิดเสียงพูดได้ที่ไอคอนลำโพง — การสั่นใช้ได้เฉพาะ Android",
   },
   pourRibbon: { en: "Pour", th: "เทน้ำ" },
   voiceOn: { en: "Voice coach on", th: "เปิดโค้ชเสียง" },

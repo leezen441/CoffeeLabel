@@ -51,7 +51,7 @@ export function speakCoach(text: string, lang: Lang, delayMs = 0): void {
     if (!s) return;
     const u = new SpeechSynthesisUtterance(line);
     u.lang = lang === "th" ? "th-TH" : "en-GB";
-    u.rate = 1.04;
+    u.rate = 0.95;
     const voice = pickVoice(lang);
     if (voice) u.voice = voice;
     s.speak(u);

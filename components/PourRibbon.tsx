@@ -1,40 +1,81 @@
 "use client";
 
 import {
-  type BrewMethod,
   type TimelineStep,
   THEMES,
-  ribbonBlocks,
   stepSpan,
 } from "@/lib/types";
 
+export type TimerRibbonBlock = {
+  id: string;
+  text: string;
+  at: string;
+  addedG: number;
+  totalG: number;
+  start: number | null;
+  end: number | null;
+  duration: number;
+  share: number;
+};
+
+/** Blocks sized by how long each step lasts, not by how much water it adds. */
+export function timerRibbonBlocks(
+  steps: TimelineStep[],
+  total: number,
+): TimerRibbonBlock[] {
+  const raw: TimerRibbonBlock[] = [];
+  let prevWater = 0;
+
+  for (let i = 0; i < steps.length; i++) {
+    const s = steps[i];
+    const { start, end } = stepSpan(steps, total, i);
+    const duration =
+      start !== null && end !== null && end > start ? end - start : 0;
+    if (duration <= 0) continue;
+
+    const totalG = parseFloat(s.waterG);
+    const hasWater = Number.isFinite(totalG) && totalG > 0;
+    const addedG = hasWater ? Math.max(0, totalG - prevWater) : 0;
+    if (hasWater) prevWater = totalG;
+
+    raw.push({
+      id: s.id,
+      text: s.text,
+      at: s.raw,
+      addedG,
+      totalG: hasWater ? totalG : 0,
+      start,
+      end,
+      duration,
+      share: 0,
+    });
+  }
+
+  if (raw.length === 0) return [];
+
+  const sum = raw.reduce((a, b) => a + b.duration, 0);
+  if (!(sum > 0)) return [];
+
+  return raw.map((b) => ({ ...b, share: b.duration / sum }));
+}
+
 export default function PourRibbon({
-  brew,
   steps,
   total,
   elapsed,
   theme,
   label,
 }: {
-  brew: BrewMethod;
   steps: TimelineStep[];
   total: number;
   elapsed: number;
   theme: (typeof THEMES)[keyof typeof THEMES];
   label: string;
 }) {
-  const blocks = ribbonBlocks(brew);
-  if (blocks.length === 0) return null;
+  const live = timerRibbonBlocks(steps, total);
+  if (live.length === 0) return null;
 
-  const byId = new Map(steps.map((s, i) => [s.id, i]));
-  const live = blocks.map((b) => {
-    const index = byId.get(b.id);
-    const span =
-      index === undefined ? { start: null, end: null } : stepSpan(steps, total, index);
-    return { ...b, ...span };
-  });
-
-  const recipeTotal = live[live.length - 1]?.totalG ?? 0;
+  const recipeTotal = live.reduce((a, b) => Math.max(a, b.totalG), 0);
   let poured = 0;
   for (const b of live) poured += b.addedG * fillOf(b, elapsed);
 
@@ -65,7 +106,7 @@ export default function PourRibbon({
                 width: `${b.share * 100}%`,
                 background: theme.rule,
               }}
-              title={`${b.text} · ${b.totalG} g`}
+              title={`${b.text} · ${b.duration}s${b.totalG ? ` · ${b.totalG} g` : ""}`}
             >
               <div
                 className="absolute inset-y-0 left-0"
@@ -82,7 +123,7 @@ export default function PourRibbon({
                   color: fill > 0.35 ? theme.paper : theme.muted,
                 }}
               >
-                {b.totalG}
+                {b.totalG > 0 ? b.totalG : ""}
               </span>
             </div>
           );
@@ -116,5 +157,5 @@ function fillOf(
 
 function fmtG(n: number): string {
   if (!Number.isFinite(n)) return "0";
-  return n >= 100 ? String(Math.round(n)) : n.toFixed(0);
+  return String(Math.round(n));
 }

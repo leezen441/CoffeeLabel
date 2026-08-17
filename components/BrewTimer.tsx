@@ -3,18 +3,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { makeT, useLang, type Lang } from "@/lib/i18n";
 import { cancelSpeech, speakCoach, unlockSpeech } from "@/lib/voiceCoach";
-import PourRibbon from "./PourRibbon";
+import PourRibbon, { timerRibbonBlocks } from "./PourRibbon";
 import {
   type BrewMethod,
   THEMES,
   brewTimeline,
   formatWeight,
-  ribbonBlocks,
   stepSpan,
 } from "@/lib/types";
 
-/** Seconds of warning before a step begins. */
+/** Beep this many seconds before a step. */
 const PRE_ALERT = 3;
+/** Speak early enough that the sentence can finish before the pour. */
+const SPEAK_ALERT = 8;
 /** Hands-free start: one tap, then this many seconds before the clock runs. */
 const COUNTDOWN_FROM = 3;
 
@@ -82,7 +83,7 @@ export default function BrewTimer({
   const lang = useLang();
   const tr = makeT(lang);
   const { steps, total } = brewTimeline(brew);
-  const hasRibbon = ribbonBlocks(brew).length > 0;
+  const hasRibbon = timerRibbonBlocks(steps, total).length > 0;
   /** only steps with a real start time can be cued */
   const cues = steps
     .map((s, i) => ({ ...s, index: i }))
@@ -172,18 +173,22 @@ export default function BrewTimer({
       for (const c of cues) {
         const at = c.start as number;
         const beepable = at > 0;
+        if (beepable && now >= at - SPEAK_ALERT && !fired.current.has(`speak${c.id}`)) {
+          fired.current.add(`speak${c.id}`);
+          if (now < at) say(coachLine(lang, c, "next"));
+        }
         if (beepable && now >= at - PRE_ALERT && !fired.current.has(`pre${c.id}`)) {
           fired.current.add(`pre${c.id}`);
-          // Skip the warning if we are already past the step itself.
-          if (now < at) {
-            cuePre();
-            say(coachLine(lang, c, "next"), 200);
-          }
+          if (now < at) cuePre();
         }
         if (now >= at && !fired.current.has(`cue${c.id}`)) {
           fired.current.add(`cue${c.id}`);
           if (beepable) cueStep();
-          say(coachLine(lang, c, "now"), beepable ? 220 : 0);
+          // Don't talk over the 8s warning — only speak here if we never got one.
+          if (!fired.current.has(`speak${c.id}`)) {
+            fired.current.add(`speak${c.id}`);
+            say(coachLine(lang, c, "now"));
+          }
         }
       }
 
@@ -243,7 +248,6 @@ export default function BrewTimer({
 
   const start = useCallback(() => {
     ensureAudio();
-    cancelSpeech();
     startedAt.current = Date.now();
     setCountdown(null);
     setRunning(true);
@@ -283,13 +287,19 @@ export default function BrewTimer({
       beep(560, 90, 0.15);
       buzz(40);
     }
-    say(String(countdown));
+    if (countdown === COUNTDOWN_FROM) {
+      const first = steps.find((s) => s.start === 0) ?? steps[0];
+      if (first) {
+        fired.current.add(`speak${first.id}`);
+        say(coachLine(lang, first, "now"));
+      }
+    }
     const id = window.setTimeout(() => {
       if (countdown <= 1) start();
       else setCountdown(countdown - 1);
     }, 1000);
     return () => window.clearTimeout(id);
-  }, [countdown, ensureAudio, beep, buzz, start, say]);
+  }, [countdown, ensureAudio, beep, buzz, start, say, lang]);
 
   // Which step is happening now: the last one whose start has passed.
   const currentIndex = steps.reduce(
@@ -376,7 +386,6 @@ export default function BrewTimer({
 
         {hasRibbon ? (
           <PourRibbon
-            brew={brew}
             steps={steps}
             total={total}
             elapsed={countdown !== null ? 0 : elapsed}
