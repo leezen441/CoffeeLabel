@@ -245,6 +245,16 @@ const DICT = {
   secBrews: { en: "Brew methods", th: "วิธีชง" },
   addMethod: { en: "+ Add method", th: "+ เพิ่มวิธีชง" },
   noBrewsYet: { en: "No brew methods yet — add up to", th: "ยังไม่มีวิธีชง — เพิ่มได้ถึง" },
+  addTemplate: { en: "Add starter recipe", th: "เพิ่มสูตรตั้งต้น" },
+  templateHint: {
+    en: "Tap a method to add a starter recipe with times and pours. Edit after the first cup.",
+    th: "แตะวิธีชงเพื่อใส่สูตรตั้งต้น พร้อมเวลาและกรัมน้ำ ปรับได้อีกหลังชงแก้วแรก",
+  },
+  useTemplate: { en: "Fill starter recipe", th: "ใส่สูตรตั้งต้น" },
+  useTemplateConfirm: {
+    en: "Replace this method with the starter recipe? Times and pours will be overwritten. Grinder settings are kept.",
+    th: "แทนที่วิธีนี้ด้วยสูตรตั้งต้นไหม เวลาและขั้นตอนจะถูกเขียนทับ เบอร์บดยังอยู่",
+  },
 
   /* brew editor */
   methodPlaceholder: {

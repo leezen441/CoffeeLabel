@@ -11,6 +11,7 @@ import {
   grinderModels,
   ratioOf,
 } from "@/lib/types";
+import { brewFromTemplate, isBrewBlank, templateFor } from "@/lib/brewTemplates";
 
 export default function BrewEditor({
   brew,
@@ -87,7 +88,14 @@ export default function BrewEditor({
           list="method-presets"
           placeholder={tr("methodPlaceholder")}
           value={brew.name}
-          onChange={(e) => set("name", e.target.value)}
+          onChange={(e) => {
+            const name = e.target.value;
+            if (templateFor(name) && isBrewBlank(brew)) {
+              onChange(brewFromTemplate(name, brew));
+            } else {
+              set("name", name);
+            }
+          }}
         />
         <button
           className="btn btn-ghost px-2"
@@ -266,6 +274,17 @@ export default function BrewEditor({
           <button className="btn btn-ghost text-xs" onClick={addStep}>
             {tr("addStep")}
           </button>
+          {templateFor(brew.name) && (
+            <button
+              className="btn btn-ghost text-xs"
+              onClick={() => {
+                if (!isBrewBlank(brew) && !confirm(tr("useTemplateConfirm"))) return;
+                onChange(brewFromTemplate(brew.name, brew));
+              }}
+            >
+              {tr("useTemplate")}
+            </button>
+          )}
         </div>
         <div className="flex flex-col gap-1.5">
           {brew.steps.map((step, i) => (
