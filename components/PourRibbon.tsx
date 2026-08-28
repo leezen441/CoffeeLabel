@@ -2,7 +2,7 @@
 
 import {
   type TimelineStep,
-  THEMES,
+  type Palette,
   stepSpan,
 } from "@/lib/types";
 
@@ -69,7 +69,7 @@ export default function PourRibbon({
   steps: TimelineStep[];
   total: number;
   elapsed: number;
-  theme: (typeof THEMES)[keyof typeof THEMES];
+  theme: Palette;
   label: string;
 }) {
   const live = timerRibbonBlocks(steps, total);

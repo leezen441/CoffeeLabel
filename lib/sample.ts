@@ -21,7 +21,6 @@ export function sampleLabel(): CoffeeLabel {
     showRest: true,
     showDoseBoxes: true,
     doseBoxes: 5,
-    theme: "espresso",
     size: "100x70",
     layout: "full",
     showQr: true,

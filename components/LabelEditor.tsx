@@ -18,6 +18,7 @@ import {
   PROCESS_GROUPS,
   PROCESS_OPTIONS,
   ROAST_LEVELS,
+  ROAST_PALETTES,
   emptyBrew,
   flavorColor,
   labelTitle,
@@ -296,14 +297,20 @@ export default function LabelEditor({ id }: { id: string }) {
                             cy="12"
                             rx="6.6"
                             ry="9.8"
-                            fill={n <= label.roastLevel ? "#6f4423" : "none"}
-                            stroke="#6f4423"
+                            fill={
+                              n <= label.roastLevel ? ROAST_PALETTES[n].bean : "none"
+                            }
+                            stroke={ROAST_PALETTES[n].bean}
                             strokeWidth="1.6"
                           />
                           <path
                             d="M12 3.2c-3 4.2-3 13.4 0 17.6"
                             fill="none"
-                            stroke={n <= label.roastLevel ? "#f6f2ec" : "#6f4423"}
+                            stroke={
+                              n <= label.roastLevel
+                                ? ROAST_PALETTES[n].paper
+                                : ROAST_PALETTES[n].bean
+                            }
                             strokeWidth="1.5"
                             strokeLinecap="round"
                           />

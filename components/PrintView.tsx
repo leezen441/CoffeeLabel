@@ -12,11 +12,9 @@ import {
   type CoffeeLabel,
   type LayoutId,
   type SizeId,
-  type ThemeId,
   MAX_MM,
   MIN_MM,
   SIZES,
-  THEMES,
   clampMm,
   labelSize,
   labelTitle,
@@ -237,7 +235,7 @@ export default function PrintView({ id }: { id: string }) {
       <div className="no-print mx-auto max-w-6xl px-5 pt-5">
         <div className="panel mb-3 p-4">
           <h2 className="section-title mb-3">{tr("secSticker")}</h2>
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-3">
             <label className="field">
               <span>{tr("fSize")}</span>
               <select
@@ -262,20 +260,6 @@ export default function PrintView({ id }: { id: string }) {
                 <option value="full">{tr("layoutFull")}</option>
                 <option value="ribbon">{tr("layoutRibbon")}</option>
                 <option value="compact">{tr("layoutCompact")}</option>
-              </select>
-            </label>
-            <label className="field">
-              <span>{tr("fColour")}</span>
-              <select
-                className="select"
-                value={label.theme}
-                onChange={(e) => update({ theme: e.target.value as ThemeId })}
-              >
-                {(Object.keys(THEMES) as ThemeId[]).map((k) => (
-                  <option key={k} value={k}>
-                    {THEMES[k].name}
-                  </option>
-                ))}
               </select>
             </label>
             <label className="field">

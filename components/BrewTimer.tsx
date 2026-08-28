@@ -6,7 +6,7 @@ import { cancelSpeech, speakCoach, unlockSpeech } from "@/lib/voiceCoach";
 import PourRibbon, { timerRibbonBlocks } from "./PourRibbon";
 import {
   type BrewMethod,
-  THEMES,
+  type Palette,
   brewTimeline,
   formatWeight,
   stepSpan,
@@ -80,7 +80,7 @@ export default function BrewTimer({
   onClose,
 }: {
   brew: BrewMethod;
-  theme: (typeof THEMES)[keyof typeof THEMES];
+  theme: Palette;
   onClose: () => void;
 }) {
   const lang = useLang();

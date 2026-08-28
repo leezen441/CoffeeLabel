@@ -5,7 +5,8 @@ import QRCode from "qrcode";
 import {
   type CoffeeLabel,
   ROAST_LEVELS,
-  THEMES,
+  type Palette,
+  paletteFor,
   addDays,
   bestBefore,
   daysSince,
@@ -237,7 +238,7 @@ export default function Sticker({
   const fitRef = useRef<HTMLDivElement>(null);
   const [qr, setQr] = useState<string>("");
 
-  const theme = THEMES[label.theme] ?? THEMES.espresso;
+  const theme: Palette = paletteFor(label);
   const size = labelSize(label);
   const roast = ROAST_LEVELS[label.roastLevel] ?? ROAST_LEVELS[3];
   const layout = label.layout;
@@ -434,11 +435,11 @@ export default function Sticker({
             <div className="cl-roaster">{ph(label.roaster, "Roaster name")}</div>
             <div className="cl-roast">
               {label.roastDisplay === "scale" ? (
-                <RoastScale level={label.roastLevel} accent={theme.accent} rule={theme.rule} />
+                <RoastScale level={label.roastLevel} accent={theme.bean} rule={theme.rule} />
               ) : (
                 <div className="cl-beans">
                   {[1, 2, 3, 4, 5].map((n) => (
-                    <Bean key={n} filled={n <= label.roastLevel} color={theme.accent} />
+                    <Bean key={n} filled={n <= label.roastLevel} color={theme.bean} />
                   ))}
                 </div>
               )}

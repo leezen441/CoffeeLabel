@@ -291,7 +291,6 @@ export type CoffeeLabel = {
   doseBoxes: number;
 
   /** sticker appearance */
-  theme: ThemeId;
   size: SizeId;
   /** used only when size === "custom", in millimetres */
   customW: number;
@@ -302,7 +301,6 @@ export type CoffeeLabel = {
   updatedAt: string;
 };
 
-export type ThemeId = "espresso" | "crimson" | "forest" | "navy" | "mono";
 export type SizeId =
   | "100x150"
   | "100x100"
@@ -576,51 +574,72 @@ export function processBias(process: string): number {
   return hits.length ? Math.max(...hits) : 0;
 }
 
-export const THEMES: Record<
-  ThemeId,
-  { name: string; ink: string; accent: string; paper: string; muted: string; rule: string }
-> = {
-  espresso: {
-    name: "Espresso",
-    ink: "#2A1A10",
+/**
+ * Label colours, taken from how the bean itself looks at each roast level —
+ * pale cinnamon through to near-black and oily, following the Agtron scale
+ * roasters actually grade by.
+ *
+ * `bean` is the true roast colour and is only ever a fill, so it can be as pale
+ * as a real light roast. `accent` is the same colour pulled dark enough to read
+ * as text: every level clears 4.5:1 on its own paper, and consecutive levels
+ * stay at least 6 L* apart so they are still told apart on a mono label printer.
+ */
+export type Palette = {
+  ink: string;
+  accent: string;
+  bean: string;
+  paper: string;
+  muted: string;
+  rule: string;
+};
+
+export const ROAST_PALETTES: Record<RoastLevel, Palette> = {
+  1: {
+    ink: "#3B2A16",
+    accent: "#9A6A2A",
+    bean: "#CFA669",
+    paper: "#FDFBF5",
+    muted: "#7C6851",
+    rule: "#E8DCC6",
+  },
+  2: {
+    ink: "#38260F",
     accent: "#8A5A2B",
-    paper: "#FBF7F0",
-    muted: "#7A6656",
-    rule: "#D9C9B6",
+    bean: "#B27C3E",
+    paper: "#FCF8F0",
+    muted: "#77634C",
+    rule: "#E3D3B8",
   },
-  crimson: {
-    name: "Crimson",
-    ink: "#2B1414",
-    accent: "#A4302A",
-    paper: "#FCF6F4",
-    muted: "#7E5F5C",
-    rule: "#E0C8C4",
+  3: {
+    ink: "#2F1E10",
+    accent: "#71481F",
+    bean: "#8E5A2C",
+    paper: "#FBF6EE",
+    muted: "#786351",
+    rule: "#DDC9AF",
   },
-  forest: {
-    name: "Forest",
-    ink: "#132218",
-    accent: "#2E6B4B",
-    paper: "#F4F9F5",
-    muted: "#5E7669",
-    rule: "#C6DBCC",
+  4: {
+    ink: "#271A11",
+    accent: "#57351D",
+    bean: "#5E3620",
+    paper: "#F9F3EB",
+    muted: "#6B584A",
+    rule: "#D6C1AB",
   },
-  navy: {
-    name: "Navy",
-    ink: "#111E2B",
-    accent: "#26547C",
-    paper: "#F4F8FC",
-    muted: "#5C7085",
-    rule: "#C5D6E4",
-  },
-  mono: {
-    name: "Mono",
-    ink: "#111111",
-    accent: "#111111",
-    paper: "#FFFFFF",
-    muted: "#666666",
-    rule: "#CCCCCC",
+  5: {
+    ink: "#1E1410",
+    accent: "#33221A",
+    bean: "#2B1B13",
+    paper: "#F7F1E9",
+    muted: "#5F4F47",
+    rule: "#CDB8A6",
   },
 };
+
+/** Every surface that paints a label goes through this, so none can drift. */
+export function paletteFor(label: { roastLevel: RoastLevel }): Palette {
+  return ROAST_PALETTES[label.roastLevel] ?? ROAST_PALETTES[3];
+}
 
 /** Physical sticker sizes in millimetres. */
 export const SIZES: Record<SizeId, { name: string; w: number; h: number; hint: string }> = {
@@ -723,7 +742,6 @@ export function emptyLabel(): CoffeeLabel {
     showDoseBoxes: false,
     doseBoxes: 5,
     brews: [emptyBrew("Espresso"), emptyBrew("V60"), emptyBrew("Aeropress")],
-    theme: "espresso",
     size: "100x70",
     customW: 100,
     customH: 70,

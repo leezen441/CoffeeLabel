@@ -9,7 +9,7 @@ import {
   type BrewMethod,
   type TasteFlag,
   TASTE_FLAGS,
-  THEMES,
+  type Palette,
   dialLabel,
   emptyEntry,
   formatDoseYield,
@@ -46,7 +46,7 @@ export default function BrewLog({
 }: {
   labelId: string;
   brew: BrewMethod;
-  theme: (typeof THEMES)[keyof typeof THEMES];
+  theme: Palette;
   /** run this exact recipe on the timer */
   onStart: (next: BrewMethod) => void;
   /** write this recipe back over the saved one */

@@ -331,7 +331,6 @@ const DICT = {
   layoutFull: { en: "Full — numbered steps", th: "เต็ม — ลำดับขั้นเป็นตัวเลข" },
   layoutRibbon: { en: "Ribbon — pour timeline", th: "แถบ — ไทม์ไลน์การริน" },
   layoutCompact: { en: "Compact — specs only", th: "กระชับ — เฉพาะค่าหลัก" },
-  fColour: { en: "Colour", th: "โทนสี" },
   fQr: { en: "QR code", th: "คิวอาร์โค้ด" },
   printQr: { en: "Print a QR code", th: "พิมพ์คิวอาร์โค้ดด้วย" },
   fWidthMm: { en: "Width (mm)", th: "กว้าง (มม.)" },

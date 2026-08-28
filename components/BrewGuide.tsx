@@ -11,7 +11,8 @@ import {
   type BrewMethod,
   type CoffeeLabel,
   ROAST_LEVELS,
-  THEMES,
+  type Palette,
+  paletteFor,
   addDays,
   bestBefore,
   daysSince,
@@ -74,7 +75,7 @@ export default function BrewGuide({
     );
   }
 
-  const theme = THEMES[label.theme] ?? THEMES.espresso;
+  const theme = paletteFor(label);
   const brews = label.brews.filter((b) => b.name || b.steps.some((s) => s.text));
   const rawBrew = brews[Math.min(active, brews.length - 1)];
   // Scaling is presentational — the stored recipe is never touched.
@@ -143,8 +144,8 @@ export default function BrewGuide({
                       cy="12"
                       rx="6.6"
                       ry="9.8"
-                      fill={n <= label.roastLevel ? theme.accent : "none"}
-                      stroke={theme.accent}
+                      fill={n <= label.roastLevel ? theme.bean : "none"}
+                      stroke={theme.bean}
                       strokeWidth="1.8"
                     />
                   </g>
@@ -339,7 +340,7 @@ function Stat({
   label,
   value,
 }: {
-  theme: (typeof THEMES)[keyof typeof THEMES];
+  theme: Palette;
   label: string;
   value: string;
 }) {
