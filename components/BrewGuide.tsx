@@ -316,8 +316,8 @@ export default function BrewGuide({
         )}
 
         <div className="mt-10 flex gap-2 text-sm">
-          <Link href={`/editor/${label.id}`} className="btn">
-            {tr("edit")}
+          <Link href={`/editor/${label.id}?view=brews`} className="btn">
+            {tr("editMethods")}
           </Link>
           <Link href={`/print/${label.id}`} className="btn">
             {tr("print")}

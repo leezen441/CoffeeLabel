@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import BrewEditor from "./BrewEditor";
 import LangToggle from "./LangToggle";
 import { type MsgKey, makeT, useLang } from "@/lib/i18n";
@@ -35,8 +36,14 @@ export default function LabelEditor({ id }: { id: string }) {
   const [noteDraft, setNoteDraft] = useState("");
   const [groups, setGroups] = useState<LabelGroup[]>([]);
   const [customProcess, setCustomProcess] = useState(false);
-  /** The brew methods are long enough to deserve their own screen. */
-  const [view, setView] = useState<"details" | "brews">("details");
+  /**
+   * The brew methods are long enough to deserve their own screen. `?view=brews`
+   * opens straight on them, which is what the brew guide links to.
+   */
+  const params = useSearchParams();
+  const [view, setView] = useState<"details" | "brews">(
+    params.get("view") === "brews" ? "brews" : "details",
+  );
   const tr = makeT(useLang());
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);

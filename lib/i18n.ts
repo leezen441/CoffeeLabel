@@ -86,6 +86,7 @@ const DICT = {
   duplicate: { en: "Duplicate", th: "ทำซ้ำ" },
   del: { en: "Delete", th: "ลบ" },
   brewGuide: { en: "Brew guide", th: "วิธีชง" },
+  editMethods: { en: "Edit methods", th: "แก้ไขวิธีชง" },
   brewTimer: { en: "Brew timer", th: "จับเวลาชง" },
   library: { en: "Library", th: "คลังกาแฟ" },
   saveImage: { en: "Save image", th: "บันทึกรูป" },
