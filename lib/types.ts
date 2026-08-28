@@ -583,6 +583,10 @@ export function processBias(process: string): number {
  * as a real light roast. `accent` is the same colour pulled dark enough to read
  * as text: every level clears 4.5:1 on its own paper, and consecutive levels
  * stay at least 6 L* apart so they are still told apart on a mono label printer.
+ *
+ * The paper carries the roast too. It has to move about 4 L* per level to be
+ * noticed at all — at 1 L* the five levels looked identical side by side in the
+ * library — and `rule` is darkened to match so the hairlines survive the tint.
  */
 export type Palette = {
   ink: string;
@@ -598,41 +602,41 @@ export const ROAST_PALETTES: Record<RoastLevel, Palette> = {
     ink: "#3B2A16",
     accent: "#9A6A2A",
     bean: "#CFA669",
-    paper: "#FDFBF5",
+    paper: "#FEFDFA",
     muted: "#7C6851",
-    rule: "#E8DCC6",
+    rule: "#E2D5BC",
   },
   2: {
     ink: "#38260F",
     accent: "#8A5A2B",
     bean: "#B27C3E",
-    paper: "#FCF8F0",
+    paper: "#FAF2E3",
     muted: "#77634C",
-    rule: "#E3D3B8",
+    rule: "#D8C4A4",
   },
   3: {
     ink: "#2F1E10",
     accent: "#71481F",
     bean: "#8E5A2C",
-    paper: "#FBF6EE",
+    paper: "#F3E7D2",
     muted: "#786351",
-    rule: "#DDC9AF",
+    rule: "#CBB28C",
   },
   4: {
     ink: "#271A11",
     accent: "#57351D",
     bean: "#5E3620",
-    paper: "#F9F3EB",
+    paper: "#EBD9BE",
     muted: "#6B584A",
-    rule: "#D6C1AB",
+    rule: "#BC9F79",
   },
   5: {
     ink: "#1E1410",
     accent: "#33221A",
     bean: "#2B1B13",
-    paper: "#F7F1E9",
+    paper: "#E1C9A9",
     muted: "#5F4F47",
-    rule: "#CDB8A6",
+    rule: "#AC8C67",
   },
 };
 
