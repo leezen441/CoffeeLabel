@@ -10,6 +10,7 @@ import * as store from "@/lib/store";
 import type { StorageMode } from "@/lib/store";
 import LangToggle from "@/components/LangToggle";
 import { type MsgKey, makeT, useLang } from "@/lib/i18n";
+import { saveGroups, useSavedGroups } from "@/lib/groupFilter";
 import { useOrigin } from "@/lib/useOrigin";
 import {
   type CoffeeLabel,
@@ -34,7 +35,7 @@ export default function LibraryPage() {
   const [query, setQuery] = useState("");
   /** "" = search everything, otherwise restrict the text search to one group */
   const [scope, setScope] = useState("");
-  const [active, setActive] = useState<Set<string>>(new Set());
+  const savedGroups = useSavedGroups();
   const [ready, setReady] = useState<"all" | RestStatus>("all");
   const [busy, setBusy] = useState(false);
   const [viewing, setViewing] = useState<CoffeeLabel | null>(null);
@@ -78,6 +79,15 @@ export default function LibraryPage() {
     [],
   );
 
+  /**
+   * The remembered selection, minus any group that has since been deleted —
+   * a stale id would silently filter the whole library down to nothing.
+   */
+  const active = useMemo(() => {
+    const known = new Set([UNGROUPED, ...groups.map((g) => g.id)]);
+    return new Set(savedGroups.filter((id) => known.has(id)));
+  }, [savedGroups, groups]);
+
   const counts = useMemo(() => {
     const m = new Map<string, number>();
     (labels ?? []).forEach((l) => m.set(groupOf(l), (m.get(groupOf(l)) ?? 0) + 1));
@@ -114,13 +124,12 @@ export default function LibraryPage() {
     return m;
   }, [labels]);
 
-  const toggleGroup = (id: string) =>
-    setActive((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const toggleGroup = (id: string) => {
+    const next = new Set(active);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    saveGroups(next);
+  };
 
   async function addGroup() {
     const name = prompt(tr("groupNamePrompt"))?.trim();
@@ -194,11 +203,9 @@ export default function LibraryPage() {
     setBusy(true);
     try {
       await store.deleteGroup(group.id);
-      setActive((prev) => {
-        const next = new Set(prev);
-        next.delete(group.id);
-        return next;
-      });
+      const next = new Set(active);
+      next.delete(group.id);
+      saveGroups(next);
       if (scope === group.id) setScope("");
       await refresh();
     } finally {
@@ -361,7 +368,7 @@ export default function LibraryPage() {
             {active.size > 0 && (
               <button
                 className="btn btn-ghost text-xs"
-                onClick={() => setActive(new Set())}
+                onClick={() => saveGroups([])}
               >
                 {tr("clearFilter")}
               </button>

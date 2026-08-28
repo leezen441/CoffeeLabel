@@ -45,3 +45,6 @@ next-env.d.ts
 
 # label backups exported from the app
 bean-label-backup-*.json
+
+# stale copy of an older main downloaded as a zip
+/CoffeeLabel-main
