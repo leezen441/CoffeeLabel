@@ -1,0 +1,338 @@
+# Bean Label — Coffee Sticker Studio
+
+Design, store and print brew-guide stickers for coffee beans. Fill in the roaster
+and bean details, set the roast level, add up to five brew recipes, then print the
+label at a real millimetre size and stick it on the bag.
+
+## What goes on a label
+
+| Field | Notes |
+| --- | --- |
+| Roaster / shop name | Small caps, top-left |
+| Coffee name | Display serif headline |
+| Variety, Process, Origin, Altitude | Combined into one meta line |
+| Roast level | Segmented scale with a marker, or 1–5 bean icons — Light · Light-Medium · Medium · Medium-Dark · Dark |
+| Roast date | Plus an auto-calculated **Best before** (roast date + N days) |
+| Tasting notes | Up to 4 |
+| Net weight | Footer |
+| Brew methods | 3 by default, up to 5 |
+| QR code | Optional — scans to the full brew guide on a phone |
+
+Each brew method holds:
+
+- **Method** — Espresso, Filter, V60, Aeropress, French Press, Moka Pot, Chemex,
+  Cold Brew, Kalita Wave, Siphon (or type your own)
+- **Water temperature** in °C
+- **Dose → Yield** in grams, with the **ratio computed automatically** (`1:2`, `1:16.7`)
+- **Total time**
+
+On the sticker these four print as one row, each preceded by a small icon —
+thermometer, weight, proportion bars, clock — so the numbers read as labelled
+values instead of a run of digits. The icons scale with the label, so they are
+clearest when a sticker carries only one or two recipes.
+- **Grinder** — chosen in two steps, **brand then model**. Picking a brand filters
+  the model list to that brand's grinders, and picking a model relabels the dial
+  input to match how that grinder is actually read: *clicks* (Comandante, 1Zpresso,
+  Timemore, Kingrinder, Hario, Porlex), a *dial number* (DF/Lagom, Niche, Fellow,
+  Baratza, Eureka, Mazzer, Mahlkönig, Weber, Wilfa) or *microns* (Generic). The unit
+  is appended for you, so the label reads `GRIND  Comandante C40 MK4 · 24 clicks`.
+
+  Either level accepts **Other…** and falls back to free text, so an unlisted brand
+  or a new model is never a dead end. Labels saved before the split are migrated
+  automatically — `Comandante C40 MK4` becomes brand `Comandante`, model `C40 MK4`,
+  and anything unrecognised is kept intact as a free-text model.
+- **Brew sequence** — an ordered, reorderable list of steps, each with an optional
+  timestamp (`0:45`) and an optional **cumulative water** figure (`45`, `150`, `250`)
+
+### Pour timeline ribbon
+
+Give the steps cumulative water and the **Ribbon** layout prints them as a
+proportional block timeline instead of a numbered list — each block's width is the
+water added during that pour, captioned with the running total and the timestamp.
+It needs water on at least two steps; any method without it (espresso, immersion)
+falls back to the numbered list automatically, so the two can mix on one label.
+
+### Rest & degas window
+
+With a roast date set, the label prints a **peak window** as a bar with the window
+highlighted and a marker showing how long the bag has actually rested. Override the
+days per label, or switch the bar off.
+
+The window is calculated from three inputs, in order of influence:
+
+1. **Roast level** — the strongest factor. A light roast is denser and holds CO₂
+   much longer than a dark one. Filter baseline: Light 10–16 days down to Dark 3–7.
+2. **Brew method** — if any recipe on the label is a pressure brew (espresso, moka,
+   lever) the espresso window is used instead, roughly a week longer, because
+   leftover CO₂ disrupts a shot long after the same coffee tastes fine as filter.
+   With both on one label, espresso wins as the binding constraint.
+3. **Process** — shifts the result: Honey +2, Natural +3, anaerobic and other heavy
+   fermentations +5, decaf and monsooned −2, Washed is the 0 baseline.
+
+So a Light roast, espresso, Anaerobic Natural lands at day 23–33, while a Dark
+roast filter Washed is day 3–7.
+
+This is a starting point, not a measurement. Bean density, packaging and storage
+all matter too, and tasting the coffee beats any formula.
+
+The window prints as **real dates** (`24–28 Aug 2026`), not day counts: once the
+sticker is on a bag, "Day 10–14" would still need counting from the roast date.
+
+The bar and the `Nd rested` readout are **screen-only**. They are correct only at
+the moment they are drawn, so anything printed or saved as an image keeps just the
+peak-window dates, which stay true.
+
+### Single-dose tracker
+
+An optional row of up to 12 tick boxes to cross off as you use single doses out of
+the bag.
+
+### Flavour colours
+
+Tasting notes carry a colour dot taken from the SCA flavour families. Notes are
+matched on keywords, so "Jasmine" picks up Floral pink and "Peach" Stone Fruit
+orange without any tagging. A quick-pick row inserts the families directly.
+
+## Pages
+
+| Route | Purpose |
+| --- | --- |
+| `/` | Library — all labels, groups, search, duplicate, delete. Clicking a card opens a read-only viewer with zoom (buttons, pinch, scroll wheel, double-tap) and drag-to-pan; Esc closes it. |
+| `/editor/[id]` | Form with a live sticker preview; autosaves as you type |
+| `/print/[id]` | Print sheet — paper size, copies, gap, cut guides |
+| `/b/[id]` | Mobile brew guide — what the QR code opens |
+
+## Groups
+
+**+ Group** in the header creates a group. To put a label in one, click the **tag
+icon** on its card and pick from the list — the icon takes on the group's colour once
+assigned. The same choice also exists in the editor (*The coffee → Group*).
+
+Groups appear as coloured chips under the search box:
+
+- Clicking a chip highlights it and filters the library to that group.
+- Several chips can be on at once — the library then shows the **union** of them.
+- **Ungrouped** appears automatically whenever some labels have no group.
+- Hovering a chip reveals ✕ to delete the group. Its labels are kept and simply
+  become ungrouped.
+
+The dropdown beside the search box restricts the **text search** to one group,
+independently of the chips. All three filters (chips, search scope, search text)
+are intersected.
+
+## Sticker sizes
+
+`100×150`, `100×100`, `100×70`, `90×60`, `80×50`, `70×40`, `60×60` mm, an A6 brew
+card (105×148 mm), and **Custom size…** — type any width × height from 20 to 300 mm.
+Values outside that range are clamped, and a blank or invalid entry falls back to
+100 × 70. Custom sizes behave exactly like presets everywhere: preview, viewer,
+tiling on a sheet, and the `@page` rule when printing one per page.
+
+**Match the sticker size to the paper actually loaded in the printer.** A 100×70
+sticker sent to a 100×150 mm label roll prints at the top and wastes the bottom
+80 mm. Don't compensate with the print dialog's Scale setting — that breaks the
+millimetre accuracy. Pick the matching size instead.
+
+The layout is defined in units of 1% of the label width, so one design renders
+correctly at every size. The content block is then scaled to **fill** the label:
+shrunk when there is too much, enlarged when a short label would otherwise leave
+the bottom blank (capped at 1.9× so a nearly-empty label doesn't turn into giant
+type). Nothing is ever clipped. On the smallest labels choose the **Compact**
+layout, which prints the specs line without the step-by-step sequence. **Ribbon**
+sits in between — the pour timeline takes far less height than numbered steps.
+
+Fewer brew methods means bigger type, because less has to fit. One V60 recipe on a
+100×150 label prints at roughly 13 pt; the same recipe on 70×40 lands near 4 pt.
+
+## Printing
+
+Open a label → **Print stickers**. Choose:
+
+- **Content** — *Full label*, or *Brew guide only*, which drops the roaster line,
+  origin, tasting notes, roast dates and QR and prints just the coffee name plus the
+  recipes. Because far less has to fit, the type comes out noticeably larger
+  (≈6 pt instead of ≈4.4 pt on a 100 × 70 mm sticker).
+- **Paper** — A4, US Letter, or "Label printer — one per page" (sets `@page` to the
+  exact sticker size for a thermal/roll printer)
+- **Copies** — tiled across as many pages as needed
+- **Gap** between stickers, and dashed **cut guides**
+
+In the browser print dialog set **Margins: None**, **Scale: 100%**, and enable
+**Background graphics** so the colours print.
+
+## Saving a label as an image
+
+**Save image** — in the print page header and in the library viewer — renders the
+sticker to a PNG at roughly 384 dpi (a 100 × 70 mm label comes out 1512 × 1060 px).
+
+On a phone this opens the system share sheet, where **Save Image** puts it straight
+into the photo album. On desktop it downloads as `coffee-name.png`. The dashed cut
+guide is never included.
+
+The renderer wraps a clone of the sticker in an SVG `<foreignObject>` and carries
+across only the `:root` variables and `.cl-*` rules it needs. Off-the-shelf
+DOM-to-image libraries stalled indefinitely on this markup; the targeted approach
+also keeps the intermediate data URL small.
+
+## Storage
+
+The app works in two modes and tells you which one is active with a badge in the
+header:
+
+- **Database** — when a Postgres connection string is present. Data lives in
+  `coffee_labels` and `coffee_groups` (both created automatically on first use) and is
+  available from any device, which is what makes the QR codes work off your phone.
+- **This browser** — no database configured; data lives in `localStorage`. Handy for
+  a quick local try, but a scanned QR code will only resolve on the same browser.
+
+## Brew timer
+
+The brew guide (`/b/[id]`, what the QR opens) has **Start brew timer** under each
+recipe. It counts up against that recipe's steps, highlights the current one,
+counts down to the next, and cues you as you go:
+
+- a soft beep and short buzz **3 seconds before** each step
+- a firmer beep and buzz **on** the step
+- a triple chime and long buzz at the end
+
+Sound is generated with the Web Audio API — no audio files, and the context is
+created from the Start tap so autoplay rules are satisfied. The screen is kept
+awake via Wake Lock while running. Elapsed time is measured against the wall
+clock rather than accumulated ticks, so it never drifts.
+
+**Vibration is Android only.** iOS Safari does not implement `navigator.vibrate`
+at any version, so iPhones get sound alone.
+
+### How the times are read
+
+Step timestamps are free text, so the timer interprets them:
+
+| Written | Read as |
+| --- | --- |
+| `0:30-1:00` | starts at 0:30, ends at 1:00 |
+| `0:30` | ends at 0:30, starting wherever the previous step finished |
+| *(blank)* | shown in the list, but never cued |
+
+A single value is treated as an end rather than a start because that is how these
+recipes are written: step 1 `0:30` means bloom for the first 30 seconds, and
+step 2 `0:30-1:00` picks up exactly there. Units (`min`, `sec`, `m.`) are ignored,
+so existing labels work untouched.
+
+## Brew log and dial-in
+
+Under each recipe in the brew guide, **+ Log a brew** records what actually
+happened: grind used, dose, yield, time, how it tasted, a rating and a note. The
+form pre-fills from the recipe, so a normal brew is two taps.
+
+Taste and flow are asked separately, because they are different evidence, and
+each flag carries a one-line explanation of what it means so the vocabulary
+teaches as you use it.
+
+The advice (`lib/dialIn.ts`) rests on three things that a simple good/bad score
+gets wrong:
+
+**Strength and extraction are different axes.** "Watery" with no sourness or
+bitterness is a ratio problem — the extraction was fine, there was just too much
+water. Grinding finer to fix it makes the cup harsh instead. So watery on its own
+gets ratio advice and an explicit "leave the grind alone".
+
+**Under- and over-extraction in the same cup is channelling, not a tie.** Weak or
+sour *and* bitter or drying together means water raced through part of the bed
+and barely touched the rest, so you taste both faults at once. Averaging them to
+"no change needed" is the single most useless answer possible. This case gets
+prep advice first — WDT and a level tamp for espresso, a flat bed and a gentle
+centre pour for filter — and only then a grind step.
+
+**Time is a symptom, not a lever.** You change grind, dose and prep; the time
+follows. So flow is read as evidence about bed resistance, never prescribed. When
+the bed is channelling, the flow flag decides the grind direction, because taste
+alone cannot tell you whether the bed was too open.
+
+Advice is capped at one change at a time and says why, plus separate notes when
+the logged ratio or time sits outside the normal window for that brew family
+(espresso 25–32 s at 1:1.5–1:2.6, pour-over 2:30–3:30 at 1:14–1:18).
+
+```
+Watery + fast + drying + bitter
+  → Even out the extraction first
+    1. Flatten the bed, pour gently into the centre
+    2. Swirl the bloom so every ground is wet
+    3. Then one step finer — 25 clicks
+    · 2:15 is fast — normal is around 2:30–3:30
+
+Sour + salty        → Go finer by about 2 clicks — try 24
+Watery alone        → Tighten the ratio, not the grind (1:20 → 1:14.5)
+Sweet & balanced    → Keep this one; expect to grind finer as the bag ages
+```
+
+The step size follows the grinder that recipe uses — 1 click on a Comandante,
+0.2 on a DF64, 25 µm on a generic. Lower is assumed to be finer, which holds for
+every grinder in the list.
+
+Entries are per recipe, so espresso and filter on the same bag keep separate
+histories.
+
+## Reading the library at a glance
+
+Each card carries a readiness badge worked out from its own peak window —
+**Ready**, **Past peak**, or how many days are left (`6d to go`) — and the row of
+filters above the grid narrows the library to one state. Opening the app and
+tapping **Drinking now** answers "what should I brew this morning".
+
+## Scaling a recipe
+
+The brew guide has a batch row: **0.5× 1× 1.5× 2× 3×**. It scales the dose, the
+yield and every pour in the sequence, leaving temperature, time and ratio alone.
+It is display-only — the saved recipe never changes.
+
+## Backup
+
+At the foot of the library, **Download a copy** writes every label, group and brew
+log entry to one JSON file (`bean-label-backup-YYYY-MM-DD.json`). **Restore from file** reads
+it back.
+
+Restoring **merges by id and never deletes**: an entry with a matching id is
+overwritten, anything else is left alone, so a restore can't wipe newer work.
+Groups are written before labels so each label's `groupId` still resolves. A bare
+array of labels — the shape older exports used — is accepted too.
+
+Worth doing occasionally: a free Postgres tier is not a backup, and a mis-clicked
+delete is not recoverable otherwise.
+
+## Local development
+
+```bash
+npm install
+npm run dev
+```
+
+Then open http://localhost:3000. No database is required to start.
+
+To develop against Postgres, copy `.env.example` to `.env.local` and set
+`DATABASE_URL`.
+
+## Deploying to Vercel
+
+1. Push this folder to a Git repository.
+2. In Vercel, **Add New → Project** and import the repository. The defaults are
+   correct — it is a standard Next.js app, no build configuration needed.
+3. Add the database: project → **Storage** → **Create Database** → **Neon (Postgres)**
+   → connect it to the project. Vercel injects `DATABASE_URL` automatically.
+4. Redeploy. The header badge should now read **Database**, and the
+   `coffee_labels` table is created on the first save.
+
+`POSTGRES_URL`, `DATABASE_URL_UNPOOLED` and `POSTGRES_URL_NON_POOLING` are also
+accepted, so most Vercel Postgres and Neon integrations work without any change.
+
+### One note on access
+
+There is no login. Anyone who knows the deployment URL can read and edit the labels.
+For personal use, turn on **Settings → Deployment Protection → Vercel Authentication**
+in the Vercel dashboard — that restricts the whole site to your Vercel account
+without any code changes. Leave it off if you want QR codes to open for other people.
+
+## Tech
+
+Next.js 16 (App Router, Turbopack) · React 19 · TypeScript · Tailwind CSS v4 ·
+`@neondatabase/serverless` · `qrcode`. Labels are stored as JSONB, so adding a field
+later does not need a migration.

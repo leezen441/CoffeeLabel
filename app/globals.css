@@ -1,0 +1,747 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f6f2ec;
+  --card: #ffffff;
+  --ink: #241a12;
+  --muted: #7c6a5b;
+  --line: #e3d9cd;
+  --brand: #6f4423;
+  --brand-soft: #f0e6da;
+  --danger: #a4302a;
+
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia,
+    "Times New Roman", serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --font-sans: var(--font-ui);
+  --font-serif: var(--font-display);
+  --font-mono: var(--font-mono);
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- shared form controls ----------
+   Kept in @layer components so Tailwind utilities (w-20, flex-1, …) still win
+   over the base `.input { width: 100% }`. Unlayered rules would beat them. */
+
+@layer components {
+
+.field {
+  display: block;
+}
+
+/* first span only — a second span in a field is helper text, not a label */
+.field > span:first-child {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.875rem;
+  color: var(--ink);
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: #b9a894;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgb(111 68 35 / 0.12);
+}
+
+.select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5' fill='none' stroke='%237c6a5b' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  background-size: 0.75rem;
+  padding-right: 1.9rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  padding: 0.5rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #83512b;
+  border-color: #83512b;
+  color: #fff;
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.btn-danger:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+}
+
+.section-title {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+} /* @layer components */
+
+/* ================================================================
+   STICKER
+   Every dimension derives from --u (1% of label width) so a single
+   layout renders correctly at any physical size.
+   ================================================================ */
+
+.cl-frame {
+  width: var(--lw);
+  height: var(--lh);
+  --u: calc(var(--lw) / 100);
+  background: var(--cl-paper);
+  color: var(--cl-ink);
+  font-family: var(--font-ui);
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+  padding: calc(3 * var(--u));
+  display: flex;
+  /* flex-start keeps .cl-fit at its natural height so overflow is measurable */
+  align-items: flex-start;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.cl-fit {
+  transform-origin: top left;
+  display: flex;
+  flex-direction: column;
+  gap: calc(1.3 * var(--u));
+  width: 100%;
+  flex: none;
+}
+
+.cl-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: calc(2 * var(--u));
+}
+
+.cl-roaster {
+  font-size: calc(3.1 * var(--u));
+  font-weight: 700;
+  letter-spacing: calc(0.18 * var(--u));
+  text-transform: uppercase;
+  color: var(--cl-accent);
+  line-height: 1.2;
+}
+
+/* --roast-fit shrinks just this group when the header row would overflow */
+.cl-roast {
+  display: flex;
+  align-items: center;
+  gap: calc(1.2 * var(--u) * var(--roast-fit, 1));
+  flex-shrink: 0;
+}
+
+.cl-beans {
+  display: flex;
+  gap: calc(0.5 * var(--u) * var(--roast-fit, 1));
+}
+
+.cl-bean {
+  width: calc(3 * var(--u) * var(--roast-fit, 1));
+  height: calc(3 * var(--u) * var(--roast-fit, 1));
+  display: block;
+}
+
+.cl-roast-name {
+  font-size: calc(2.7 * var(--u) * var(--roast-fit, 1));
+  font-weight: 700;
+  letter-spacing: calc(0.1 * var(--u));
+  text-transform: uppercase;
+  color: var(--cl-muted);
+  white-space: nowrap;
+}
+
+.cl-name {
+  font-family: var(--font-display);
+  font-size: calc(7 * var(--u));
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: calc(-0.05 * var(--u));
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.cl-origin {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(0.5 * var(--u)) calc(2.2 * var(--u));
+  font-size: calc(2.8 * var(--u));
+  color: var(--cl-muted);
+  line-height: 1.25;
+}
+
+/* each fact travels with its own icon and never splits across lines */
+.cl-origin-item {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(0.7 * var(--u));
+  min-width: 0;
+}
+
+.cl-origin-icon {
+  width: calc(2.8 * var(--u));
+  height: calc(2.8 * var(--u));
+  flex-shrink: 0;
+  color: var(--cl-accent);
+}
+
+.cl-origin b {
+  color: var(--cl-ink);
+  font-weight: 600;
+}
+
+/* altitude always starts its own line */
+.cl-altitude {
+  flex-basis: 100%;
+}
+
+/* ---- flavour notes: colour dot + name, coloured by SCA family ---- */
+
+.cl-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(0.6 * var(--u)) calc(2 * var(--u));
+  font-size: calc(2.7 * var(--u));
+  font-family: var(--font-ui);
+  color: var(--cl-ink);
+  line-height: 1.25;
+}
+
+.cl-note {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(0.8 * var(--u));
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.cl-note-dot {
+  width: calc(2 * var(--u));
+  height: calc(2 * var(--u));
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ---- segmented roast scale ---- */
+
+.cl-roast-scale {
+  position: relative;
+  display: flex;
+  gap: calc(0.3 * var(--u));
+  width: calc(22 * var(--u));
+  flex-shrink: 0;
+}
+
+.cl-roast-seg {
+  flex: 1;
+  height: calc(1.6 * var(--u));
+  border-radius: calc(0.3 * var(--u));
+}
+
+.cl-roast-marker {
+  position: absolute;
+  top: calc(-0.7 * var(--u));
+  width: calc(0.7 * var(--u));
+  height: calc(3 * var(--u));
+  border-radius: calc(0.35 * var(--u));
+  transform: translateX(-50%);
+}
+
+/* ---- pour timeline ribbon ---- */
+
+.cl-ribbon {
+  display: flex;
+  flex-direction: column;
+  gap: calc(0.4 * var(--u));
+}
+
+.cl-ribbon-track {
+  display: flex;
+  width: 100%;
+  gap: calc(0.3 * var(--u));
+}
+
+.cl-ribbon-block {
+  height: calc(4 * var(--u));
+  border-radius: calc(0.4 * var(--u));
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: calc(0.6 * var(--u));
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.cl-ribbon-total {
+  font-family: var(--font-mono);
+  font-size: calc(2.1 * var(--u));
+  font-weight: 700;
+  color: var(--cl-paper);
+  white-space: nowrap;
+}
+
+.cl-ribbon-times span {
+  font-family: var(--font-mono);
+  font-size: calc(1.9 * var(--u));
+  color: var(--cl-muted);
+  text-align: right;
+  padding-right: calc(0.6 * var(--u));
+  white-space: nowrap;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* ---- rest / degas window ---- */
+
+.cl-rest {
+  display: flex;
+  flex-direction: column;
+  gap: calc(0.7 * var(--u));
+}
+
+.cl-rest-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(1.5 * var(--u));
+  white-space: nowrap;
+}
+
+.cl-rest-label {
+  font-size: calc(2 * var(--u));
+  font-weight: 700;
+  letter-spacing: calc(0.14 * var(--u));
+  text-transform: uppercase;
+  color: var(--cl-accent);
+}
+
+.cl-rest-value {
+  font-family: var(--font-mono);
+  font-size: calc(2.3 * var(--u));
+  color: var(--cl-muted);
+}
+
+.cl-rest-value b {
+  color: var(--cl-ink);
+  font-weight: 600;
+}
+
+.cl-rest-track {
+  position: relative;
+  height: calc(1.6 * var(--u));
+  border-radius: calc(0.8 * var(--u));
+  background: var(--cl-rule);
+  overflow: visible;
+}
+
+.cl-rest-window {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: calc(0.8 * var(--u));
+  opacity: 0.55;
+}
+
+.cl-rest-marker {
+  position: absolute;
+  top: calc(-0.6 * var(--u));
+  width: calc(0.8 * var(--u));
+  height: calc(2.8 * var(--u));
+  border-radius: calc(0.4 * var(--u));
+  transform: translateX(-50%);
+}
+
+/* ---- single-dose tick boxes ---- */
+
+.cl-doses {
+  display: flex;
+  align-items: center;
+  gap: calc(1.2 * var(--u));
+}
+
+.cl-doses-label {
+  font-size: calc(2 * var(--u));
+  font-weight: 700;
+  letter-spacing: calc(0.14 * var(--u));
+  text-transform: uppercase;
+  color: var(--cl-accent);
+}
+
+.cl-doses-row {
+  display: flex;
+  gap: calc(0.8 * var(--u));
+}
+
+.cl-dose-box {
+  width: calc(2.8 * var(--u));
+  height: calc(2.8 * var(--u));
+  border: calc(0.25 * var(--u)) solid;
+  border-radius: calc(0.4 * var(--u));
+}
+
+.cl-rule {
+  height: calc(0.25 * var(--u));
+  background: var(--cl-rule);
+  flex-shrink: 0;
+}
+
+.cl-brews {
+  display: flex;
+  flex-direction: column;
+  gap: calc(1.2 * var(--u));
+}
+
+.cl-brews-label {
+  font-size: calc(2.5 * var(--u));
+  font-weight: 700;
+  letter-spacing: calc(0.16 * var(--u));
+  text-transform: uppercase;
+  color: var(--cl-accent);
+}
+
+.cl-brew {
+  display: flex;
+  flex-direction: column;
+  gap: calc(0.5 * var(--u));
+}
+
+/*
+ * Column, not a wrapping row: with a row the specs sat beside the method name
+ * whenever they happened to fit, so labels looked inconsistent side by side.
+ * The method name always gets its own line.
+ */
+.cl-brew-head {
+  display: flex;
+  flex-direction: column;
+  /* stretch, not flex-start: flex-start shrinks the specs row to its text and
+     leaves most of the label empty on the right */
+  align-items: stretch;
+  gap: calc(0.5 * var(--u));
+}
+
+.cl-brew-name {
+  font-size: calc(3.5 * var(--u));
+  font-weight: 700;
+  letter-spacing: calc(0.02 * var(--u));
+  flex-shrink: 0;
+}
+
+.cl-specs {
+  display: flex;
+  align-items: center;
+  /* spread the four values across the label rather than bunching them left */
+  justify-content: space-between;
+  /* wider gap between values than inside one, so each icon binds to its number */
+  gap: calc(2.4 * var(--u) * var(--specs-fit, 1));
+  /*
+   * Must stay on one line. This row alone is scaled by --specs-fit when it would
+   * be too wide, so the whole sticker doesn't have to shrink for it —
+   * see the specs pass in Sticker.tsx.
+   */
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: calc(2.9 * var(--u) * var(--specs-fit, 1));
+  color: var(--cl-muted);
+}
+
+.cl-spec {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(0.7 * var(--u) * var(--specs-fit, 1));
+}
+
+.cl-spec b {
+  color: var(--cl-ink);
+  font-weight: 600;
+}
+
+.cl-spec-icon {
+  width: calc(2.9 * var(--u) * var(--specs-fit, 1));
+  height: calc(2.9 * var(--u) * var(--specs-fit, 1));
+  flex-shrink: 0;
+  color: var(--cl-accent);
+}
+
+.cl-grind {
+  display: flex;
+  align-items: baseline;
+  gap: calc(1 * var(--u));
+  font-family: var(--font-mono);
+  font-size: calc(2.8 * var(--u));
+  color: var(--cl-muted);
+  line-height: 1.25;
+}
+
+.cl-grind b {
+  color: var(--cl-ink);
+  font-weight: 600;
+}
+
+.cl-grind-label {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(0.5 * var(--u));
+  font-family: var(--font-ui);
+  font-size: calc(2.4 * var(--u));
+  font-weight: 700;
+  letter-spacing: calc(0.1 * var(--u));
+  text-transform: uppercase;
+  color: var(--cl-accent);
+  flex-shrink: 0;
+}
+
+.cl-grind-icon {
+  width: calc(2.6 * var(--u));
+  height: calc(2.6 * var(--u));
+  flex-shrink: 0;
+}
+
+/*
+ * The brew sequence is a four-column table: no. | step | water | time.
+ * One grid for the whole list keeps the columns aligned across every row —
+ * as separate flex rows each line sized itself and the numbers came out ragged.
+ */
+.cl-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  column-gap: calc(1.4 * var(--u));
+  row-gap: 0;
+  font-size: calc(2.8 * var(--u));
+  line-height: 1.25;
+  color: var(--cl-ink);
+}
+
+/* contents, so each span becomes a cell of the shared grid */
+.cl-step {
+  display: contents;
+}
+
+.cl-step > * {
+  padding-top: calc(0.55 * var(--u));
+  padding-bottom: calc(0.55 * var(--u));
+  border-top: max(0.5px, calc(0.12 * var(--u))) solid var(--cl-rule);
+  min-width: 0;
+}
+
+/* no rule above the first row — it already sits under the grind line */
+.cl-steps > .cl-step:first-child > * {
+  border-top: none;
+}
+
+.cl-step-n {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--cl-accent);
+  white-space: nowrap;
+}
+
+.cl-step-water {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--cl-ink);
+  white-space: nowrap;
+  text-align: right;
+}
+
+.cl-step-at {
+  font-family: var(--font-mono);
+  color: var(--cl-muted);
+  white-space: nowrap;
+  text-align: right;
+}
+
+.cl-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: calc(2 * var(--u));
+  font-size: calc(2.7 * var(--u));
+  color: var(--cl-muted);
+}
+
+.cl-foot b {
+  color: var(--cl-ink);
+  font-weight: 600;
+}
+
+.cl-foot-meta {
+  display: flex;
+  flex-wrap: wrap;
+  /* row-gap, column-gap — facts sit side by side and wrap as whole units */
+  gap: calc(0.4 * var(--u)) calc(2.4 * var(--u));
+  min-width: 0;
+}
+
+.cl-foot-meta > span {
+  white-space: nowrap;
+}
+
+.cl-qr {
+  width: calc(13 * var(--u));
+  height: calc(13 * var(--u));
+  flex-shrink: 0;
+  display: block;
+  image-rendering: pixelated;
+}
+
+.cl-placeholder {
+  color: var(--cl-rule);
+}
+
+/* ---------- print ---------- */
+
+@page {
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  /* undo the on-screen fit-to-window scaling so real mm reach the printer */
+  .print-reset {
+    transform: none !important;
+  }
+
+  .screen-scale {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .print-root {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+
+  .print-sheet {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+  }
+
+  .print-page {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .cl-frame {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  .cut-guide {
+    outline: 0.1mm dashed #bbb;
+    outline-offset: 0;
+  }
+}
