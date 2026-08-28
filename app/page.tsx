@@ -12,13 +12,13 @@ import LangToggle from "@/components/LangToggle";
 import { type MsgKey, makeT, useLang } from "@/lib/i18n";
 import { saveGroups, useSavedGroups } from "@/lib/groupFilter";
 import { useOrigin } from "@/lib/useOrigin";
+import { newLabel } from "@/lib/brewTemplates";
 import {
   type CoffeeLabel,
   type LabelGroup,
   type RestStatus,
   REST_STATUS_META,
   emptyGroup,
-  emptyLabel,
   labelTitle,
   restStatus,
   uid,
@@ -216,7 +216,7 @@ export default function LibraryPage() {
   async function createNew() {
     setBusy(true);
     try {
-      const label = emptyLabel();
+      const label = newLabel();
       await store.saveLabel(label);
       router.push(`/editor/${label.id}`);
     } finally {

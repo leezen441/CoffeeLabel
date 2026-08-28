@@ -115,15 +115,28 @@ const DICT = {
   resume: { en: "Resume", th: "ไปต่อ" },
   pause: { en: "Pause", th: "หยุดชั่วคราว" },
   reset: { en: "Reset", th: "เริ่มใหม่" },
+  startNow: { en: "Start now", th: "เริ่มเลย" },
+  startingIn: { en: "Starting in", th: "เริ่มใน" },
+  countdownHint: {
+    en: "Hands off the screen — the timer starts on its own.",
+    th: "ไม่ต้องแตะจอ นาฬิกาจะเริ่มเอง",
+  },
+  briefingHint: {
+    en: "Listen to the first step. The 3-2-1 countdown starts when it finishes.",
+    th: "ฟังขั้นแรกให้จบ แล้วจะนับ 3 2 1",
+  },
   ofTotal: { en: "of", th: "จาก" },
   noTotal: { en: "no total set", th: "ยังไม่ได้ตั้งเวลารวม" },
   brewComplete: { en: "Brew complete", th: "ชงเสร็จแล้ว" },
   readyWord: { en: "Ready", th: "พร้อมเริ่ม" },
   nextIn: { en: "next in", th: "อีก" },
   timerFooter: {
-    en: "Beeps and vibrates 3s before each step, then again on the step. Vibration is Android only — iPhone gets sound.",
-    th: "เตือนล่วงหน้า 3 วินาทีก่อนถึงแต่ละขั้น แล้วเตือนซ้ำตอนถึง — การสั่นใช้ได้เฉพาะ Android ส่วน iPhone จะได้เฉพาะเสียง",
+    en: "Voice names the next step 8s early, then beeps 3s before. Mute from the speaker. Vibration is Android only.",
+    th: "โค้ชเสียงอ่านขั้นต่อไปล่วงหน้า 8 วินาที แล้วบี๊บก่อนถึง 3 วินาที ปิดเสียงพูดได้ที่ไอคอนลำโพง — การสั่นใช้ได้เฉพาะ Android",
   },
+  pourRibbon: { en: "Pour", th: "เทน้ำ" },
+  voiceOn: { en: "Voice coach on", th: "เปิดโค้ชเสียง" },
+  voiceOff: { en: "Voice coach off", th: "ปิดโค้ชเสียง" },
 
   /* brew log */
   brewLog: { en: "Brew log", th: "บันทึกการชง" },
@@ -232,6 +245,16 @@ const DICT = {
   secBrews: { en: "Brew methods", th: "วิธีชง" },
   addMethod: { en: "+ Add method", th: "+ เพิ่มวิธีชง" },
   noBrewsYet: { en: "No brew methods yet — add up to", th: "ยังไม่มีวิธีชง — เพิ่มได้ถึง" },
+  addTemplate: { en: "Add starter recipe", th: "เพิ่มสูตรตั้งต้น" },
+  templateHint: {
+    en: "Tap a method to add a starter recipe with times and pours. Edit after the first cup.",
+    th: "แตะวิธีชงเพื่อใส่สูตรตั้งต้น พร้อมเวลาและกรัมน้ำ ปรับได้อีกหลังชงแก้วแรก",
+  },
+  useTemplate: { en: "Fill starter recipe", th: "ใส่สูตรตั้งต้น" },
+  useTemplateConfirm: {
+    en: "Replace this method with the starter recipe? Times and pours will be overwritten. Grinder settings are kept.",
+    th: "แทนที่วิธีนี้ด้วยสูตรตั้งต้นไหม เวลาและขั้นตอนจะถูกเขียนทับ เบอร์บดยังอยู่",
+  },
 
   /* brew editor */
   methodPlaceholder: {

@@ -14,6 +14,7 @@ import {
   FLAVOR_FAMILIES,
   MAX_BREWS,
   MAX_NOTES,
+  METHOD_PRESETS,
   PROCESS_GROUPS,
   PROCESS_OPTIONS,
   ROAST_LEVELS,
@@ -22,6 +23,7 @@ import {
   labelTitle,
   restWindow,
 } from "@/lib/types";
+import { brewFromTemplate } from "@/lib/brewTemplates";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -106,6 +108,11 @@ export default function LabelEditor({ id }: { id: string }) {
   const addBrew = () => {
     if (label.brews.length >= MAX_BREWS) return;
     update({ brews: [...label.brews, emptyBrew()] });
+  };
+
+  const addTemplatedBrew = (name: string) => {
+    if (label.brews.length >= MAX_BREWS) return;
+    update({ brews: [...label.brews, brewFromTemplate(name)] });
   };
 
   const removeBrew = (i: number) =>
@@ -543,6 +550,21 @@ export default function LabelEditor({ id }: { id: string }) {
                 {tr("addMethod")}
               </button>
             </div>
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {METHOD_PRESETS.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  className="btn text-xs"
+                  title={`${tr("addTemplate")} ${name}`}
+                  disabled={label.brews.length >= MAX_BREWS}
+                  onClick={() => addTemplatedBrew(name)}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+            <p className="mb-3 text-xs text-muted">{tr("templateHint")}</p>
             <div className="flex flex-col gap-3">
               {label.brews.map((brew, i) => (
                 <BrewEditor

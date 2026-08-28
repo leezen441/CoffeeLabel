@@ -1,16 +1,73 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { makeT, useLang } from "@/lib/i18n";
+import { makeT, useLang, type Lang } from "@/lib/i18n";
+import { cancelSpeech, speakCoach, unlockSpeech } from "@/lib/voiceCoach";
+import PourRibbon, { timerRibbonBlocks } from "./PourRibbon";
 import {
   type BrewMethod,
   THEMES,
   brewTimeline,
   formatWeight,
+  stepSpan,
 } from "@/lib/types";
 
-/** Seconds of warning before a step begins. */
+/** Beep this many seconds before a step. */
 const PRE_ALERT = 3;
+/** Speak early enough that the sentence can finish before the pour. */
+const SPEAK_ALERT = 8;
+/** Hands-free start: one tap, then this many seconds before the clock runs. */
+const COUNTDOWN_FROM = 3;
+
+type AudioCtxCtor = typeof AudioContext;
+
+let sharedAudio: AudioContext | null = null;
+
+function audioCtor(): AudioCtxCtor | null {
+  if (typeof window === "undefined") return null;
+  return (
+    window.AudioContext ??
+    (window as unknown as { webkitAudioContext: AudioCtxCtor }).webkitAudioContext ??
+    null
+  );
+}
+
+/**
+ * Call from a tap so the browser allows sound later. The countdown itself
+ * starts from an effect, which is no longer a user gesture.
+ */
+export function unlockTimerAudio(): AudioContext | null {
+  const Ctx = audioCtor();
+  if (!Ctx) return null;
+  if (!sharedAudio || sharedAudio.state === "closed") sharedAudio = new Ctx();
+  void sharedAudio.resume().catch(() => {});
+  unlockSpeech();
+  return sharedAudio;
+}
+
+const VOICE_KEY = "bean-label/voice-coach";
+
+function coachLine(
+  lang: Lang,
+  step: { text: string; waterG: string },
+  kind: "now" | "next" | "first",
+): string {
+  const text = step.text.trim();
+  const g = parseFloat(step.waterG);
+  const water =
+    Number.isFinite(g) && g > 0
+      ? lang === "th"
+        ? ` ถึง ${g} กรัม`
+        : `, to ${g} grams`
+      : "";
+  if (kind === "next") {
+    return lang === "th" ? `ขั้นต่อไป ${text}${water}` : `Next. ${text}${water}`;
+  }
+  if (kind === "first") {
+    return lang === "th" ? `ขั้นแรก ${text}${water}` : `First. ${text}${water}`;
+  }
+  return `${text}${water}`;
+}
 
 function mmss(total: number): string {
   const s = Math.max(0, Math.floor(total));
@@ -26,12 +83,14 @@ export default function BrewTimer({
   theme: (typeof THEMES)[keyof typeof THEMES];
   onClose: () => void;
 }) {
-  const tr = makeT(useLang());
+  const lang = useLang();
+  const tr = makeT(lang);
   const { steps, total } = brewTimeline(brew);
+  const hasRibbon = timerRibbonBlocks(steps, total).length > 0;
   /** only steps with a real start time can be cued */
   const cues = steps
     .map((s, i) => ({ ...s, index: i }))
-    .filter((s) => s.start !== null && s.start > 0);
+    .filter((s) => s.start !== null);
 
   /**
    * "0:30–1:00", the same window the label prints — knowing when a step ends
@@ -39,19 +98,7 @@ export default function BrewTimer({
    * end borrows the next step's start, and the last one closes on the total.
    */
   function windowOf(index: number): string {
-    const s = steps[index];
-    if (!s) return "";
-    const start =
-      s.start ??
-      steps
-        .slice(0, index)
-        .reverse()
-        .find((p) => p.end !== null)?.end ??
-      null;
-    const end =
-      s.end ??
-      steps.slice(index + 1).find((n) => n.start !== null)?.start ??
-      (index === steps.length - 1 && total > 0 ? total : null);
+    const { start, end } = stepSpan(steps, total, index);
     if (start === null) return end === null ? "—" : mmss(end);
     return end === null ? mmss(start) : `${mmss(start)}–${mmss(end)}`;
   }
@@ -59,6 +106,11 @@ export default function BrewTimer({
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(false);
+  /** Speak the first step to completion before 3-2-1. */
+  const [briefing, setBriefing] = useState(true);
+  /** 3 → 2 → 1 while waiting; null when briefing, idle, or the clock is running. */
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [voice, setVoice] = useState(true);
 
   // Wall-clock based so the count never drifts, unlike accumulating ticks.
   const startedAt = useRef(0);
@@ -66,20 +118,35 @@ export default function BrewTimer({
   const fired = useRef<Set<string>>(new Set());
   const audio = useRef<AudioContext | null>(null);
   const wakeLock = useRef<WakeLockSentinel | null>(null);
+  const voiceRef = useRef(voice);
+  voiceRef.current = voice;
 
-  const beep = useCallback((freq: number, ms: number, gain = 0.25) => {
+  useEffect(() => {
+    setVoice(window.localStorage.getItem(VOICE_KEY) !== "off");
+  }, []);
+
+  const beep = useCallback((freq: number, ms: number, gain = 0.7) => {
     const ctx = audio.current;
     if (!ctx) return;
     const osc = ctx.createOscillator();
+    const click = ctx.createOscillator();
     const vol = ctx.createGain();
+    const clickVol = ctx.createGain();
     osc.frequency.value = freq;
-    osc.type = "sine";
-    // short fade out, otherwise the note clicks
-    vol.gain.setValueAtTime(gain, ctx.currentTime);
-    vol.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + ms / 1000);
+    osc.type = "triangle";
+    click.frequency.value = freq * 2;
+    click.type = "square";
+    const t = ctx.currentTime;
+    vol.gain.setValueAtTime(gain, t);
+    vol.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000);
+    clickVol.gain.setValueAtTime(gain * 0.22, t);
+    clickVol.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000);
     osc.connect(vol).connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + ms / 1000);
+    click.connect(clickVol).connect(ctx.destination);
+    osc.start(t);
+    click.start(t);
+    osc.stop(t + ms / 1000);
+    click.stop(t + ms / 1000);
   }, []);
 
   const buzz = useCallback((pattern: number | number[]) => {
@@ -88,19 +155,35 @@ export default function BrewTimer({
   }, []);
 
   const cueStep = useCallback(() => {
-    beep(880, 180);
+    beep(880, 260, 0.8);
     buzz(180);
   }, [beep, buzz]);
 
   const cuePre = useCallback(() => {
-    beep(560, 90, 0.15);
+    beep(560, 160, 0.55);
     buzz(60);
   }, [beep, buzz]);
 
   const cueDone = useCallback(() => {
-    [0, 220, 440].forEach((d) => setTimeout(() => beep(1046, 200), d));
+    [0, 220, 440].forEach((d) => setTimeout(() => beep(1046, 240, 0.8), d));
     buzz([180, 90, 180, 90, 320]);
   }, [beep, buzz]);
+
+  const say = useCallback(
+    (text: string, delayMs = 0, onEnd?: () => void) => {
+      if (!voiceRef.current) {
+        onEnd?.();
+        return;
+      }
+      speakCoach(text, lang, delayMs, onEnd);
+    },
+    [lang],
+  );
+
+  const beginCountdown = useCallback(() => {
+    setBriefing(false);
+    setCountdown(COUNTDOWN_FROM);
+  }, []);
 
   /** Ticks while running and fires any cue whose moment has passed. */
   useEffect(() => {
@@ -111,30 +194,40 @@ export default function BrewTimer({
 
       for (const c of cues) {
         const at = c.start as number;
-        if (now >= at - PRE_ALERT && !fired.current.has(`pre${c.id}`)) {
+        const beepable = at > 0;
+        if (beepable && now >= at - SPEAK_ALERT && !fired.current.has(`speak${c.id}`)) {
+          fired.current.add(`speak${c.id}`);
+          if (now < at) say(coachLine(lang, c, "next"));
+        }
+        if (beepable && now >= at - PRE_ALERT && !fired.current.has(`pre${c.id}`)) {
           fired.current.add(`pre${c.id}`);
-          // Skip the warning if we are already past the step itself.
           if (now < at) cuePre();
         }
         if (now >= at && !fired.current.has(`cue${c.id}`)) {
           fired.current.add(`cue${c.id}`);
-          cueStep();
+          if (beepable) cueStep();
+          // Don't talk over the 8s warning — only speak here if we never got one.
+          if (!fired.current.has(`speak${c.id}`)) {
+            fired.current.add(`speak${c.id}`);
+            say(coachLine(lang, c, "now"));
+          }
         }
       }
 
       if (total > 0 && now >= total && !fired.current.has("done")) {
         fired.current.add("done");
         cueDone();
+        say(lang === "th" ? "ชงเสร็จแล้ว" : "Brew complete", 400);
         setDone(true);
         setRunning(false);
       }
     }, 100);
     return () => clearInterval(id);
-  }, [running, cues, total, cuePre, cueStep, cueDone]);
+  }, [running, cues, total, cuePre, cueStep, cueDone, say, lang]);
 
-  /** Keep the screen awake while a brew is actually running. */
+  /** Keep the screen awake while counting down or brewing. */
   useEffect(() => {
-    if (!running) return;
+    if (!running && countdown === null && !briefing) return;
     let cancelled = false;
     navigator.wakeLock
       ?.request("screen")
@@ -148,7 +241,7 @@ export default function BrewTimer({
       void wakeLock.current?.release().catch(() => {});
       wakeLock.current = null;
     };
-  }, [running]);
+  }, [running, countdown, briefing]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -160,37 +253,88 @@ export default function BrewTimer({
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
+      cancelSpeech();
       void audio.current?.close().catch(() => {});
     };
   }, [onClose]);
 
-  function start() {
-    // The context must be created from a gesture or the browser mutes it.
+  const ensureAudio = useCallback(() => {
+    const unlocked = unlockTimerAudio();
+    audio.current = unlocked ?? audio.current;
     if (!audio.current) {
-      const Ctx =
-        window.AudioContext ??
-        (window as unknown as { webkitAudioContext: typeof AudioContext })
-          .webkitAudioContext;
-      audio.current = new Ctx();
+      const Ctx = audioCtor();
+      if (Ctx) audio.current = new Ctx();
     }
-    void audio.current.resume().catch(() => {});
+    void audio.current?.resume().catch(() => {});
+  }, []);
+
+  /** Speak step 1 all the way through, then start 3-2-1. */
+  useEffect(() => {
+    if (!briefing) return;
+    ensureAudio();
+    const on = window.localStorage.getItem(VOICE_KEY) !== "off";
+    setVoice(on);
+    voiceRef.current = on;
+    const first = steps.find((s) => s.start === 0) ?? steps[0];
+    if (!on || !first?.text.trim()) {
+      beginCountdown();
+      return;
+    }
+    fired.current.add(`speak${first.id}`);
+    speakCoach(coachLine(lang, first, "first"), lang, 0, beginCountdown);
+  }, [briefing, beginCountdown, ensureAudio, lang]);
+
+  const start = useCallback(() => {
+    ensureAudio();
+    cancelSpeech();
+    setBriefing(false);
     startedAt.current = Date.now();
+    setCountdown(null);
     setRunning(true);
     setDone(false);
-  }
+  }, [ensureAudio]);
 
   function pause() {
     offset.current = elapsed;
     setRunning(false);
+    cancelSpeech();
   }
 
   function reset() {
     setRunning(false);
     setDone(false);
     setElapsed(0);
+    setBriefing(false);
+    setCountdown(null);
     offset.current = 0;
     fired.current.clear();
+    cancelSpeech();
   }
+
+  function requestStart() {
+    // Resume a paused brew immediately; a fresh start gets the 3-2-1 first.
+    if (elapsed > 0 && !done) start();
+    else if (voiceRef.current) setBriefing(true);
+    else setCountdown(COUNTDOWN_FROM);
+  }
+
+  /** Tick 3 → 2 → 1, then start the clock. Skip/reset clears this. */
+  useEffect(() => {
+    if (countdown === null) return;
+    ensureAudio();
+    if (countdown === 1) {
+      beep(880, 260, 0.8);
+      buzz(80);
+    } else {
+      beep(560, 160, 0.55);
+      buzz(40);
+    }
+    const id = window.setTimeout(() => {
+      if (countdown <= 1) start();
+      else setCountdown(countdown - 1);
+    }, 1000);
+    return () => window.clearTimeout(id);
+  }, [countdown, ensureAudio, beep, buzz, start]);
 
   // Which step is happening now: the last one whose start has passed.
   const currentIndex = steps.reduce(
@@ -199,6 +343,8 @@ export default function BrewTimer({
   );
   const next = cues.find((c) => (c.start as number) > elapsed);
   const pct = total > 0 ? Math.min(100, (elapsed / total) * 100) : 0;
+  const firstStep = steps.find((s) => s.start === 0) ?? steps[0];
+  const waiting = briefing || countdown !== null;
 
   return (
     <div
@@ -220,6 +366,28 @@ export default function BrewTimer({
           </p>
         </div>
         <button
+          type="button"
+          onClick={() => {
+            const nextOn = !voice;
+            setVoice(nextOn);
+            window.localStorage.setItem(VOICE_KEY, nextOn ? "on" : "off");
+            if (!nextOn) {
+              cancelSpeech();
+              if (briefing) beginCountdown();
+            }
+          }}
+          aria-pressed={voice}
+          aria-label={voice ? tr("voiceOn") : tr("voiceOff")}
+          title={voice ? tr("voiceOn") : tr("voiceOff")}
+          className="flex h-10 w-10 items-center justify-center rounded-full text-lg"
+          style={{
+            border: `1px solid ${voice ? theme.accent : theme.rule}`,
+            color: voice ? theme.accent : theme.muted,
+          }}
+        >
+          {voice ? <SpeakerOnIcon /> : <SpeakerOffIcon />}
+        </button>
+        <button
           onClick={onClose}
           aria-label="Close timer"
           className="flex h-10 w-10 items-center justify-center rounded-full text-lg"
@@ -230,28 +398,76 @@ export default function BrewTimer({
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center px-5">
-        <p
-          className="font-mono text-7xl font-bold tabular-nums sm:text-8xl"
-          style={{ color: done ? theme.accent : theme.ink }}
-        >
-          {mmss(elapsed)}
-        </p>
+        {briefing ? (
+          <p
+            className="max-w-md text-center font-serif text-3xl leading-tight font-semibold sm:text-4xl"
+            style={{ color: theme.accent }}
+          >
+            {firstStep?.text || tr("readyWord")}
+          </p>
+        ) : countdown !== null ? (
+          <button
+            type="button"
+            onClick={start}
+            aria-label={tr("startNow")}
+            className="bg-transparent p-0 font-mono text-7xl font-bold tabular-nums sm:text-8xl"
+            style={{ color: theme.accent }}
+          >
+            <span aria-live="assertive">{countdown}</span>
+          </button>
+        ) : (
+          <p
+            className="font-mono text-7xl font-bold tabular-nums sm:text-8xl"
+            style={{ color: done ? theme.accent : theme.ink }}
+          >
+            {mmss(elapsed)}
+          </p>
+        )}
         <p className="mt-1 font-mono text-sm" style={{ color: theme.muted }}>
-          {total > 0 ? `${tr("ofTotal")} ${mmss(total)}` : tr("noTotal")}
+          {briefing
+            ? firstStep?.waterG
+              ? formatWeight(firstStep.waterG)
+              : tr("briefingHint")
+            : countdown !== null
+              ? tr("startingIn")
+              : total > 0
+                ? `${tr("ofTotal")} ${mmss(total)}`
+                : tr("noTotal")}
         </p>
 
-        <div
-          className="mt-5 h-2 w-full max-w-md overflow-hidden rounded-full"
-          style={{ background: theme.rule }}
-        >
-          <div
-            className="h-full rounded-full transition-[width] duration-100"
-            style={{ width: `${pct}%`, background: theme.accent }}
+        {hasRibbon ? (
+          <PourRibbon
+            steps={steps}
+            total={total}
+            elapsed={waiting ? 0 : elapsed}
+            theme={theme}
+            label={tr("pourRibbon")}
           />
-        </div>
+        ) : (
+          countdown === null &&
+          !briefing && (
+            <div
+              className="mt-5 h-2 w-full max-w-md overflow-hidden rounded-full"
+              style={{ background: theme.rule }}
+            >
+              <div
+                className="h-full rounded-full transition-[width] duration-100"
+                style={{ width: `${pct}%`, background: theme.accent }}
+              />
+            </div>
+          )
+        )}
 
         <div className="mt-6 w-full max-w-md text-center">
-          {done ? (
+          {briefing ? (
+            <p className="text-sm" style={{ color: theme.muted }}>
+              {tr("briefingHint")}
+            </p>
+          ) : countdown !== null ? (
+            <p className="text-sm" style={{ color: theme.muted }}>
+              {tr("countdownHint")}
+            </p>
+          ) : done ? (
             <p className="font-serif text-2xl font-semibold" style={{ color: theme.accent }}>
               {tr("brewComplete")}
             </p>
@@ -286,7 +502,8 @@ export default function BrewTimer({
       <div className="max-h-[34vh] overflow-y-auto px-5">
         <ol className="mx-auto flex max-w-md flex-col gap-1">
           {steps.map((s, i) => {
-            const isNow = i === currentIndex && !done;
+            const isNow =
+              (i === currentIndex && running && !done) || (briefing && i === 0);
             const passed = s.start !== null && elapsed >= s.start;
             return (
               <li
@@ -313,9 +530,17 @@ export default function BrewTimer({
       </div>
 
       <div className="flex items-center justify-center gap-3 px-5 py-5">
-        {!running ? (
+        {waiting ? (
           <button
             onClick={start}
+            className="rounded-full px-8 py-3 text-base font-bold"
+            style={{ background: theme.accent, color: theme.paper }}
+          >
+            {tr("startNow")}
+          </button>
+        ) : !running ? (
+          <button
+            onClick={requestStart}
             className="rounded-full px-8 py-3 text-base font-bold"
             style={{ background: theme.accent, color: theme.paper }}
           >
@@ -343,5 +568,43 @@ export default function BrewTimer({
         {tr("timerFooter")}
       </p>
     </div>
+  );
+}
+
+function SpeakerOnIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 9v6h3l5 4V5L7 9H4Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M16 8.5a5 5 0 0 1 0 7"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function SpeakerOffIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 9v6h3l5 4V5L7 9H4Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M19 9l-4 6M15 9l4 6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
