@@ -35,6 +35,8 @@ export default function LabelEditor({ id }: { id: string }) {
   const [noteDraft, setNoteDraft] = useState("");
   const [groups, setGroups] = useState<LabelGroup[]>([]);
   const [customProcess, setCustomProcess] = useState(false);
+  /** The brew methods are long enough to deserve their own screen. */
+  const [view, setView] = useState<"details" | "brews">("details");
   const tr = makeT(useLang());
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -157,6 +159,27 @@ export default function LabelEditor({ id }: { id: string }) {
           <Link href={`/b/${label.id}`} className="btn" target="_blank">
             {tr("brewGuide")}
           </Link>
+          <select
+            className="select w-auto"
+            value={label.groupId}
+            onChange={(e) => update({ groupId: e.target.value })}
+            aria-label={tr("fGroup")}
+            title={groups.length ? tr("filterByThis") : tr("createGroupsHint")}
+          >
+            <option value="">{tr("noGroup")}</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+          <button
+            className={view === "brews" ? "btn btn-primary" : "btn"}
+            aria-pressed={view === "brews"}
+            onClick={() => setView(view === "brews" ? "details" : "brews")}
+          >
+            {tr("secBrews")} ({label.brews.length}/{MAX_BREWS})
+          </button>
           <Link href={`/print/${label.id}`} className="btn btn-primary">
             {tr("printStickers")}
           </Link>
@@ -166,6 +189,8 @@ export default function LabelEditor({ id }: { id: string }) {
       <div className="mx-auto max-w-4xl px-5 py-6">
         {/* Sticker appearance and preview live on the print page. */}
         <div className="flex flex-col gap-5">
+          {view === "details" && (
+            <>
           <section className="panel p-4">
             <h2 className="section-title mb-3">{tr("secCoffee")}</h2>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -248,26 +273,6 @@ export default function LabelEditor({ id }: { id: string }) {
                   value={label.altitude}
                   onChange={(e) => update({ altitude: e.target.value })}
                 />
-              </label>
-              <label className="field">
-                <span>{tr("fGroup")}</span>
-                <select
-                  className="select"
-                  value={label.groupId}
-                  onChange={(e) => update({ groupId: e.target.value })}
-                >
-                  <option value="">{tr("noGroup")}</option>
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
-                <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-muted">
-                  {groups.length
-                    ? tr("filterByThis")
-                    : tr("createGroupsHint")}
-                </span>
               </label>
             </div>
           </section>
@@ -543,7 +548,10 @@ export default function LabelEditor({ id }: { id: string }) {
               </>
             )}
           </section>
+            </>
+          )}
 
+          {view === "brews" && (
           <section className="panel p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="section-title">
@@ -591,6 +599,7 @@ export default function LabelEditor({ id }: { id: string }) {
               )}
             </div>
           </section>
+          )}
         </div>
 
       </div>
