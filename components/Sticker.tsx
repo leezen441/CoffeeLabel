@@ -21,6 +21,7 @@ import {
   labelSize,
   ratioOf,
   restWindow,
+  processText,
   ribbonBlocks,
   stepTimeLabel,
 } from "@/lib/types";
@@ -387,7 +388,7 @@ export default function Sticker({
     ) : null;
 
   // Altitude is kept out of the joined line — it gets a line of its own.
-  const originBits = [label.variety, label.process, label.origin].filter(Boolean);
+  const originBits = [label.variety, processText(label), label.origin].filter(Boolean);
   const altitude = (label.altitude ?? "").trim();
   const brews = label.brews.filter(
     (b) => b.name || b.waterTempC || b.doseG || b.steps.some((s) => s.text),
@@ -461,10 +462,10 @@ export default function Sticker({
                 <b>{label.variety}</b>
               </span>
             )}
-            {label.process && (
+            {processText(label) && (
               <span className="cl-origin-item">
                 <OriginIcon kind="process" />
-                <b>{label.process}</b>
+                <b>{processText(label)}</b>
               </span>
             )}
             {label.origin && (

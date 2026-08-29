@@ -272,7 +272,7 @@ export type CoffeeLabel = {
   coffeeName: string;
   variety: string;
   origin: string;
-  process: string;
+  processes: string[];
   altitude: string;
   roastLevel: RoastLevel;
   roastDate: string;
@@ -312,6 +312,8 @@ export type SizeId =
   | "a6"
   | "custom";
 export type LayoutId = "full" | "ribbon" | "compact";
+
+export const MAX_PROCESSES = 6;
 
 export const MAX_BREWS = 5;
 export const DEFAULT_BREWS = 3;
@@ -461,7 +463,7 @@ export function restWindow(label: CoffeeLabel): {
   const level = (REST_BY_ROAST[label.roastLevel] ?? REST_BY_ROAST[3]);
   const espresso = hasEspresso(label);
   const [baseFrom, baseTo] = espresso ? level.espresso : level.filter;
-  const bias = processBias(label.process);
+  const bias = processBiasOf(label.processes);
 
   const from = Math.max(1, baseFrom + bias);
   const to = Math.max(from + 1, baseTo + bias);
@@ -470,8 +472,11 @@ export function restWindow(label: CoffeeLabel): {
     `${ROAST_LEVELS[label.roastLevel]?.name ?? "Medium"} roast`,
     espresso ? "espresso" : "filter",
   ];
-  if (bias !== 0 && label.process.trim()) {
-    parts.push(`${label.process.trim()} ${bias > 0 ? "+" : ""}${bias}d`);
+  const driver = label.processes
+    .filter(Boolean)
+    .find((p) => processBias(p) === bias);
+  if (bias !== 0 && driver) {
+    parts.push(`${driver.trim()} ${bias > 0 ? "+" : ""}${bias}d`);
   }
   return { from, to, auto: true, basis: parts.join(" · ") };
 }
@@ -562,6 +567,21 @@ const PROCESS_KEYWORDS: { match: RegExp; bias: number }[] = [
   { match: /decaf|swiss water|sugarcane|monsoon/i, bias: -2 },
   { match: /washed|wet/i, bias: 0 },
 ];
+
+/** "Anaerobic Natural · Barrel Aged" — how the stages read on the label. */
+export function processText(label: { processes: string[] }): string {
+  return label.processes.filter(Boolean).join(" · ");
+}
+
+/**
+ * The most fermented stage sets the rest, because that is what keeps producing
+ * CO2 — a washed coffee that was then barrel aged degasses like the barrel, not
+ * like the wash.
+ */
+export function processBiasOf(processes: string[]): number {
+  const each = processes.filter(Boolean).map(processBias);
+  return each.length ? Math.max(...each) : 0;
+}
 
 export function processBias(process: string): number {
   const p = (process ?? "").trim();
@@ -731,7 +751,7 @@ export function emptyLabel(): CoffeeLabel {
     coffeeName: "",
     variety: "",
     origin: "",
-    process: "",
+    processes: [],
     altitude: "",
     roastLevel: 3,
     roastDate: todayISO(),
@@ -811,9 +831,20 @@ function splitLegacyGrinder(name: string): { grinderBrand: string; grinderModel:
 export function normalizeLabel(raw: Partial<CoffeeLabel> & { id: string }): CoffeeLabel {
   const base = emptyLabel();
   const brews = Array.isArray(raw.brews) && raw.brews.length ? raw.brews : base.brews;
+  // Labels written before processes became a list carry a single `process`.
+  const legacyProcess = (raw as { process?: string }).process;
+  const processes = Array.isArray(raw.processes)
+    ? raw.processes.filter(Boolean)
+    : legacyProcess?.trim()
+      ? [legacyProcess.trim()]
+      : [];
+  // Drop the legacy singular so it cannot sit there contradicting the list.
+  const rest = { ...raw } as Partial<CoffeeLabel> & { process?: string };
+  delete rest.process;
   return {
     ...base,
-    ...raw,
+    ...rest,
+    processes,
     tastingNotes: Array.isArray(raw.tastingNotes) ? raw.tastingNotes : [],
     brews: brews.slice(0, MAX_BREWS).map((b) => {
       const legacy = b as Partial<BrewMethod> & { grinder?: string };

@@ -108,7 +108,7 @@ export default function LibraryPage() {
       if (scope && l.groupId !== scope) return false;
       if (ready !== "all" && restStatus(l).status !== ready) return false;
       if (!q) return true;
-      return [l.coffeeName, l.roaster, l.variety, l.origin, l.process, ...l.tastingNotes]
+      return [l.coffeeName, l.roaster, l.variety, l.origin, ...l.processes, ...l.tastingNotes]
         .join(" ")
         .toLowerCase()
         .includes(q);

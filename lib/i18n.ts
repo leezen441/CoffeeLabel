@@ -207,7 +207,8 @@ const DICT = {
   fGroup: { en: "Group", th: "กลุ่ม" },
   noneDash: { en: "— None —", th: "— ไม่ระบุ —" },
   otherDots: { en: "Other…", th: "อื่น ๆ…" },
-  typeProcess: { en: "Type the process", th: "พิมพ์กระบวนการเอง" },
+  typeProcess: { en: "Type the process, then Enter", th: "พิมพ์กระบวนการเอง แล้วกด Enter" },
+  addProcess: { en: "+ Add process", th: "+ เพิ่มกระบวนการ" },
   dRest: { en: "d rest", th: " วันพัก" },
   filterByThis: { en: "Filter by this in the library", th: "ใช้กรองในคลังกาแฟได้" },
   createGroupsHint: {

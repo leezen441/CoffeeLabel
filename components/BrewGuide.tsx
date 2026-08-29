@@ -13,6 +13,7 @@ import {
   ROAST_LEVELS,
   type Palette,
   paletteFor,
+  processText,
   addDays,
   bestBefore,
   daysSince,
@@ -89,7 +90,7 @@ export default function BrewGuide({
         addDays(label.roastDate, rest.to),
       )
     : "";
-  const originBits = [label.variety, label.process, label.origin].filter(Boolean);
+  const originBits = [label.variety, processText(label), label.origin].filter(Boolean);
   const altitude = (label.altitude ?? "").trim();
 
   /** Write a dialled-in recipe back over the stored one, by id. */

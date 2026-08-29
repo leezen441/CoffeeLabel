@@ -10,7 +10,7 @@ export function sampleLabel(): CoffeeLabel {
     coffeeName: "Ethiopia Guji Uraga",
     variety: "Heirloom",
     origin: "Guji, Ethiopia",
-    process: "Washed",
+    processes: ["Washed"],
     altitude: "2,050 masl",
     roastLevel: 2,
     roastDate: todayISO(),

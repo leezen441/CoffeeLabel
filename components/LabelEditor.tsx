@@ -14,9 +14,9 @@ import {
   type RoastLevel,
   FLAVOR_FAMILIES,
   MAX_BREWS,
+  MAX_PROCESSES,
   METHOD_PRESETS,
   PROCESS_GROUPS,
-  PROCESS_OPTIONS,
   ROAST_LEVELS,
   ROAST_PALETTES,
   emptyBrew,
@@ -35,6 +35,7 @@ export default function LabelEditor({ id }: { id: string }) {
   const [noteDraft, setNoteDraft] = useState("");
   const [groups, setGroups] = useState<LabelGroup[]>([]);
   const [customProcess, setCustomProcess] = useState(false);
+  const [processDraft, setProcessDraft] = useState("");
   /**
    * The brew methods are long enough to deserve their own screen. `?view=brews`
    * opens straight on them, which is what the brew guide links to.
@@ -136,7 +137,13 @@ export default function LabelEditor({ id }: { id: string }) {
   };
 
   const rest = restWindow(label);
-  const knownProcess = PROCESS_OPTIONS.some((p) => p.name === label.process);
+  /** A stage is added once; the picker hides what is already on the label. */
+  const addProcess = (name: string) => {
+    const value = name.trim();
+    if (!value || label.processes.length >= MAX_PROCESSES) return;
+    if (label.processes.some((p) => p.toLowerCase() === value.toLowerCase())) return;
+    update({ processes: [...label.processes, value] });
+  };
 
   /**
    * Takes one note or a whole list at once — "jasmine, peach, black tea" is how
@@ -235,41 +242,86 @@ export default function LabelEditor({ id }: { id: string }) {
                   onChange={(e) => update({ variety: e.target.value })}
                 />
               </label>
-              <label className="field">
-                <span>{tr("fProcess")}</span>
-                <select
-                  className="select"
-                  value={knownProcess ? label.process : "__custom"}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    update({ process: v === "__custom" ? "" : v });
-                    setCustomProcess(v === "__custom");
-                  }}
-                >
-                  <option value="">{tr("noneDash")}</option>
-                  {PROCESS_GROUPS.map((g) => (
-                    <optgroup key={g.group} label={g.group}>
-                      {g.items.map((p) => (
-                        <option key={p.name} value={p.name}>
-                          {p.name}
-                          {p.restBias !== 0
-                            ? ` (${p.restBias > 0 ? "+" : ""}${p.restBias}${tr("dRest")})`
-                            : ""}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                  <option value="__custom">{tr("otherDots")}</option>
-                </select>
-                {(customProcess || (!knownProcess && label.process)) && (
+              <div className="field">
+                <span>
+                  {tr("fProcess")} ({label.processes.length}/{MAX_PROCESSES})
+                </span>
+                {label.processes.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {label.processes.map((name) => (
+                      <span
+                        key={name}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-line bg-brand-soft px-2.5 py-1 text-xs font-normal normal-case tracking-normal"
+                      >
+                        {name}
+                        <button
+                          className="text-muted hover:text-ink"
+                          aria-label={`Remove ${name}`}
+                          onClick={() =>
+                            update({
+                              processes: label.processes.filter((p) => p !== name),
+                            })
+                          }
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {label.processes.length < MAX_PROCESSES && (
+                  <select
+                    className="select"
+                    value=""
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "__custom") {
+                        setCustomProcess(true);
+                      } else if (v) {
+                        addProcess(v);
+                        setCustomProcess(false);
+                      }
+                    }}
+                  >
+                    <option value="">{tr("addProcess")}</option>
+                    {PROCESS_GROUPS.map((g) => (
+                      <optgroup key={g.group} label={g.group}>
+                        {g.items
+                          .filter(
+                            (p) =>
+                              !label.processes.some(
+                                (has) => has.toLowerCase() === p.name.toLowerCase(),
+                              ),
+                          )
+                          .map((p) => (
+                            <option key={p.name} value={p.name}>
+                              {p.name}
+                              {p.restBias !== 0
+                                ? ` (${p.restBias > 0 ? "+" : ""}${p.restBias}${tr("dRest")})`
+                                : ""}
+                            </option>
+                          ))}
+                      </optgroup>
+                    ))}
+                    <option value="__custom">{tr("otherDots")}</option>
+                  </select>
+                )}
+                {customProcess && label.processes.length < MAX_PROCESSES && (
                   <input
                     className="input mt-2"
                     placeholder={tr("typeProcess")}
-                    value={label.process}
-                    onChange={(e) => update({ process: e.target.value })}
+                    value={processDraft}
+                    onChange={(e) => setProcessDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter") return;
+                      e.preventDefault();
+                      addProcess(processDraft);
+                      setProcessDraft("");
+                      setCustomProcess(false);
+                    }}
                   />
                 )}
-              </label>
+              </div>
               <label className="field">
                 <span>{tr("fOrigin")}</span>
                 <input
