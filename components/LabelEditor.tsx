@@ -14,7 +14,6 @@ import {
   type RoastLevel,
   FLAVOR_FAMILIES,
   MAX_BREWS,
-  MAX_NOTES,
   METHOD_PRESETS,
   PROCESS_GROUPS,
   PROCESS_OPTIONS,
@@ -139,14 +138,22 @@ export default function LabelEditor({ id }: { id: string }) {
   const rest = restWindow(label);
   const knownProcess = PROCESS_OPTIONS.some((p) => p.name === label.process);
 
+  /**
+   * Takes one note or a whole list at once — "jasmine, peach, black tea" is how
+   * roasters write them on the bag, so pasting that in should just work.
+   */
   const addNote = () => {
-    const value = noteDraft.trim();
-    if (!value || label.tastingNotes.length >= MAX_NOTES) return;
-    if (label.tastingNotes.includes(value)) {
-      setNoteDraft("");
-      return;
+    const added = noteDraft
+      .split(/[,;\n]+/)
+      .map((n) => n.trim())
+      .filter(Boolean);
+    if (added.length === 0) return;
+    const next = [...label.tastingNotes];
+    for (const note of added) {
+      // case-insensitive, so "Peach" typed twice does not become two chips
+      if (!next.some((n) => n.toLowerCase() === note.toLowerCase())) next.push(note);
     }
-    update({ tastingNotes: [...label.tastingNotes, value] });
+    if (next.length > label.tastingNotes.length) update({ tastingNotes: next });
     setNoteDraft("");
   };
 
@@ -481,7 +488,7 @@ export default function LabelEditor({ id }: { id: string }) {
 
           <section className="panel p-4">
             <h2 className="section-title mb-3">
-              {tr("secNotes")} ({label.tastingNotes.length}/{MAX_NOTES})
+              {tr("secNotes")} ({label.tastingNotes.length})
             </h2>
             <div className="flex flex-wrap items-center gap-2">
               {label.tastingNotes.map((note) => (
@@ -507,11 +514,10 @@ export default function LabelEditor({ id }: { id: string }) {
                   </button>
                 </span>
               ))}
-              {label.tastingNotes.length < MAX_NOTES && (
-                <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-1.5">
                   <input
-                    className="input w-44"
-                    placeholder="Jasmine"
+                    className="input w-56"
+                    placeholder="Jasmine, Peach, Black tea"
                     value={noteDraft}
                     onChange={(e) => setNoteDraft(e.target.value)}
                     onKeyDown={(e) => {
@@ -524,17 +530,12 @@ export default function LabelEditor({ id }: { id: string }) {
                   <button className="btn" onClick={addNote} disabled={!noteDraft.trim()}>
                     {tr("addWord")}
                   </button>
-                </span>
-              )}
+              </span>
             </div>
 
-            {label.tastingNotes.length < MAX_NOTES && (
-              <>
-                <p className="mt-3 mb-1.5 text-xs text-muted">
-                  {tr("quickPick")}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {FLAVOR_FAMILIES.filter(
+            <p className="mt-3 mb-1.5 text-xs text-muted">{tr("quickPick")}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {FLAVOR_FAMILIES.filter(
                     (f) => !label.tastingNotes.includes(f.name),
                   ).map((f) => (
                     <button
@@ -551,9 +552,7 @@ export default function LabelEditor({ id }: { id: string }) {
                       {f.name}
                     </button>
                   ))}
-                </div>
-              </>
-            )}
+            </div>
           </section>
             </>
           )}

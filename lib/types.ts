@@ -315,7 +315,6 @@ export type LayoutId = "full" | "ribbon" | "compact";
 
 export const MAX_BREWS = 5;
 export const DEFAULT_BREWS = 3;
-export const MAX_NOTES = 4;
 
 export const ROAST_LEVELS: Record<RoastLevel, { name: string; blurb: string }> = {
   1: { name: "Light", blurb: "Bright, floral, high acidity" },
