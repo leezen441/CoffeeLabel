@@ -1,3 +1,6 @@
+"use client";
+
+import { useSyncExternalStore } from "react";
 import type { Lang } from "./i18n";
 
 let queued: ReturnType<typeof setTimeout> | null = null;
@@ -95,4 +98,47 @@ export function speakCoach(
   };
   if (delayMs > 0) queued = setTimeout(run, delayMs);
   else run();
+}
+
+/* ------------------------- the on/off preference ------------------------- */
+
+/**
+ * Whether the coach speaks, remembered across brews. It is a store for the same
+ * reason the language is: reading localStorage during render would not match
+ * the server's HTML, and reading it in an effect means setting state in an
+ * effect, which cascades a second render every time the timer opens.
+ */
+
+const VOICE_KEY = "bean-label/voice-coach";
+const listeners = new Set<() => void>();
+
+function subscribe(cb: () => void) {
+  listeners.add(cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    listeners.delete(cb);
+    window.removeEventListener("storage", cb);
+  };
+}
+
+function getSnapshot(): boolean {
+  return window.localStorage.getItem(VOICE_KEY) !== "off";
+}
+
+/** On by default, which is also what the server renders. */
+function getServerSnapshot(): boolean {
+  return true;
+}
+
+export function useVoiceOn(): boolean {
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
+
+export function setVoiceOn(on: boolean): void {
+  try {
+    window.localStorage.setItem(VOICE_KEY, on ? "on" : "off");
+  } catch {
+    // Private mode — the choice still holds for this session.
+  }
+  listeners.forEach((cb) => cb());
 }

@@ -1,8 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { makeT, useLang, type Lang } from "@/lib/i18n";
-import { cancelSpeech, speakCoach, unlockSpeech } from "@/lib/voiceCoach";
+import {
+  cancelSpeech,
+  setVoiceOn,
+  speakCoach,
+  unlockSpeech,
+  useVoiceOn,
+} from "@/lib/voiceCoach";
 import PourRibbon, { timerRibbonBlocks } from "./PourRibbon";
 import {
   type BrewMethod,
@@ -45,8 +51,6 @@ export function unlockTimerAudio(): AudioContext | null {
   return sharedAudio;
 }
 
-const VOICE_KEY = "bean-label/voice-coach";
-
 function coachLine(
   lang: Lang,
   step: { text: string; waterG: string },
@@ -85,12 +89,13 @@ export default function BrewTimer({
 }) {
   const lang = useLang();
   const tr = makeT(lang);
-  const { steps, total } = brewTimeline(brew);
+  const { steps, total } = useMemo(() => brewTimeline(brew), [brew]);
   const hasRibbon = timerRibbonBlocks(steps, total).length > 0;
   /** only steps with a real start time can be cued */
-  const cues = steps
-    .map((s, i) => ({ ...s, index: i }))
-    .filter((s) => s.start !== null);
+  const cues = useMemo(
+    () => steps.map((s, i) => ({ ...s, index: i })).filter((s) => s.start !== null),
+    [steps],
+  );
 
   /**
    * "0:30–1:00", the same window the label prints — knowing when a step ends
@@ -103,14 +108,23 @@ export default function BrewTimer({
     return end === null ? mmss(start) : `${mmss(start)}–${mmss(end)}`;
   }
 
+  const voice = useVoiceOn();
+  /** The step the coach reads out before the countdown, when there is one. */
+  const firstSpoken = useMemo(() => {
+    const first = steps.find((s) => s.start === 0) ?? steps[0];
+    return first?.text.trim() ? first : null;
+  }, [steps]);
+  const canBrief = voice && firstSpoken !== null;
+
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(false);
   /** Speak the first step to completion before 3-2-1. */
-  const [briefing, setBriefing] = useState(true);
+  const [briefing, setBriefing] = useState(canBrief);
   /** 3 → 2 → 1 while waiting; null when briefing, idle, or the clock is running. */
-  const [countdown, setCountdown] = useState<number | null>(null);
-  const [voice, setVoice] = useState(true);
+  const [countdown, setCountdown] = useState<number | null>(
+    canBrief ? null : COUNTDOWN_FROM,
+  );
 
   // Wall-clock based so the count never drifts, unlike accumulating ticks.
   const startedAt = useRef(0);
@@ -118,12 +132,6 @@ export default function BrewTimer({
   const fired = useRef<Set<string>>(new Set());
   const audio = useRef<AudioContext | null>(null);
   const wakeLock = useRef<WakeLockSentinel | null>(null);
-  const voiceRef = useRef(voice);
-  voiceRef.current = voice;
-
-  useEffect(() => {
-    setVoice(window.localStorage.getItem(VOICE_KEY) !== "off");
-  }, []);
 
   const beep = useCallback((freq: number, ms: number, gain = 0.7) => {
     const ctx = audio.current;
@@ -171,13 +179,13 @@ export default function BrewTimer({
 
   const say = useCallback(
     (text: string, delayMs = 0, onEnd?: () => void) => {
-      if (!voiceRef.current) {
+      if (!voice) {
         onEnd?.();
         return;
       }
       speakCoach(text, lang, delayMs, onEnd);
     },
-    [lang],
+    [lang, voice],
   );
 
   const beginCountdown = useCallback(() => {
@@ -270,19 +278,11 @@ export default function BrewTimer({
 
   /** Speak step 1 all the way through, then start 3-2-1. */
   useEffect(() => {
-    if (!briefing) return;
+    if (!briefing || !firstSpoken) return;
     ensureAudio();
-    const on = window.localStorage.getItem(VOICE_KEY) !== "off";
-    setVoice(on);
-    voiceRef.current = on;
-    const first = steps.find((s) => s.start === 0) ?? steps[0];
-    if (!on || !first?.text.trim()) {
-      beginCountdown();
-      return;
-    }
-    fired.current.add(`speak${first.id}`);
-    speakCoach(coachLine(lang, first, "first"), lang, 0, beginCountdown);
-  }, [briefing, beginCountdown, ensureAudio, lang]);
+    fired.current.add(`speak${firstSpoken.id}`);
+    speakCoach(coachLine(lang, firstSpoken, "first"), lang, 0, beginCountdown);
+  }, [briefing, beginCountdown, ensureAudio, lang, firstSpoken]);
 
   const start = useCallback(() => {
     ensureAudio();
@@ -314,7 +314,7 @@ export default function BrewTimer({
   function requestStart() {
     // Resume a paused brew immediately; a fresh start gets the 3-2-1 first.
     if (elapsed > 0 && !done) start();
-    else if (voiceRef.current) setBriefing(true);
+    else if (canBrief) setBriefing(true);
     else setCountdown(COUNTDOWN_FROM);
   }
 
@@ -369,8 +369,7 @@ export default function BrewTimer({
           type="button"
           onClick={() => {
             const nextOn = !voice;
-            setVoice(nextOn);
-            window.localStorage.setItem(VOICE_KEY, nextOn ? "on" : "off");
+            setVoiceOn(nextOn);
             if (!nextOn) {
               cancelSpeech();
               if (briefing) beginCountdown();
