@@ -764,7 +764,7 @@ export function emptyLabel(): CoffeeLabel {
     restTo: 0,
     showDoseBoxes: false,
     doseBoxes: 5,
-    brews: [emptyBrew("Espresso"), emptyBrew("V60"), emptyBrew("Aeropress")],
+    brews: [emptyBrew()],
     size: "100x70",
     customW: 100,
     customH: 70,
@@ -830,7 +830,9 @@ function splitLegacyGrinder(name: string): { grinderBrand: string; grinderModel:
 
 export function normalizeLabel(raw: Partial<CoffeeLabel> & { id: string }): CoffeeLabel {
   const base = emptyLabel();
-  const brews = Array.isArray(raw.brews) && raw.brews.length ? raw.brews : base.brews;
+  // An empty list is a decision, not missing data — only a label saved without
+  // the key at all falls back, or deleting the last method would undo itself.
+  const brews = Array.isArray(raw.brews) ? raw.brews : base.brews;
   // Labels written before processes became a list carry a single `process`.
   const legacyProcess = (raw as { process?: string }).process;
   const processes = Array.isArray(raw.processes)
@@ -1203,6 +1205,24 @@ export function ribbonBlocks(brew: BrewMethod): RibbonBlock[] {
   const raised = blocks.map((b) => ({ ...b, share: Math.max(floor, b.share) }));
   const sum = raised.reduce((a, b) => a + b.share, 0);
   return raised.map((b) => ({ ...b, share: b.share / sum }));
+}
+
+/**
+ * Whether a method says anything beyond its own name. A bag often lists the
+ * methods that suit it without a recipe for any of them, and that is a
+ * recommendation, not a guide.
+ */
+export function brewHasDetail(brew: BrewMethod): boolean {
+  return Boolean(
+    brew.waterTempC.trim() ||
+      brew.doseG.trim() ||
+      brew.yieldG.trim() ||
+      brew.totalTime.trim() ||
+      brew.grind.trim() ||
+      brew.grinderBrand.trim() ||
+      brew.grinderModel.trim() ||
+      brew.steps.some((s) => s.text.trim()),
+  );
 }
 
 export function ratioOf(brew: BrewMethod): string {

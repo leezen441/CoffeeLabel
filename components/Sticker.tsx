@@ -9,6 +9,7 @@ import {
   paletteFor,
   addDays,
   bestBefore,
+  brewHasDetail,
   daysSince,
   formatDateRange,
   dialLabel,
@@ -390,9 +391,9 @@ export default function Sticker({
   // Altitude is kept out of the joined line — it gets a line of its own.
   const originBits = [label.variety, processText(label), label.origin].filter(Boolean);
   const altitude = (label.altitude ?? "").trim();
-  const brews = label.brews.filter(
-    (b) => b.name || b.waterTempC || b.doseG || b.steps.some((s) => s.text),
-  );
+  const brews = label.brews.filter((b) => b.name.trim() || brewHasDetail(b));
+  /** Names with no recipe behind them are a suggestion, not a guide. */
+  const anyDetail = brews.some(brewHasDetail);
   const bb = bestBefore(label.roastDate, label.bestBeforeDays);
   const rest = restWindow(label);
   const age = daysSince(label.roastDate);
@@ -494,11 +495,13 @@ export default function Sticker({
           </div>
         )}
 
-        {(brews.length > 0 || preview) && <div className="cl-rule" />}
+        {brews.length > 0 && <div className="cl-rule" />}
 
         {brews.length > 0 && (
           <div className="cl-brews">
-            <div className="cl-brews-label">Brew Guide</div>
+            <div className="cl-brews-label">
+              {anyDetail ? "Brew Guide" : "Brewing Recommendation"}
+            </div>
             {brews.map((brew) => {
               const steps = brew.steps.filter((s) => s.text.trim());
               const grinder = grinderOf(brew);
