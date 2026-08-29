@@ -400,13 +400,21 @@ export default function LibraryPage() {
 
         {labels && labels.length > 0 && (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((label) => (
+            {filtered.map((label) => {
+              const rest = restStatus(label);
+              const restMeta =
+                rest.status === "unknown" ? null : REST_STATUS_META[rest.status];
+              return (
               <article key={label.id} className="panel relative overflow-hidden">
                 {/* The sticker already carries the name, roaster and dates, so the
-                    card is just the sticker plus an action rail. */}
+                    card is just the sticker plus an action rail. The badge sits
+                    above the sticker rather than on it — it used to cover the
+                    roaster's name. */}
                 <button
                   type="button"
-                  className="block w-full cursor-zoom-in bg-card py-4 pl-4 pr-16 text-left"
+                  className={`block w-full cursor-zoom-in bg-card ${
+                    restMeta ? "pt-11" : "pt-4"
+                  } pb-4 pl-4 pr-16 text-left`}
                   onClick={() => setViewing(label)}
                   aria-label={`View ${labelTitle(label)}`}
                 >
@@ -417,24 +425,19 @@ export default function LibraryPage() {
                   />
                 </button>
 
-                {(() => {
-                  const r = restStatus(label);
-                  if (r.status === "unknown") return null;
-                  const meta = REST_STATUS_META[r.status];
-                  return (
-                    <span
-                      className="absolute left-3 top-3 z-10 rounded-full px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.06em] text-white shadow-sm"
-                      style={{ background: meta.color }}
-                      title={`${meta.label} · day ${r.age} of ${r.from}–${r.to}`}
-                    >
-                      {r.status === "resting"
-                        ? tr("daysToGoPre") + r.daysToPeak + tr("daysToGo")
-                        : r.status === "peak"
-                          ? tr("ready")
-                          : tr("pastPeak")}
-                    </span>
-                  );
-                })()}
+                {restMeta && (
+                  <span
+                    className="absolute left-3 top-3 z-10 rounded-full px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.06em] text-white shadow-sm"
+                    style={{ background: restMeta.color }}
+                    title={`${restMeta.label} · day ${rest.age} of ${rest.from}–${rest.to}`}
+                  >
+                    {rest.status === "resting"
+                      ? tr("daysToGoPre") + rest.daysToPeak + tr("daysToGo")
+                      : rest.status === "peak"
+                        ? tr("ready")
+                        : tr("pastPeak")}
+                  </span>
+                )}
 
                 {/* Siblings of the thumbnail button — interactive elements cannot nest. */}
                 <div className="absolute right-3 top-3 z-10 flex flex-col gap-1.5">
@@ -499,7 +502,8 @@ export default function LibraryPage() {
                   </button>
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
         )}
 
