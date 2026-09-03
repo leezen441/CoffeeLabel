@@ -431,11 +431,11 @@ const REST_BY_ROAST: Record<
   RoastLevel,
   { filter: [number, number]; espresso: [number, number] }
 > = {
-  1: { filter: [10, 16], espresso: [18, 28] },
-  2: { filter: [8, 14], espresso: [15, 24] },
-  3: { filter: [6, 12], espresso: [12, 20] },
-  4: { filter: [5, 9], espresso: [9, 16] },
-  5: { filter: [3, 7], espresso: [6, 12] },
+  1: { filter: [10, 16], espresso: [14, 21] },
+  2: { filter: [8, 14], espresso: [12, 18] },
+  3: { filter: [6, 12], espresso: [8, 14] },
+  4: { filter: [5, 9], espresso: [7, 12] },
+  5: { filter: [3, 7], espresso: [5, 10] },
 };
 
 const ESPRESSO_RE = /espresso|moka|lever|piston/i;
