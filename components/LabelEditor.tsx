@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import BrewEditor from "./BrewEditor";
-import { recallBrew, useRememberedNames } from "@/lib/methodMemory";
+import { forgetMethod, recallBrew, useRememberedNames } from "@/lib/methodMemory";
 import LangToggle from "./LangToggle";
 import { type MsgKey, makeT, useLang } from "@/lib/i18n";
 import * as store from "@/lib/store";
@@ -636,18 +636,40 @@ export default function LabelEditor({ id }: { id: string }) {
               </button>
             </div>
             <div className="mb-3 flex flex-wrap gap-1.5">
-              {methodChips.map((name) => (
-                <button
-                  key={name}
-                  type="button"
-                  className="btn text-xs"
-                  title={`${tr("addTemplate")} ${name}`}
-                  disabled={label.brews.length >= MAX_BREWS}
-                  onClick={() => addTemplatedBrew(name)}
-                >
-                  {name}
-                </button>
-              ))}
+              {methodChips.map((name) => {
+                // Only your own methods can be dropped; a built-in one is reset
+                // with Fill starter recipe instead.
+                const mine = !METHOD_PRESETS.some(
+                  (p) => p.toLowerCase() === name.toLowerCase(),
+                );
+                return (
+                  <span key={name} className="inline-flex items-center">
+                    <button
+                      type="button"
+                      className={`btn text-xs ${mine ? "!rounded-r-none !border-r-0 !pr-2" : ""}`}
+                      title={`${tr("addTemplate")} ${name}`}
+                      disabled={label.brews.length >= MAX_BREWS}
+                      onClick={() => addTemplatedBrew(name)}
+                    >
+                      {name}
+                    </button>
+                    {mine && (
+                      <button
+                        type="button"
+                        className="btn text-xs !rounded-l-none !px-2 !text-muted hover:!border-[var(--danger)] hover:!text-[var(--danger)]"
+                        aria-label={`${tr("forgetMethod")} ${name}`}
+                        title={`${tr("forgetMethod")} ${name}`}
+                        onClick={() => {
+                          if (!confirm(`${tr("forgetMethodQ")} "${name}"`)) return;
+                          forgetMethod(name);
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </span>
+                );
+              })}
             </div>
             <p className="mb-3 text-xs text-muted">{tr("templateHint")}</p>
             <div className="flex flex-col gap-3">

@@ -252,6 +252,11 @@ const DICT = {
     en: "Tap a method to add it with times and pours — your last recipe for that method if you have one, otherwise a starter.",
     th: "แตะวิธีชงเพื่อเพิ่มพร้อมเวลาและกรัมน้ำ — ถ้าเคยตั้งไว้จะใช้สูตรล่าสุดของคุณ ถ้ายังไม่เคยจะใช้สูตรตั้งต้น",
   },
+  forgetMethod: { en: "Forget", th: "ลบออกจากที่จำไว้" },
+  forgetMethodQ: {
+    en: "Forget the saved recipe for",
+    th: "ลบสูตรที่จำไว้ของ",
+  },
   useTemplate: { en: "Fill starter recipe", th: "ใส่สูตรตั้งต้น" },
   useTemplateConfirm: {
     en: "Replace this method with the starter recipe? Times and pours will be overwritten. Grinder settings are kept.",
