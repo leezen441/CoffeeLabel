@@ -249,8 +249,8 @@ const DICT = {
   noBrewsYet: { en: "No brew methods yet — add up to", th: "ยังไม่มีวิธีชง — เพิ่มได้ถึง" },
   addTemplate: { en: "Add starter recipe", th: "เพิ่มสูตรตั้งต้น" },
   templateHint: {
-    en: "Tap a method to add a starter recipe with times and pours. Edit after the first cup.",
-    th: "แตะวิธีชงเพื่อใส่สูตรตั้งต้น พร้อมเวลาและกรัมน้ำ ปรับได้อีกหลังชงแก้วแรก",
+    en: "Tap a method to add it with times and pours — your last recipe for that method if you have one, otherwise a starter.",
+    th: "แตะวิธีชงเพื่อเพิ่มพร้อมเวลาและกรัมน้ำ — ถ้าเคยตั้งไว้จะใช้สูตรล่าสุดของคุณ ถ้ายังไม่เคยจะใช้สูตรตั้งต้น",
   },
   useTemplate: { en: "Fill starter recipe", th: "ใส่สูตรตั้งต้น" },
   useTemplateConfirm: {

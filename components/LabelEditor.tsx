@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import BrewEditor from "./BrewEditor";
+import { recallBrew } from "@/lib/methodMemory";
 import LangToggle from "./LangToggle";
 import { type MsgKey, makeT, useLang } from "@/lib/i18n";
 import * as store from "@/lib/store";
@@ -122,7 +123,8 @@ export default function LabelEditor({ id }: { id: string }) {
 
   const addTemplatedBrew = (name: string) => {
     if (label.brews.length >= MAX_BREWS) return;
-    update({ brews: [...label.brews, brewFromTemplate(name)] });
+    const next = recallBrew(name) ?? brewFromTemplate(name);
+    update({ brews: [...label.brews, next] });
   };
 
   const removeBrew = (i: number) =>

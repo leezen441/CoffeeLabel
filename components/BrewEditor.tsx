@@ -12,6 +12,7 @@ import {
   ratioOf,
 } from "@/lib/types";
 import { brewFromTemplate, isBrewBlank, templateFor } from "@/lib/brewTemplates";
+import { recallBrew } from "@/lib/methodMemory";
 
 export default function BrewEditor({
   brew,
@@ -90,11 +91,16 @@ export default function BrewEditor({
           value={brew.name}
           onChange={(e) => {
             const name = e.target.value;
-            if (templateFor(name) && isBrewBlank(brew)) {
-              onChange(brewFromTemplate(name, brew));
-            } else {
+            if (!isBrewBlank(brew)) {
               set("name", name);
+              return;
             }
+            // Naming a blank method fills it in: your own last recipe for that
+            // name if you have one, otherwise the built-in starter.
+            const recalled = recallBrew(name);
+            if (recalled) onChange({ ...recalled, id: brew.id });
+            else if (templateFor(name)) onChange(brewFromTemplate(name, brew));
+            else set("name", name);
           }}
         />
         <button
