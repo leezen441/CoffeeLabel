@@ -442,7 +442,11 @@ const ESPRESSO_RE = /espresso|moka|lever|piston/i;
 
 /** True when any recipe on the label is a pressure brew. */
 export function hasEspresso(label: CoffeeLabel): boolean {
-  return label.brews.some((b) => ESPRESSO_RE.test(b.name ?? ""));
+  // A blank Espresso left over from the starter set is not evidence that this
+  // bag is for espresso, and it used to nearly double the resting window.
+  const withRecipes = label.brews.filter(brewHasDetail);
+  const judged = withRecipes.length > 0 ? withRecipes : label.brews;
+  return judged.some((b) => ESPRESSO_RE.test(b.name ?? ""));
 }
 
 /**
