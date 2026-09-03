@@ -12,7 +12,7 @@ import {
   ratioOf,
 } from "@/lib/types";
 import { brewFromTemplate, isBrewBlank, templateFor } from "@/lib/brewTemplates";
-import { recallBrew } from "@/lib/methodMemory";
+import { recallBrew, useRememberedNames } from "@/lib/methodMemory";
 
 export default function BrewEditor({
   brew,
@@ -32,6 +32,7 @@ export default function BrewEditor({
   const [customBrand, setCustomBrand] = useState(false);
   const [customModel, setCustomModel] = useState(false);
   const tr = makeT(useLang());
+  const remembered = useRememberedNames();
 
   const set = <K extends keyof BrewMethod>(key: K, value: BrewMethod[K]) =>
     onChange({ ...brew, [key]: value });
@@ -366,7 +367,12 @@ export default function BrewEditor({
       </div>
 
       <datalist id="method-presets">
-        {METHOD_PRESETS.map((m) => (
+        {[
+          ...METHOD_PRESETS,
+          ...remembered.filter(
+            (n) => !METHOD_PRESETS.some((p) => p.toLowerCase() === n.toLowerCase()),
+          ),
+        ].map((m) => (
           <option key={m} value={m} />
         ))}
       </datalist>

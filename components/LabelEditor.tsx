@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import BrewEditor from "./BrewEditor";
-import { recallBrew } from "@/lib/methodMemory";
+import { recallBrew, useRememberedNames } from "@/lib/methodMemory";
 import LangToggle from "./LangToggle";
 import { type MsgKey, makeT, useLang } from "@/lib/i18n";
 import * as store from "@/lib/store";
@@ -42,6 +42,16 @@ export default function LabelEditor({ id }: { id: string }) {
    * opens straight on them, which is what the brew guide links to.
    */
   const params = useSearchParams();
+  const remembered = useRememberedNames();
+  /** Built-in starters first, then the methods you have set up yourself. */
+  const methodChips = useMemo(() => {
+    const builtIn = new Set(METHOD_PRESETS.map((n) => n.toLowerCase()));
+    return [
+      ...METHOD_PRESETS,
+      ...remembered.filter((n) => !builtIn.has(n.toLowerCase())),
+    ];
+  }, [remembered]);
+
   const [view, setView] = useState<"details" | "brews">(
     params.get("view") === "brews" ? "brews" : "details",
   );
@@ -626,7 +636,7 @@ export default function LabelEditor({ id }: { id: string }) {
               </button>
             </div>
             <div className="mb-3 flex flex-wrap gap-1.5">
-              {METHOD_PRESETS.map((name) => (
+              {methodChips.map((name) => (
                 <button
                   key={name}
                   type="button"

@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { type BrewMethod, brewHasDetail, emptyBrew, uid } from "./types";
 
 /**
@@ -13,7 +14,12 @@ import { type BrewMethod, brewHasDetail, emptyBrew, uid } from "./types";
 const KEY = "bean-label/method-memory";
 
 /** Everything about a method except which label it belongs to. */
-type Remembered = Omit<BrewMethod, "id">;
+type Remembered = Omit<BrewMethod, "id"> & { savedAt?: number };
+
+const listeners = new Set<() => void>();
+/** Cached so the names snapshot keeps its identity between renders. */
+let namesCache: readonly string[] | null = null;
+const NO_NAMES: readonly string[] = [];
 
 const keyOf = (name: string) => name.trim().toLowerCase();
 
@@ -48,6 +54,7 @@ export function rememberBrews(brews: BrewMethod[]): void {
       grind: brew.grind,
       totalTime: brew.totalTime,
       steps: brew.steps,
+      savedAt: Date.now(),
     };
     changed = true;
   }
@@ -57,6 +64,36 @@ export function rememberBrews(brews: BrewMethod[]): void {
   } catch {
     // Full or private — the recipe is still saved on the label itself.
   }
+  namesCache = null;
+  listeners.forEach((cb) => cb());
+}
+
+function subscribe(cb: () => void) {
+  listeners.add(cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    listeners.delete(cb);
+    window.removeEventListener("storage", cb);
+  };
+}
+
+function getNames(): readonly string[] {
+  if (namesCache) return namesCache;
+  namesCache = Object.values(readAll())
+    .sort((a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0))
+    .map((r) => r.name)
+    .filter(Boolean);
+  return namesCache;
+}
+
+/** Nothing on the server, which is also what a first-time visitor has. */
+function getServerNames(): readonly string[] {
+  return NO_NAMES;
+}
+
+/** Every method you have set up before, most recently used first. */
+export function useRememberedNames(): readonly string[] {
+  return useSyncExternalStore(subscribe, getNames, getServerNames);
 }
 
 /** A fresh copy of the remembered recipe, or null when there is none. */
