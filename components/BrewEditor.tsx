@@ -13,7 +13,13 @@ import {
   ratioOf,
 } from "@/lib/types";
 import { brewFromTemplate, isBrewBlank, templateFor } from "@/lib/brewTemplates";
-import { recallBrew, rememberBrews, useRememberedNames } from "@/lib/methodMemory";
+import {
+  matchesRemembered,
+  recallBrew,
+  rememberBrews,
+  useRememberedMap,
+  useRememberedNames,
+} from "@/lib/methodMemory";
 
 export default function BrewEditor({
   brew,
@@ -34,13 +40,18 @@ export default function BrewEditor({
   const [customModel, setCustomModel] = useState(false);
   const tr = makeT(useLang());
   const remembered = useRememberedNames();
-  /** Shows "Saved" on the button for a moment, so the tap has an answer. */
-  const [justSaved, setJustSaved] = useState(false);
+  const savedMethods = useRememberedMap();
+  /**
+   * Green while the saved copy still matches what is on screen, so the button
+   * reports the state of this method rather than flashing after a tap.
+   */
+  const isSaved = matchesRemembered(savedMethods, brew);
+  const [failed, setFailed] = useState(false);
   useEffect(() => {
-    if (!justSaved) return;
-    const id = window.setTimeout(() => setJustSaved(false), 1800);
+    if (!failed) return;
+    const id = window.setTimeout(() => setFailed(false), 2500);
     return () => window.clearTimeout(id);
-  }, [justSaved]);
+  }, [failed]);
 
   const set = <K extends keyof BrewMethod>(key: K, value: BrewMethod[K]) =>
     onChange({ ...brew, [key]: value });
@@ -290,15 +301,21 @@ export default function BrewEditor({
             {tr("addStep")}
           </button>
           <button
-            className="btn btn-ghost text-xs"
+            className="btn text-xs shadow-[0_2px_0_rgba(0,0,0,0.18)] transition-transform active:translate-y-px disabled:shadow-none"
             disabled={!brew.name.trim() || !brewHasDetail(brew)}
             title={tr("saveMethodHint")}
+            style={
+              isSaved
+                ? { background: "#2E6B4B", borderColor: "#2E6B4B", color: "#fff" }
+                : failed
+                  ? { background: "var(--danger)", borderColor: "var(--danger)", color: "#fff" }
+                  : { background: "var(--brand)", borderColor: "var(--brand)", color: "#fff" }
+            }
             onClick={() => {
-              rememberBrews([brew]);
-              setJustSaved(true);
+              if (!rememberBrews([brew])) setFailed(true);
             }}
           >
-            {justSaved ? tr("methodSaved") : tr("saveMethod")}
+            {isSaved ? tr("methodSaved") : failed ? tr("methodSaveFailed") : tr("saveMethod")}
           </button>
           {templateFor(brew.name) && (
             <button

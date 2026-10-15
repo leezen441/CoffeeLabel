@@ -20,7 +20,9 @@ type Remembered = Omit<BrewMethod, "id"> & { savedAt?: number };
 const listeners = new Set<() => void>();
 /** Cached so the names snapshot keeps its identity between renders. */
 let namesCache: readonly string[] | null = null;
+let mapCache: Record<string, Remembered> | null = null;
 const NO_NAMES: readonly string[] = [];
+const NO_MAP: Record<string, Remembered> = {};
 
 const keyOf = (name: string) => name.trim().toLowerCase();
 
@@ -37,8 +39,8 @@ function readAll(): Record<string, Remembered> {
 }
 
 /** Records every named method that carries a recipe; blanks are left alone. */
-export function rememberBrews(brews: BrewMethod[]): void {
-  if (typeof window === "undefined") return;
+export function rememberBrews(brews: BrewMethod[]): boolean {
+  if (typeof window === "undefined") return false;
   const all = readAll();
   let changed = false;
   for (const brew of brews) {
@@ -59,14 +61,49 @@ export function rememberBrews(brews: BrewMethod[]): void {
     };
     changed = true;
   }
-  if (!changed) return;
+  if (!changed) return false;
   try {
     window.localStorage.setItem(KEY, JSON.stringify(all));
+    // Read it back — a write can be refused without throwing.
+    if (!window.localStorage.getItem(KEY)) return false;
   } catch {
     // Full or private — the recipe is still saved on the label itself.
+    return false;
   }
   namesCache = null;
+  mapCache = null;
   listeners.forEach((cb) => cb());
+  return true;
+}
+
+/** True when the saved copy of this method matches what is on screen. */
+export function matchesRemembered(
+  saved: Record<string, Remembered>,
+  brew: BrewMethod,
+): boolean {
+  const found = saved[keyOf(brew.name)];
+  if (!found) return false;
+  const sameSteps =
+    (found.steps?.length ?? 0) === brew.steps.length &&
+    (found.steps ?? []).every((step, i) => {
+      const b = brew.steps[i];
+      return (
+        step.text === b.text &&
+        step.startAt === b.startAt &&
+        step.endAt === b.endAt &&
+        step.waterG === b.waterG
+      );
+    });
+  return (
+    sameSteps &&
+    found.waterTempC === brew.waterTempC &&
+    found.doseG === brew.doseG &&
+    found.yieldG === brew.yieldG &&
+    found.grinderBrand === brew.grinderBrand &&
+    found.grinderModel === brew.grinderModel &&
+    found.grind === brew.grind &&
+    found.totalTime === brew.totalTime
+  );
 }
 
 function subscribe(cb: () => void) {
@@ -92,6 +129,20 @@ function getServerNames(): readonly string[] {
   return NO_NAMES;
 }
 
+function getMap(): Record<string, Remembered> {
+  if (!mapCache) mapCache = readAll();
+  return mapCache;
+}
+
+function getServerMap(): Record<string, Remembered> {
+  return NO_MAP;
+}
+
+/** The saved recipes themselves, for comparing against what is on screen. */
+export function useRememberedMap(): Record<string, Remembered> {
+  return useSyncExternalStore(subscribe, getMap, getServerMap);
+}
+
 /** Every method you have set up before, most recently used first. */
 export function useRememberedNames(): readonly string[] {
   return useSyncExternalStore(subscribe, getNames, getServerNames);
@@ -110,6 +161,7 @@ export function forgetMethod(name: string): void {
     return;
   }
   namesCache = null;
+  mapCache = null;
   listeners.forEach((cb) => cb());
 }
 
