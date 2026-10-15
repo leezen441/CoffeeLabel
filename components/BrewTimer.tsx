@@ -19,7 +19,7 @@ import {
   stepSpan,
 } from "@/lib/types";
 
-/** Beep this many seconds before a step. */
+/** Beep on each of these last seconds before a step, then on the step. */
 const PRE_ALERT = 3;
 /** Speak early enough that the sentence can finish before the pour. */
 const SPEAK_ALERT = 8;
@@ -229,9 +229,14 @@ export default function BrewTimer({
           fired.current.add(`speak${c.id}`);
           if (now < at) say(coachLine(lang, c, "next"));
         }
-        if (beepable && now >= at - PRE_ALERT && !fired.current.has(`pre${c.id}`)) {
-          fired.current.add(`pre${c.id}`);
-          if (now < at) cuePre();
+        // One beep per second into the step, so the fourth lands on it.
+        for (let left = PRE_ALERT; left >= 1 && beepable; left -= 1) {
+          const key = `pre${left}:${c.id}`;
+          if (now < at - left || fired.current.has(key)) continue;
+          fired.current.add(key);
+          // A backgrounded tab resumes seconds later; mark those ticks as spent
+          // rather than firing them all at once.
+          if (now < at && now < at - left + 1) cuePre();
         }
         if (now >= at && !fired.current.has(`cue${c.id}`)) {
           fired.current.add(`cue${c.id}`);
