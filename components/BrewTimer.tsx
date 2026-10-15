@@ -15,6 +15,7 @@ import {
   type Palette,
   brewTimeline,
   formatWeight,
+  pourAt,
   stepSpan,
 } from "@/lib/types";
 
@@ -116,6 +117,18 @@ export default function BrewTimer({
   }, [steps]);
   const canBrief = voice && firstSpoken !== null;
 
+  /**
+   * "125 g. (175)" — what to add now, and what the scale should read after it,
+   * since the recipe stores running totals but you pour the difference.
+   */
+  function waterLabel(index: number): string {
+    const pour = pourAt(steps, index);
+    // Nothing is added during a drawdown; it just carries the running total.
+    if (!pour || pour.added === 0) return "";
+    const added = formatWeight(String(pour.added));
+    return pour.added === pour.total ? added : `${added} (${pour.total})`;
+  }
+
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(false);
@@ -132,6 +145,13 @@ export default function BrewTimer({
   const fired = useRef<Set<string>>(new Set());
   const audio = useRef<AudioContext | null>(null);
   const wakeLock = useRef<WakeLockSentinel | null>(null);
+  /** Beeps scheduled for later, so a reset can call them off. */
+  const pending = useRef<number[]>([]);
+
+  const clearPending = useCallback(() => {
+    pending.current.forEach((id) => window.clearTimeout(id));
+    pending.current = [];
+  }, []);
 
   const beep = useCallback((freq: number, ms: number, gain = 0.7) => {
     const ctx = audio.current;
@@ -173,7 +193,9 @@ export default function BrewTimer({
   }, [beep, buzz]);
 
   const cueDone = useCallback(() => {
-    [0, 220, 440].forEach((d) => setTimeout(() => beep(1046, 240, 0.8), d));
+    [0, 220, 440].forEach((d) =>
+      pending.current.push(window.setTimeout(() => beep(1046, 240, 0.8), d)),
+    );
     buzz([180, 90, 180, 90, 320]);
   }, [beep, buzz]);
 
@@ -261,10 +283,11 @@ export default function BrewTimer({
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
+      clearPending();
       cancelSpeech();
       void audio.current?.close().catch(() => {});
     };
-  }, [onClose]);
+  }, [onClose, clearPending]);
 
   const ensureAudio = useCallback(() => {
     const unlocked = unlockTimerAudio();
@@ -284,15 +307,29 @@ export default function BrewTimer({
     speakCoach(coachLine(lang, firstSpoken, "first"), lang, 0, beginCountdown);
   }, [briefing, beginCountdown, ensureAudio, lang, firstSpoken]);
 
-  const start = useCallback(() => {
-    ensureAudio();
-    cancelSpeech();
-    setBriefing(false);
-    startedAt.current = Date.now();
-    setCountdown(null);
-    setRunning(true);
-    setDone(false);
-  }, [ensureAudio]);
+  /**
+   * `fresh` starts the brew from zero; without it this resumes a paused one.
+   * Starting again after a finished brew used to keep the old cue set, so every
+   * beep was skipped as already-fired and the clock ran past its own end.
+   */
+  const start = useCallback(
+    (fresh = false) => {
+      ensureAudio();
+      cancelSpeech();
+      if (fresh) {
+        clearPending();
+        fired.current.clear();
+        offset.current = 0;
+        setElapsed(0);
+      }
+      setBriefing(false);
+      startedAt.current = Date.now();
+      setCountdown(null);
+      setRunning(true);
+      setDone(false);
+    },
+    [ensureAudio, clearPending],
+  );
 
   function pause() {
     offset.current = elapsed;
@@ -308,6 +345,7 @@ export default function BrewTimer({
     setCountdown(null);
     offset.current = 0;
     fired.current.clear();
+    clearPending();
     cancelSpeech();
   }
 
@@ -330,7 +368,7 @@ export default function BrewTimer({
       buzz(40);
     }
     const id = window.setTimeout(() => {
-      if (countdown <= 1) start();
+      if (countdown <= 1) start(true);
       else setCountdown(countdown - 1);
     }, 1000);
     return () => window.clearTimeout(id);
@@ -407,7 +445,7 @@ export default function BrewTimer({
         ) : countdown !== null ? (
           <button
             type="button"
-            onClick={start}
+            onClick={() => start(true)}
             aria-label={tr("startNow")}
             className="bg-transparent p-0 font-mono text-7xl font-bold tabular-nums sm:text-8xl"
             style={{ color: theme.accent }}
@@ -425,7 +463,7 @@ export default function BrewTimer({
         <p className="mt-1 font-mono text-sm" style={{ color: theme.muted }}>
           {briefing
             ? firstStep?.waterG
-              ? formatWeight(firstStep.waterG)
+              ? waterLabel(steps.indexOf(firstStep))
               : tr("briefingHint")
             : countdown !== null
               ? tr("startingIn")
@@ -479,9 +517,7 @@ export default function BrewTimer({
                 <p className="mt-0.5 font-mono text-sm" style={{ color: theme.muted }}>
                   {[
                     windowOf(currentIndex),
-                    steps[currentIndex].waterG
-                      ? formatWeight(steps[currentIndex].waterG)
-                      : "",
+                    steps[currentIndex].waterG ? waterLabel(currentIndex) : "",
                   ]
                     .filter(Boolean)
                     .join("  ·  ")}
@@ -517,7 +553,9 @@ export default function BrewTimer({
                 <span className="font-mono font-bold">{i + 1}.</span>
                 <span className="flex-1">{s.text}</span>
                 {s.waterG && (
-                  <span className="font-mono text-xs">{formatWeight(s.waterG)}</span>
+                  <span className="font-mono text-xs whitespace-nowrap">
+                    {waterLabel(i)}
+                  </span>
                 )}
                 <span className="font-mono text-xs whitespace-nowrap">
                   {windowOf(i)}
@@ -531,7 +569,7 @@ export default function BrewTimer({
       <div className="flex items-center justify-center gap-3 px-5 py-5">
         {waiting ? (
           <button
-            onClick={start}
+            onClick={() => start(true)}
             className="rounded-full px-8 py-3 text-base font-bold"
             style={{ background: theme.accent, color: theme.paper }}
           >

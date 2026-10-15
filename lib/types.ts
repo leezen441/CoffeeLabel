@@ -1182,6 +1182,27 @@ export type RibbonBlock = {
  * cumulative water on at least two steps; returns [] otherwise so the label
  * can fall back to the plain numbered list.
  */
+/**
+ * How much water goes in at this step, and what the scale reads once it has.
+ *
+ * Steps store the running total, because that is the number you dial a scale
+ * to. While brewing you also need the amount to add right now, which is the
+ * difference from the last step that carried a figure.
+ */
+export function pourAt(
+  steps: { waterG: string }[],
+  index: number,
+): { added: number; total: number } | null {
+  const total = parseFloat(steps[index]?.waterG ?? "");
+  if (!Number.isFinite(total) || total <= 0) return null;
+  let prev = 0;
+  for (let i = 0; i < index; i += 1) {
+    const n = parseFloat(steps[i]?.waterG ?? "");
+    if (Number.isFinite(n) && n > 0) prev = n;
+  }
+  return { added: Math.max(0, total - prev), total };
+}
+
 export function ribbonBlocks(brew: BrewMethod): RibbonBlock[] {
   const withWater = brew.steps
     .map((s) => ({ ...s, n: parseFloat(s.waterG) }))
