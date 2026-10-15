@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { makeT, useLang } from "@/lib/i18n";
 import {
   type BrewMethod,
   GRINDER_BRANDS,
+  brewHasDetail,
   METHOD_PRESETS,
   emptyStep,
   grinderModelOf,
@@ -12,7 +13,7 @@ import {
   ratioOf,
 } from "@/lib/types";
 import { brewFromTemplate, isBrewBlank, templateFor } from "@/lib/brewTemplates";
-import { recallBrew, useRememberedNames } from "@/lib/methodMemory";
+import { recallBrew, rememberBrews, useRememberedNames } from "@/lib/methodMemory";
 
 export default function BrewEditor({
   brew,
@@ -33,6 +34,13 @@ export default function BrewEditor({
   const [customModel, setCustomModel] = useState(false);
   const tr = makeT(useLang());
   const remembered = useRememberedNames();
+  /** Shows "Saved" on the button for a moment, so the tap has an answer. */
+  const [justSaved, setJustSaved] = useState(false);
+  useEffect(() => {
+    if (!justSaved) return;
+    const id = window.setTimeout(() => setJustSaved(false), 1800);
+    return () => window.clearTimeout(id);
+  }, [justSaved]);
 
   const set = <K extends keyof BrewMethod>(key: K, value: BrewMethod[K]) =>
     onChange({ ...brew, [key]: value });
@@ -280,6 +288,17 @@ export default function BrewEditor({
           </span>
           <button className="btn btn-ghost text-xs" onClick={addStep}>
             {tr("addStep")}
+          </button>
+          <button
+            className="btn btn-ghost text-xs"
+            disabled={!brew.name.trim() || !brewHasDetail(brew)}
+            title={tr("saveMethodHint")}
+            onClick={() => {
+              rememberBrews([brew]);
+              setJustSaved(true);
+            }}
+          >
+            {justSaved ? tr("methodSaved") : tr("saveMethod")}
           </button>
           {templateFor(brew.name) && (
             <button

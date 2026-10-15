@@ -252,6 +252,12 @@ const DICT = {
     en: "Tap a method to add it with times and pours — your last recipe for that method if you have one, otherwise a starter.",
     th: "แตะวิธีชงเพื่อเพิ่มพร้อมเวลาและกรัมน้ำ — ถ้าเคยตั้งไว้จะใช้สูตรล่าสุดของคุณ ถ้ายังไม่เคยจะใช้สูตรตั้งต้น",
   },
+  saveMethod: { en: "Save method", th: "บันทึกวิธีชงนี้" },
+  methodSaved: { en: "Saved ✓", th: "บันทึกแล้ว ✓" },
+  saveMethodHint: {
+    en: "Keep this recipe for next time — adding this method to another bag brings it back",
+    th: "เก็บสูตรนี้ไว้ใช้ครั้งหน้า — เพิ่มวิธีชงนี้ในกาแฟถุงอื่นแล้วจะได้ค่าชุดนี้กลับมา",
+  },
   forgetMethod: { en: "Forget", th: "ลบออกจากที่จำไว้" },
   forgetMethodQ: {
     en: "Forget the saved recipe for",

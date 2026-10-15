@@ -13,12 +13,6 @@ import { type BrewMethod, brewHasDetail, emptyBrew, uid } from "./types";
 
 const KEY = "bean-label/method-memory";
 
-/**
- * A name saved this recently that is a prefix of the one being saved came from
- * the same burst of typing, not from a method you meant to keep. Long enough
- * for slow typing, far shorter than the gap between two sittings.
- */
-const TYPING_WINDOW_MS = 20_000;
 
 /** Everything about a method except which label it belongs to. */
 type Remembered = Omit<BrewMethod, "id"> & { savedAt?: number };
@@ -51,16 +45,6 @@ export function rememberBrews(brews: BrewMethod[]): void {
     const key = keyOf(brew.name);
     // A method someone has emptied out should not erase what it used to hold.
     if (!key || !brewHasDetail(brew)) continue;
-    // "S", "St", "Sta"… on the way to "Stag X" are not methods.
-    const now = Date.now();
-    for (const [other, saved] of Object.entries(all)) {
-      const typedOnTheWay =
-        other !== key &&
-        key.startsWith(other) &&
-        now - (saved.savedAt ?? 0) < TYPING_WINDOW_MS;
-      if (typedOnTheWay) delete all[other];
-    }
-
     all[key] = {
       name: brew.name,
       waterTempC: brew.waterTempC,

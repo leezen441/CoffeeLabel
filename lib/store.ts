@@ -1,5 +1,4 @@
 import type { BrewEntry, CoffeeLabel, LabelGroup } from "./types";
-import { rememberBrews } from "./methodMemory";
 import { normalizeLabel } from "./types";
 
 export type StorageMode = "cloud" | "local";
@@ -67,9 +66,6 @@ export async function getLabel(id: string): Promise<CoffeeLabel | null> {
 
 export async function saveLabel(label: CoffeeLabel): Promise<CoffeeLabel> {
   const next = { ...label, updatedAt: new Date().toISOString() };
-  // Every route that sets a recipe comes through here — the editor's autosave
-  // and the dial-in's "replace recipe" alike.
-  rememberBrews(next.brews);
   if ((await storageMode()) === "cloud") {
     const res = await fetch(`/api/labels/${next.id}`, {
       method: "PUT",
