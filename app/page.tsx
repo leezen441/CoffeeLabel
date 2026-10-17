@@ -410,11 +410,14 @@ export default function LibraryPage() {
                     card is just the sticker plus an action rail. The badge sits
                     above the sticker rather than on it — it used to cover the
                     roaster's name. */}
+                {/* A row, not an overlay: a sparse label made the card shorter
+                    than the rail, and overflow-hidden cut the last icons off. */}
+                <div className="flex items-start">
                 <button
                   type="button"
-                  className={`block w-full cursor-zoom-in bg-card ${
+                  className={`min-w-0 flex-1 cursor-zoom-in bg-card ${
                     restMeta ? "pt-11" : "pt-4"
-                  } pb-4 pl-4 pr-16 text-left`}
+                  } pb-4 pl-4 pr-2 text-left`}
                   onClick={() => setViewing(label)}
                   aria-label={`View ${labelTitle(label)}`}
                 >
@@ -440,7 +443,7 @@ export default function LibraryPage() {
                 )}
 
                 {/* Siblings of the thumbnail button — interactive elements cannot nest. */}
-                <div className="absolute right-3 top-3 z-10 flex flex-col gap-1.5">
+                <div className="flex shrink-0 flex-col gap-1.5 pr-3 pt-3 pb-3">
                   <Link
                     href={`/print/${label.id}`}
                     title={tr("printStickers")}
@@ -500,6 +503,7 @@ export default function LibraryPage() {
                   >
                     <TrashIcon />
                   </button>
+                </div>
                 </div>
               </article>
               );
