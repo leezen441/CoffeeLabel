@@ -11,8 +11,10 @@ import {
   grinderModelOf,
   grinderModels,
   ratioOf,
+  stepTimeLabel,
 } from "@/lib/types";
 import { brewFromTemplate, isBrewBlank, templateFor } from "@/lib/brewTemplates";
+import { type ParsedRecipe, parseRecipe } from "@/lib/recipeParse";
 import {
   matchesRemembered,
   recallBrew,
@@ -47,6 +49,26 @@ export default function BrewEditor({
    */
   const isSaved = matchesRemembered(savedMethods, brew);
   const [failed, setFailed] = useState(false);
+  /** Paste panel: the raw text, and what was read out of it. */
+  const [paste, setPaste] = useState<string | null>(null);
+  const [parsed, setParsed] = useState<ParsedRecipe | null>(null);
+
+  /** Only the fields the text actually gave up are written over. */
+  function applyParsed(p: ParsedRecipe) {
+    const next = { ...brew };
+    if (p.name) next.name = p.name;
+    if (p.waterTempC) next.waterTempC = p.waterTempC;
+    if (p.doseG) next.doseG = p.doseG;
+    if (p.yieldG) next.yieldG = p.yieldG;
+    if (p.grinderBrand) next.grinderBrand = p.grinderBrand;
+    if (p.grinderModel) next.grinderModel = p.grinderModel;
+    if (p.grind) next.grind = p.grind;
+    if (p.totalTime) next.totalTime = p.totalTime;
+    if (p.steps.length) next.steps = p.steps;
+    onChange(next);
+    setPaste(null);
+    setParsed(null);
+  }
   useEffect(() => {
     if (!failed) return;
     const id = window.setTimeout(() => setFailed(false), 2500);
@@ -301,6 +323,16 @@ export default function BrewEditor({
             {tr("addStep")}
           </button>
           <button
+            className="btn btn-ghost text-xs"
+            title={tr("pasteRecipeHint")}
+            onClick={() => {
+              setParsed(null);
+              setPaste(paste === null ? "" : null);
+            }}
+          >
+            {tr("pasteRecipe")}
+          </button>
+          <button
             className="btn text-xs shadow-[0_2px_0_rgba(0,0,0,0.18)] transition-transform active:translate-y-px disabled:shadow-none"
             disabled={!brew.name.trim() || !brewHasDetail(brew)}
             title={tr("saveMethodHint")}
@@ -329,6 +361,101 @@ export default function BrewEditor({
             </button>
           )}
         </div>
+
+        {paste !== null && (
+          <div className="mb-3 rounded-xl border border-line bg-paper/60 p-3">
+            <p className="mb-2 text-xs text-muted">{tr("pasteRecipeHint")}</p>
+            <textarea
+              className="input min-h-28 w-full font-mono text-xs leading-relaxed"
+              placeholder={tr("pasteRecipePlaceholder")}
+              value={paste}
+              autoFocus
+              onChange={(e) => {
+                setPaste(e.target.value);
+                setParsed(null);
+              }}
+            />
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <button
+                className="btn text-xs"
+                disabled={!paste.trim()}
+                onClick={() => setParsed(parseRecipe(paste))}
+              >
+                {tr("readFromPaste")}
+              </button>
+              {parsed && parsed.found.length > 0 && (
+                <button
+                  className="btn btn-primary text-xs"
+                  onClick={() => applyParsed(parsed)}
+                >
+                  {tr("applyPaste")}
+                </button>
+              )}
+              <button
+                className="btn btn-ghost text-xs"
+                onClick={() => {
+                  setPaste(null);
+                  setParsed(null);
+                }}
+              >
+                {tr("cancel")}
+              </button>
+            </div>
+
+            {parsed && (
+              <div className="mt-3 border-t border-line pt-2 text-xs">
+                {parsed.found.length === 0 ? (
+                  <p className="text-muted">{tr("pasteNothingFound")}</p>
+                ) : (
+                  <>
+                    <p className="mb-1 font-semibold uppercase tracking-[0.08em] text-muted">
+                      {tr("pasteFoundLabel")}
+                    </p>
+                    <ul className="flex flex-wrap gap-x-4 gap-y-0.5 font-mono">
+                      {parsed.name && (
+                        <li>
+                          {tr("method")}: {parsed.name}
+                        </li>
+                      )}
+                      {parsed.waterTempC && <li>{tr("fWaterC")}: {parsed.waterTempC}</li>}
+                      {parsed.doseG && <li>{tr("fDoseG")}: {parsed.doseG}</li>}
+                      {parsed.yieldG && <li>{tr("fYieldG")}: {parsed.yieldG}</li>}
+                      {(parsed.grinderBrand || parsed.grind) && (
+                        <li>
+                          {tr("grind")}:{" "}
+                          {[parsed.grinderBrand, parsed.grinderModel, parsed.grind]
+                            .filter(Boolean)
+                            .join(" ")}
+                        </li>
+                      )}
+                      {parsed.totalTime && <li>{tr("fTime")}: {parsed.totalTime}</li>}
+                    </ul>
+                    {parsed.steps.length > 0 && (
+                      <ol className="mt-1.5 flex flex-col gap-0.5">
+                        {parsed.steps.map((step, i) => (
+                          <li key={step.id} className="flex gap-2">
+                            <span className="font-mono text-muted">{i + 1}.</span>
+                            <span className="flex-1">{step.text}</span>
+                            <span className="font-mono text-muted">
+                              {[step.waterG && `${step.waterG} g`, stepTimeLabel(step)]
+                                .filter(Boolean)
+                                .join("  ")}
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                    {parsed.found.includes("poursSummed") && (
+                      <p className="mt-1.5 text-muted">{tr("poursSummedNote")}</p>
+                    )}
+                    <p className="mt-1.5 text-muted">{tr("pasteOverwrites")}</p>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex flex-col gap-1.5">
           {brew.steps.map((step, i) => (
             /* Wraps on a phone: the step text takes its own line and the

@@ -252,6 +252,30 @@ const DICT = {
     en: "Tap a method to add it with times and pours — your last recipe for that method if you have one, otherwise a starter.",
     th: "แตะวิธีชงเพื่อเพิ่มพร้อมเวลาและกรัมน้ำ — ถ้าเคยตั้งไว้จะใช้สูตรล่าสุดของคุณ ถ้ายังไม่เคยจะใช้สูตรตั้งต้น",
   },
+  pasteRecipe: { en: "Paste recipe", th: "วางสูตรจากที่อื่น" },
+  pasteRecipeHint: {
+    en: "Paste a recipe written in words — from an AI, a roaster's page, a note — and the figures are read out of it.",
+    th: "วางสูตรที่เขียนเป็นข้อความ — จาก AI หน้าเว็บร้านคั่ว หรือโน้ตของคุณ — แล้วระบบจะดึงค่าต่าง ๆ ออกมาให้",
+  },
+  pasteRecipePlaceholder: {
+    en: "V60\nWater 93C, 15 g coffee, 250 g water, Comandante 24 clicks\n1. Bloom 45 g, swirl 0:00-0:45\n2. Pour to 150 g 0:45-1:20\n3. Pour to 250 g 1:20-2:00\n4. Drawdown, finishes at 2:45",
+    th: "V60\nน้ำ 93°C, ผง 15 g, น้ำรวม 250 g, Comandante 24 คลิก\n1. บลูม 45 g สวิร์ลเบา ๆ 0:00-0:45\n2. เทถึง 150 g 0:45-1:20\n3. เทถึง 250 g 1:20-2:00\n4. รอน้ำลงหมด จบที่ 2:45",
+  },
+  readFromPaste: { en: "Read this", th: "อ่านข้อความนี้" },
+  applyPaste: { en: "Use these values", th: "ใช้ค่าเหล่านี้" },
+  pasteNothingFound: {
+    en: "Nothing recognisable in that. Check it has figures like 93C, 15 g, 0:00-0:30.",
+    th: "อ่านอะไรไม่ออกเลย ลองเช็คว่ามีตัวเลขแบบ 93°C, 15 g, 0:00-0:30 อยู่ไหม",
+  },
+  pasteFoundLabel: { en: "Read from the text", th: "อ่านได้จากข้อความ" },
+  pasteOverwrites: {
+    en: "Only the fields below are replaced; anything not read stays as it is.",
+    th: "จะแทนที่เฉพาะช่องที่อ่านได้ ช่องที่อ่านไม่ออกยังคงค่าเดิมไว้",
+  },
+  poursSummedNote: {
+    en: "Pours looked like separate amounts, so they were added into running totals.",
+    th: "ตัวเลขน้ำดูเหมือนเป็นปริมาณที่เทแต่ละรอบ ระบบจึงรวมให้เป็นยอดสะสม",
+  },
   saveMethod: { en: "Save method", th: "บันทึกวิธีชงนี้" },
   methodSaved: { en: "Saved", th: "บันทึกแล้ว" },
   methodSaveFailed: { en: "Not saved", th: "บันทึกไม่สำเร็จ" },
