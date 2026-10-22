@@ -249,6 +249,7 @@ const DICT = {
     th: "เลือกวิธีชงเพื่อเพิ่มพร้อมเวลาและกรัมน้ำ — ถ้าเคยตั้งไว้จะใช้สูตรล่าสุดของคุณ ถ้ายังไม่เคยจะใช้สูตรตั้งต้น",
   },
   blankMethod: { en: "Blank method", th: "วิธีชงเปล่า" },
+  methodWord: { en: "Method", th: "วิธีชง" },
   startersGroup: { en: "Starters", th: "สูตรตั้งต้น" },
   savedGroup: { en: "Saved", th: "ที่บันทึกไว้" },
   forgetMethod: { en: "Forget", th: "ลบออกจากที่จำไว้" },

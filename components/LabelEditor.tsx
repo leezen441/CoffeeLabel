@@ -35,6 +35,8 @@ export default function LabelEditor({ id }: { id: string }) {
   const [missing, setMissing] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [noteDraft, setNoteDraft] = useState("");
+  /** The one brew method open for editing, by id; the rest sit as tabs. */
+  const [pickedBrew, setPickedBrew] = useState<string | null>(null);
   const [groups, setGroups] = useState<LabelGroup[]>([]);
   const [customProcess, setCustomProcess] = useState(false);
   const [processDraft, setProcessDraft] = useState("");
@@ -129,17 +131,24 @@ export default function LabelEditor({ id }: { id: string }) {
 
   const addBrew = () => {
     if (label.brews.length >= MAX_BREWS) return;
-    update({ brews: [...label.brews, emptyBrew()] });
+    const next = emptyBrew();
+    update({ brews: [...label.brews, next] });
+    setPickedBrew(next.id);
   };
 
   const addTemplatedBrew = (name: string) => {
     if (label.brews.length >= MAX_BREWS) return;
     const next = recallBrew(name) ?? brewFromTemplate(name);
     update({ brews: [...label.brews, next] });
+    setPickedBrew(next.id);
   };
 
-  const removeBrew = (i: number) =>
-    update({ brews: label.brews.filter((_, j) => j !== i) });
+  const removeBrew = (i: number) => {
+    const rest = label.brews.filter((_, j) => j !== i);
+    update({ brews: rest });
+    // Whatever slides into its place is what stays open.
+    setPickedBrew((rest[i] ?? rest[i - 1])?.id ?? null);
+  };
 
   const moveBrew = (i: number, dir: -1 | 1) => {
     const next = [...label.brews];
@@ -148,6 +157,13 @@ export default function LabelEditor({ id }: { id: string }) {
     [next[i], next[j]] = [next[j], next[i]];
     update({ brews: next });
   };
+
+  // Nothing picked yet, or the pick was removed: open the first method.
+  const activeIndex = Math.max(
+    0,
+    label.brews.findIndex((b) => b.id === pickedBrew),
+  );
+  const activeBrew = label.brews[activeIndex];
 
   const rest = restWindow(label);
   /** A stage is added once; the picker hides what is already on the label. */
@@ -633,18 +649,40 @@ export default function LabelEditor({ id }: { id: string }) {
               />
             </div>
             <p className="mb-3 text-xs text-muted">{tr("templateHint")}</p>
+            {label.brews.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-2" role="tablist">
+                {label.brews.map((b, i) => {
+                  const on = i === activeIndex;
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={on}
+                      onClick={() => setPickedBrew(b.id)}
+                      className={`max-w-full truncate rounded-full border px-4 py-1.5 text-sm font-semibold transition ${
+                        on ? "text-white" : "border-line bg-card text-muted hover:text-ink"
+                      }`}
+                      style={on ? { background: "#2E6B4B", borderColor: "#2E6B4B" } : undefined}
+                    >
+                      {b.name.trim() || `${tr("methodWord")} ${i + 1}`}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <div className="flex flex-col gap-3">
-              {label.brews.map((brew, i) => (
+              {activeBrew && (
                 <BrewEditor
-                  key={brew.id}
-                  brew={brew}
-                  index={i}
+                  key={activeBrew.id}
+                  brew={activeBrew}
+                  index={activeIndex}
                   total={label.brews.length}
-                  onChange={(next) => setBrew(i, next)}
-                  onRemove={() => removeBrew(i)}
-                  onMove={(dir) => moveBrew(i, dir)}
+                  onChange={(next) => setBrew(activeIndex, next)}
+                  onRemove={() => removeBrew(activeIndex)}
+                  onMove={(dir) => moveBrew(activeIndex, dir)}
                 />
-              ))}
+              )}
               {label.brews.length === 0 && (
                 <p className="text-sm text-muted">
                   {tr("noBrewsYet")} {MAX_BREWS}.
