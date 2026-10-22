@@ -332,23 +332,6 @@ export default function BrewEditor({
           >
             {tr("pasteRecipe")}
           </button>
-          <button
-            className="btn text-xs shadow-[0_2px_0_rgba(0,0,0,0.18)] transition-transform active:translate-y-px disabled:shadow-none"
-            disabled={!brew.name.trim() || !brewHasDetail(brew)}
-            title={tr("saveMethodHint")}
-            style={
-              isSaved
-                ? { background: "#2E6B4B", borderColor: "#2E6B4B", color: "#fff" }
-                : failed
-                  ? { background: "var(--danger)", borderColor: "var(--danger)", color: "#fff" }
-                  : { background: "var(--brand)", borderColor: "var(--brand)", color: "#fff" }
-            }
-            onClick={() => {
-              if (!rememberBrews([brew])) setFailed(true);
-            }}
-          >
-            {isSaved ? tr("methodSaved") : failed ? tr("methodSaveFailed") : tr("saveMethod")}
-          </button>
           {templateFor(brew.name) && (
             <button
               className="btn btn-ghost text-xs"
@@ -527,6 +510,27 @@ export default function BrewEditor({
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Last, under the steps: saving is what you do once the recipe is done. */}
+      <div className="mt-3 flex justify-end">
+        <button
+          className="btn text-xs shadow-[0_2px_0_rgba(0,0,0,0.18)] transition-transform active:translate-y-px disabled:shadow-none"
+          disabled={!brew.name.trim() || !brewHasDetail(brew)}
+          title={tr("saveMethodHint")}
+          style={
+            isSaved
+              ? { background: "#2E6B4B", borderColor: "#2E6B4B", color: "#fff" }
+              : failed
+                ? { background: "var(--danger)", borderColor: "var(--danger)", color: "#fff" }
+                : { background: "var(--brand)", borderColor: "var(--brand)", color: "#fff" }
+          }
+          onClick={() => {
+            if (!rememberBrews([brew])) setFailed(true);
+          }}
+        >
+          {isSaved ? tr("methodSaved") : failed ? tr("methodSaveFailed") : tr("saveMethod")}
+        </button>
       </div>
 
       <datalist id="method-presets">
