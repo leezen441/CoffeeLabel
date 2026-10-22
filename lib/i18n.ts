@@ -248,7 +248,7 @@ const DICT = {
     en: "Pick a method to add it with times and pours — your last recipe for that method if you have one, otherwise a starter.",
     th: "เลือกวิธีชงเพื่อเพิ่มพร้อมเวลาและกรัมน้ำ — ถ้าเคยตั้งไว้จะใช้สูตรล่าสุดของคุณ ถ้ายังไม่เคยจะใช้สูตรตั้งต้น",
   },
-  addFromList: { en: "Add a method…", th: "เพิ่มวิธีชง…" },
+  blankMethod: { en: "Blank method", th: "วิธีชงเปล่า" },
   startersGroup: { en: "Starters", th: "สูตรตั้งต้น" },
   savedGroup: { en: "Saved", th: "ที่บันทึกไว้" },
   forgetMethod: { en: "Forget", th: "ลบออกจากที่จำไว้" },

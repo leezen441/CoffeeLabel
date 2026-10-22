@@ -614,25 +614,18 @@ export default function LabelEditor({ id }: { id: string }) {
               <h2 className="section-title">
                 {tr("secBrews")} ({label.brews.length}/{MAX_BREWS})
               </h2>
-              <button
-                className="btn"
-                onClick={addBrew}
-                disabled={label.brews.length >= MAX_BREWS}
-              >
-                {tr("addMethod")}
-              </button>
-            </div>
-            {/* Only your own methods carry a cross; a built-in one is reset
-                with Fill starter recipe instead. */}
-            <div className="mb-3">
+              {/* Only your own methods carry a cross; a built-in one is reset
+                  with Fill starter recipe instead. */}
               <MethodPicker
+                label={tr("addMethod")}
+                blankLabel={tr("blankMethod")}
                 starters={METHOD_PRESETS}
                 saved={savedMethods}
                 disabled={label.brews.length >= MAX_BREWS}
-                placeholder={tr("addFromList")}
                 startersLabel={tr("startersGroup")}
                 savedLabel={tr("savedGroup")}
                 forgetLabel={tr("forgetMethod")}
+                onBlank={addBrew}
                 onPick={addTemplatedBrew}
                 onForget={(name) => {
                   if (confirm(`${tr("forgetMethodQ")} "${name}"`)) forgetMethod(name);

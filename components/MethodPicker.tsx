@@ -3,28 +3,32 @@
 import { useEffect, useState } from "react";
 
 /**
- * The list of brew methods to add. A native select would do for picking, but
- * it has nowhere to hang a cross on each saved method, and forgetting one
- * belongs in the same list it was saved into.
+ * The "+ Add method" button and the list it opens. A native select would do
+ * for picking, but it has nowhere to hang a cross on each saved method, and
+ * forgetting one belongs in the same list it was saved into.
  */
 export default function MethodPicker({
+  label,
+  blankLabel,
   starters,
   saved,
   disabled,
-  placeholder,
   startersLabel,
   savedLabel,
   forgetLabel,
+  onBlank,
   onPick,
   onForget,
 }: {
+  label: string;
+  blankLabel: string;
   starters: readonly string[];
   saved: string[];
   disabled: boolean;
-  placeholder: string;
   startersLabel: string;
   savedLabel: string;
   forgetLabel: string;
+  onBlank: () => void;
   onPick: (name: string) => void;
   onForget: (name: string) => void;
 }) {
@@ -39,22 +43,22 @@ export default function MethodPicker({
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const pick = (name: string) => {
+  const choose = (add: () => void) => {
     setOpen(false);
-    onPick(name);
+    add();
   };
 
   return (
-    <div className="relative w-full sm:max-w-xs">
+    <div className="relative">
       <button
         type="button"
-        className="select text-left disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn"
         aria-haspopup="menu"
         aria-expanded={open}
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
       >
-        {placeholder}
+        {label}
       </button>
 
       {open && !disabled && (
@@ -66,19 +70,16 @@ export default function MethodPicker({
           />
           <div
             role="menu"
-            className="panel absolute inset-x-0 top-full z-50 mt-1 max-h-80 overflow-y-auto py-1 shadow-lg"
+            className="panel absolute right-0 top-full z-50 mt-1 max-h-80 w-64 max-w-[calc(100vw-2rem)] overflow-y-auto py-1 shadow-lg"
           >
+            {/* What the button did on its own before it opened a list. */}
+            <MenuRow onClick={() => choose(onBlank)}>{blankLabel}</MenuRow>
+
             <GroupLabel>{startersLabel}</GroupLabel>
             {starters.map((name) => (
-              <button
-                key={name}
-                type="button"
-                role="menuitem"
-                className="block w-full truncate px-3 py-2 text-left text-sm hover:bg-brand-soft"
-                onClick={() => pick(name)}
-              >
+              <MenuRow key={name} onClick={() => choose(() => onPick(name))}>
                 {name}
-              </button>
+              </MenuRow>
             ))}
 
             {saved.length > 0 && (
@@ -90,7 +91,7 @@ export default function MethodPicker({
                       type="button"
                       role="menuitem"
                       className="min-w-0 flex-1 truncate px-3 py-2 text-left text-sm"
-                      onClick={() => pick(name)}
+                      onClick={() => choose(() => onPick(name))}
                     >
                       {name}
                     </button>
@@ -112,6 +113,25 @@ export default function MethodPicker({
         </>
       )}
     </div>
+  );
+}
+
+function MenuRow({
+  onClick,
+  children,
+}: {
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      className="block w-full truncate px-3 py-2 text-left text-sm hover:bg-brand-soft"
+      onClick={onClick}
+    >
+      {children}
+    </button>
   );
 }
 
