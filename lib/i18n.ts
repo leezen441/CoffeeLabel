@@ -400,6 +400,8 @@ const DICT = {
   fCutGuides: { en: "Cut guides", th: "เส้นตัด" },
   showDashed: { en: "Show dashed outline", th: "แสดงเส้นประรอบดวง" },
   stickerWord: { en: "Sticker", th: "สติกเกอร์" },
+  sticker1: { en: "Sticker 1 · Bag", th: "ดวงที่ 1 · ข้อมูลเมล็ด" },
+  sticker2: { en: "Sticker 2 · Recipe", th: "ดวงที่ 2 · วิธีชง" },
   perPage: { en: "per page", th: "ต่อหน้า" },
   pageWord: { en: "page", th: "หน้า" },
   pagesWord: { en: "pages", th: "หน้า" },

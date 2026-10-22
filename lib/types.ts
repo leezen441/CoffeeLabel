@@ -288,11 +288,15 @@ export type CoffeeLabel = {
   showDoseBoxes: boolean;
   doseBoxes: number;
 
-  /** sticker appearance */
+  /** sticker appearance — the bag sticker's size */
   size: SizeId;
   /** used only when size === "custom", in millimetres */
   customW: number;
   customH: number;
+  /** the recipe sticker's size; the two print on different stock */
+  brewSize: SizeId;
+  brewCustomW: number;
+  brewCustomH: number;
   layout: LayoutId;
   showQr: boolean;
   createdAt: string;
@@ -702,22 +706,32 @@ export function clampMm(value: number, fallback: number): number {
 }
 
 /**
- * Resolve a label's physical size. Everything that renders or prints a sticker
- * goes through this so a custom size behaves exactly like a preset one.
+ * Resolve the physical size of one of a label's stickers. Everything that
+ * renders or prints a sticker goes through this, so a custom size behaves
+ * exactly like a preset one, and the recipe sticker can be cut from different
+ * stock than the bag sticker.
  */
-export function labelSize(label: CoffeeLabel): {
+export function labelSize(
+  label: CoffeeLabel,
+  which: StickerVariant = "beans",
+): {
   name: string;
   w: number;
   h: number;
   hint: string;
 } {
-  if (label.size === "custom") {
-    const w = clampMm(label.customW, 100);
-    const h = clampMm(label.customH, 70);
+  const brew = which === "brew";
+  const id = brew ? label.brewSize : label.size;
+  if (id === "custom") {
+    const w = clampMm(brew ? label.brewCustomW : label.customW, 100);
+    const h = clampMm(brew ? label.brewCustomH : label.customH, 70);
     return { name: `${w} × ${h} mm`, w, h, hint: "Custom size" };
   }
-  return SIZES[label.size] ?? SIZES["100x70"];
+  return SIZES[id] ?? SIZES["100x70"];
 }
+
+/** Which of a label's stickers is being drawn. */
+export type StickerVariant = "full" | "brew" | "beans";
 
 export function uid(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -776,6 +790,9 @@ export function emptyLabel(): CoffeeLabel {
     size: "100x70",
     customW: 100,
     customH: 70,
+    brewSize: "100x70",
+    brewCustomW: 100,
+    brewCustomH: 70,
     layout: "full",
     showQr: false,
     createdAt: now,
@@ -856,9 +873,17 @@ export function normalizeLabel(raw: Partial<CoffeeLabel> & { id: string }): Coff
   };
   delete rest.process;
   delete rest.roastDisplay;
+  // The recipe sticker used to share the bag sticker's size. A label saved
+  // before it had one of its own keeps printing exactly as it always did.
+  const brewSize = raw.brewSize ?? raw.size ?? base.size;
+  const brewCustomW = raw.brewCustomW ?? raw.customW ?? base.customW;
+  const brewCustomH = raw.brewCustomH ?? raw.customH ?? base.customH;
   return {
     ...base,
     ...rest,
+    brewSize,
+    brewCustomW,
+    brewCustomH,
     processes,
     tastingNotes: Array.isArray(raw.tastingNotes) ? raw.tastingNotes : [],
     brews: brews.slice(0, MAX_BREWS).map((b) => {

@@ -12,6 +12,7 @@ import {
   type CoffeeLabel,
   type LayoutId,
   type SizeId,
+  type StickerVariant,
   MAX_MM,
   brewHasDetail,
   MIN_MM,
@@ -44,6 +45,8 @@ export default function PrintView({ id }: { id: string }) {
   const [guides, setGuides] = useState(true);
   /** "both" prints the bag sticker and the recipe sticker, one after the other. */
   const [variant, setVariant] = useState<"both" | "beans" | "brew" | "full">("both");
+  /** which of the two stickers the size controls are editing */
+  const [which, setWhich] = useState<"beans" | "brew">("beans");
   const origin = useOrigin();
   const lang = useLang();
   const tr = makeT(lang);
@@ -115,23 +118,21 @@ export default function PrintView({ id }: { id: string }) {
     }
     if (!confirm(tr("sizeToAllConfirm"))) return;
 
-    const patch = {
-      size: label.size,
-      customW: label.customW,
-      customH: label.customH,
-    };
+    const patch: Partial<CoffeeLabel> =
+      which === "brew"
+        ? {
+            brewSize: label.brewSize,
+            brewCustomW: label.brewCustomW,
+            brewCustomH: label.brewCustomH,
+          }
+        : { size: label.size, customW: label.customW, customH: label.customH };
+    const keys = Object.keys(patch) as (keyof CoffeeLabel)[];
     setResizing(true);
     setFailed(false);
     try {
       let changed = 0;
       for (const other of [...others].reverse()) {
-        if (
-          other.size !== patch.size ||
-          other.customW !== patch.customW ||
-          other.customH !== patch.customH
-        ) {
-          changed++;
-        }
+        if (keys.some((k) => other[k] !== patch[k])) changed++;
         await store.saveLabel({ ...other, ...patch });
       }
       // The debounced save for this label has not necessarily fired yet, and
@@ -163,24 +164,40 @@ export default function PrintView({ id }: { id: string }) {
     [copies, sheetsPerCopy],
   );
 
-  const grid = useMemo(() => {
-    if (!size) return null;
-    if (sheet === "exact") {
-      return { cols: 1, rows: 1, perPage: 1, pages: stickers.length };
+  /**
+   * A sheet holds one kind of sticker at a time, since the bag and the recipe
+   * can be cut from different stock. Copies of each kind are tiled together
+   * rather than interleaved, which is also how they are easiest to peel.
+   */
+  const runs = useMemo(() => {
+    if (!label) return [];
+    const order: StickerVariant[] = [];
+    const counts = new Map<StickerVariant, number>();
+    for (const kind of stickers) {
+      if (!counts.has(kind)) order.push(kind);
+      counts.set(kind, (counts.get(kind) ?? 0) + 1);
     }
-    const s = SHEETS[sheet];
-    const usableW = s.w - s.margin * 2;
-    const usableH = s.h - s.margin * 2;
-    const cols = Math.max(1, Math.floor((usableW + gap) / (size.w + gap)));
-    const rows = Math.max(1, Math.floor((usableH + gap) / (size.h + gap)));
-    const perPage = cols * rows;
-    return {
-      cols,
-      rows,
-      perPage,
-      pages: Math.max(1, Math.ceil(stickers.length / perPage)),
-    };
-  }, [sheet, size, gap, stickers.length]);
+    return order.map((kind) => {
+      const count = counts.get(kind) ?? 0;
+      const mm = labelSize(label, kind);
+      if (sheet === "exact") {
+        return { kind, size: mm, cols: 1, rows: 1, perPage: 1, count, pages: count };
+      }
+      const s = SHEETS[sheet];
+      const cols = Math.max(1, Math.floor((s.w - s.margin * 2 + gap) / (mm.w + gap)));
+      const rows = Math.max(1, Math.floor((s.h - s.margin * 2 + gap) / (mm.h + gap)));
+      const perPage = cols * rows;
+      return {
+        kind,
+        size: mm,
+        cols,
+        rows,
+        perPage,
+        count,
+        pages: Math.max(1, Math.ceil(count / perPage)),
+      };
+    });
+  }, [stickers, label, sheet, gap]);
 
   useIsoLayoutEffect(() => {
     const wrap = wrapRef.current;
@@ -209,6 +226,9 @@ export default function PrintView({ id }: { id: string }) {
     label?.size,
     label?.customW,
     label?.customH,
+    label?.brewSize,
+    label?.brewCustomW,
+    label?.brewCustomH,
     label?.layout,
     label?.showQr,
   ]);
@@ -224,66 +244,101 @@ export default function PrintView({ id }: { id: string }) {
     );
   }
 
-  if (!label || !size || !grid) {
+  if (!label || !size) {
     return <p className="px-5 py-10 text-sm text-muted">{tr("loading")}</p>;
   }
 
+  // On a sheet every page is the same paper. Printing at the exact sticker
+  // size, each kind needs its own page rule — but only when they really
+  // differ, so a single-size run keeps the plain rule every browser honours.
+  const exactSizes = new Set(runs.map((r) => `${r.size.w}x${r.size.h}`));
   const pageStyle =
-    sheet === "exact"
-      ? `@page { size: ${size.w}mm ${size.h}mm; margin: 0; }`
-      : `@page { size: ${SHEETS[sheet].w}mm ${SHEETS[sheet].h}mm; margin: 0; }`;
+    sheet !== "exact"
+      ? `@page { size: ${SHEETS[sheet].w}mm ${SHEETS[sheet].h}mm; margin: 0; }`
+      : exactSizes.size <= 1
+        ? `@page { size: ${runs[0]?.size.w ?? size.w}mm ${runs[0]?.size.h ?? size.h}mm; margin: 0; }`
+        : runs
+            .map(
+              (r) =>
+                `@page ${r.kind} { size: ${r.size.w}mm ${r.size.h}mm; margin: 0; } ` +
+                `.print-page-${r.kind} { page: ${r.kind}; }`,
+            )
+            .join(" ");
 
   const brewUrl = origin ? `${origin}/b/${label.id}` : "";
 
-  const stickerAt = (n: number) => (
+  // The size controls edit one sticker at a time; these read and write it.
+  const brewPicked = which === "brew";
+  const sizeId = brewPicked ? label.brewSize : label.size;
+  const mmW = brewPicked ? label.brewCustomW : label.customW;
+  const mmH = brewPicked ? label.brewCustomH : label.customH;
+  const setSizeId = (id: SizeId) => {
+    setResized(null);
+    update(brewPicked ? { brewSize: id } : { size: id });
+  };
+  const setMmW = (w: number) => update(brewPicked ? { brewCustomW: w } : { customW: w });
+  const setMmH = (h: number) => update(brewPicked ? { brewCustomH: h } : { customH: h });
+
+  const kindName = (kind: StickerVariant) =>
+    kind === "brew" ? tr("sticker2") : kind === "full" ? tr("fullLabel") : tr("sticker1");
+
+  const stickerOf = (kind: StickerVariant, key: number) => (
     <Sticker
-      key={n}
+      key={key}
       label={label}
       qrUrl={brewUrl}
-      variant={stickers[n] ?? "beans"}
+      variant={kind}
       live={false}
       className={guides ? "cut-guide" : ""}
       style={guides ? { outline: "0.1mm dashed #c9c9c9" } : undefined}
     />
   );
 
-  const pages = Array.from({ length: grid.pages }, (_, p) => {
-    const start = p * grid.perPage;
-    const count = Math.min(grid.perPage, stickers.length - start);
-    if (sheet === "exact") {
+  const pages = runs.flatMap((run) =>
+    Array.from({ length: run.pages }, (_, p) => {
+      const start = p * run.perPage;
+      const count = Math.min(run.perPage, run.count - start);
+      if (sheet === "exact") {
+        return (
+          <div
+            key={`${run.kind}-${p}`}
+            className={`print-page print-page-${run.kind}`}
+            style={{
+              width: `${run.size.w}mm`,
+              height: `${run.size.h}mm`,
+              background: "#fff",
+            }}
+          >
+            {stickerOf(run.kind, start)}
+          </div>
+        );
+      }
+      const s = SHEETS[sheet];
       return (
         <div
-          key={p}
-          className="print-page"
-          style={{ width: `${size.w}mm`, height: `${size.h}mm`, background: "#fff" }}
+          key={`${run.kind}-${p}`}
+          className={`print-page print-page-${run.kind}`}
+          style={{
+            width: `${s.w}mm`,
+            height: `${s.h}mm`,
+            padding: `${s.margin}mm`,
+            background: "#fff",
+            boxSizing: "border-box",
+            display: "grid",
+            gridTemplateColumns: `repeat(${run.cols}, ${run.size.w}mm)`,
+            gridAutoRows: `${run.size.h}mm`,
+            gap: `${gap}mm`,
+            alignContent: "start",
+            justifyContent: "start",
+          }}
         >
-          {stickerAt(start)}
+          {Array.from({ length: Math.max(0, count) }, (_, i) =>
+            stickerOf(run.kind, start + i),
+          )}
         </div>
       );
-    }
-    const s = SHEETS[sheet];
-    return (
-      <div
-        key={p}
-        className="print-page"
-        style={{
-          width: `${s.w}mm`,
-          height: `${s.h}mm`,
-          padding: `${s.margin}mm`,
-          background: "#fff",
-          boxSizing: "border-box",
-          display: "grid",
-          gridTemplateColumns: `repeat(${grid.cols}, ${size.w}mm)`,
-          gridAutoRows: `${size.h}mm`,
-          gap: `${gap}mm`,
-          alignContent: "start",
-          justifyContent: "start",
-        }}
-      >
-        {Array.from({ length: Math.max(0, count) }, (_, i) => stickerAt(start + i))}
-      </div>
-    );
-  });
+    }),
+  );
 
   return (
     <div className="flex-1">
@@ -310,16 +365,28 @@ export default function PrintView({ id }: { id: string }) {
       <div className="no-print mx-auto max-w-6xl px-5 pt-5">
         <div className="panel mb-3 p-4">
           <h2 className="section-title mb-3">{tr("secSticker")}</h2>
+          <div className="mb-3 flex flex-wrap gap-2">
+            {(["beans", "brew"] as const).map((k) => (
+              <button
+                key={k}
+                className={`btn text-xs ${which === k ? "btn-primary" : "btn-ghost"}`}
+                aria-pressed={which === k}
+                onClick={() => {
+                  setWhich(k);
+                  setResized(null);
+                }}
+              >
+                {kindName(k)}
+              </button>
+            ))}
+          </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="field">
               <span>{tr("fSize")}</span>
               <select
                 className="select"
-                value={label.size}
-                onChange={(e) => {
-                  setResized(null);
-                  update({ size: e.target.value as SizeId });
-                }}
+                value={sizeId}
+                onChange={(e) => setSizeId(e.target.value as SizeId)}
               >
                 {(Object.keys(SIZES) as SizeId[]).map((k) => (
                   <option key={k} value={k}>
@@ -354,7 +421,7 @@ export default function PrintView({ id }: { id: string }) {
               </span>
             </label>
 
-            {label.size === "custom" && (
+            {sizeId === "custom" && (
               <div className="grid grid-cols-2 gap-3 sm:col-span-2">
                 <label className="field">
                   <span>{tr("fWidthMm")}</span>
@@ -363,9 +430,9 @@ export default function PrintView({ id }: { id: string }) {
                     min={MIN_MM}
                     max={MAX_MM}
                     className="input"
-                    value={label.customW}
-                    onChange={(e) => update({ customW: Number(e.target.value) })}
-                    onBlur={(e) => update({ customW: clampMm(Number(e.target.value), 100) })}
+                    value={mmW}
+                    onChange={(e) => setMmW(Number(e.target.value))}
+                    onBlur={(e) => setMmW(clampMm(Number(e.target.value), 100))}
                   />
                 </label>
                 <label className="field">
@@ -375,18 +442,18 @@ export default function PrintView({ id }: { id: string }) {
                     min={MIN_MM}
                     max={MAX_MM}
                     className="input"
-                    value={label.customH}
-                    onChange={(e) => update({ customH: Number(e.target.value) })}
-                    onBlur={(e) => update({ customH: clampMm(Number(e.target.value), 70) })}
+                    value={mmH}
+                    onChange={(e) => setMmH(Number(e.target.value))}
+                    onBlur={(e) => setMmH(clampMm(Number(e.target.value), 70))}
                   />
                 </label>
               </div>
             )}
           </div>
           <p className="mt-2 text-xs text-muted">
-            {label.size === "custom"
+            {sizeId === "custom"
               ? `${tr("customBetween")} ${MIN_MM}–${MAX_MM} ${tr("mmEachSide")}`
-              : sizeHint(label.size, SIZES[label.size].hint, lang)}
+              : sizeHint(sizeId, SIZES[sizeId].hint, lang)}
             {" · "}
             {tr("savedToLabel")}
           </p>
@@ -486,11 +553,16 @@ export default function PrintView({ id }: { id: string }) {
           </label>
         </div>
 
-        <p className="mt-3 text-xs text-muted">
-          {tr("stickerWord")} {size.name} · {grid.cols} × {grid.rows} {tr("perPage")} ·{" "}
-          {grid.pages} {grid.pages === 1 ? tr("pageWord") : tr("pagesWord")}
-          {sheetsPerCopy.length > 1 && ` · ${tr("twoPerCopy")}`}.
-        </p>
+        <div className="mt-3 text-xs text-muted">
+          {runs.map((run) => (
+            <p key={run.kind}>
+              {kindName(run.kind)} · {run.size.name} · {run.cols} × {run.rows}{" "}
+              {tr("perPage")} · {run.pages}{" "}
+              {run.pages === 1 ? tr("pageWord") : tr("pagesWord")}.
+            </p>
+          ))}
+          {sheetsPerCopy.length > 1 && <p>{tr("twoPerCopy")}.</p>}
+        </div>
         <div className="mt-2 rounded-lg border border-line bg-brand-soft/50 px-3 py-2 text-xs text-muted">
           <b className="text-ink">{tr("printTipsTitle")}</b>
           <ul className="mt-1 list-disc space-y-0.5 pl-4">

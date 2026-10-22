@@ -223,7 +223,7 @@ export default function Sticker({
   const [qr, setQr] = useState<string>("");
 
   const theme: Palette = paletteFor(label);
-  const size = labelSize(label);
+  const size = labelSize(label, variant);
   const roast = ROAST_LEVELS[label.roastLevel] ?? ROAST_LEVELS[3];
   const layout = label.layout;
   const brewOnly = variant === "brew";
