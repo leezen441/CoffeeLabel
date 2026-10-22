@@ -34,15 +34,18 @@ import {
 export default function BrewGuide({
   id,
   initial,
+  initialBrew,
 }: {
   id: string;
   initial: CoffeeLabel | null;
+  initialBrew: string | null;
 }) {
   const [label, setLabel] = useState<CoffeeLabel | null>(initial);
   const [state, setState] = useState<"ready" | "loading" | "missing">(
     initial ? "ready" : "loading",
   );
-  const [active, setActive] = useState(0);
+  /** The method on screen, by id, so it survives a round trip to the editor. */
+  const [activeId, setActiveId] = useState<string | null>(initialBrew);
   const [timing, setTiming] = useState<BrewMethod | null>(null);
   const [factor, setFactor] = useState(1);
   const lang = useLang();
@@ -78,7 +81,12 @@ export default function BrewGuide({
 
   const theme = paletteFor(label);
   const brews = label.brews.filter((b) => b.name || b.steps.some((s) => s.text));
-  const rawBrew = brews[Math.min(active, brews.length - 1)];
+  // Nothing picked yet, or the pick no longer exists: the first method.
+  const active = Math.max(
+    0,
+    brews.findIndex((b) => b.id === activeId),
+  );
+  const rawBrew = brews[active];
   // Scaling is presentational — the stored recipe is never touched.
   const brew = rawBrew ? scaleBrew(rawBrew, factor) : rawBrew;
   const age = daysSince(label.roastDate);
@@ -187,7 +195,7 @@ export default function BrewGuide({
               {brews.map((b, i) => (
                 <button
                   key={b.id}
-                  onClick={() => setActive(i)}
+                  onClick={() => setActiveId(b.id)}
                   className="rounded-full px-4 py-2 text-sm font-semibold transition"
                   style={{
                     background: i === active ? theme.accent : "transparent",
@@ -318,7 +326,7 @@ export default function BrewGuide({
 
         <div className="mt-10 flex gap-2 text-sm">
           <Link
-            href={`/editor/${label.id}?view=brews${rawBrew ? `&brew=${rawBrew.id}` : ""}`}
+            href={`/editor/${label.id}?view=brews&from=guide${rawBrew ? `&brew=${rawBrew.id}` : ""}`}
             className="btn"
           >
             {tr("editMethods")}

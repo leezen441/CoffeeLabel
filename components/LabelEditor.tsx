@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import BrewEditor from "./BrewEditor";
 import { forgetMethod, recallBrew, useRememberedNames } from "@/lib/methodMemory";
+import { useBackTarget } from "./BackToHome";
 import MethodPicker from "./MethodPicker";
 import LangToggle from "./LangToggle";
 import { type MsgKey, makeT, useLang } from "@/lib/i18n";
@@ -59,6 +60,16 @@ export default function LabelEditor({ id }: { id: string }) {
   const [view, setView] = useState<"details" | "brews">(
     params.get("view") === "brews" ? "brews" : "details",
   );
+
+  /**
+   * Opened from a brew guide, "back" returns to it rather than the library,
+   * showing whichever method is open here now.
+   */
+  const fromGuide = params.get("from") === "guide";
+  const backHref = fromGuide
+    ? `/b/${id}${pickedBrew ? `?brew=${pickedBrew}` : ""}`
+    : "/";
+  useBackTarget(fromGuide ? backHref : null);
   const tr = makeT(useLang());
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -199,8 +210,8 @@ export default function LabelEditor({ id }: { id: string }) {
     <div className="flex-1">
       <header className="sticky top-0 z-20 border-b border-line bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-5 py-3">
-          <Link href="/" className="btn btn-ghost">
-            ← {tr("library")}
+          <Link href={backHref} className="btn btn-ghost">
+            ← {fromGuide ? tr("brewGuide") : tr("library")}
           </Link>
           <h1 className="mr-auto truncate font-serif text-lg font-semibold">
             {labelTitle(label)}
