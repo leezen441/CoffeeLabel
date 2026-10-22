@@ -404,6 +404,22 @@ export default function LibraryPage() {
               const rest = restStatus(label);
               const restMeta =
                 rest.status === "unknown" ? null : REST_STATUS_META[rest.status];
+              // The same test the brew guide uses to decide what to list.
+              const hasMethods = label.brews.some(
+                (b) => b.name.trim() || b.steps.some((st) => st.text.trim()),
+              );
+              const thumbCls = `block min-w-0 flex-1 bg-card ${
+                restMeta ? "pt-11" : "pt-4"
+              } pb-4 pl-4 pr-2 text-left`;
+              const thumb = (
+                <StickerScaler
+                  label={label}
+                  preview
+                  // The card is about the bag; the recipe has its own sticker.
+                  variant="beans"
+                  qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
+                />
+              );
               return (
               <article key={label.id} className="panel relative overflow-hidden">
                 {/* The sticker already carries the name, roaster and dates, so the
@@ -413,22 +429,27 @@ export default function LibraryPage() {
                 {/* A row, not an overlay: a sparse label made the card shorter
                     than the rail, and overflow-hidden cut the last icons off. */}
                 <div className="flex items-start">
-                <button
-                  type="button"
-                  className={`min-w-0 flex-1 cursor-zoom-in bg-card ${
-                    restMeta ? "pt-11" : "pt-4"
-                  } pb-4 pl-4 pr-2 text-left`}
-                  onClick={() => setViewing(label)}
-                  aria-label={`View ${labelTitle(label)}`}
-                >
-                  <StickerScaler
-                    label={label}
-                    preview
-                    // The card is about the bag; the recipe has its own sticker.
-                    variant="beans"
-                    qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
-                  />
-                </button>
+                {/* The biggest thing on the card leads to what you open it
+                    for: the recipe, once there is one. Until then there is
+                    nothing to brew, so it still opens the sticker large. */}
+                {hasMethods ? (
+                  <Link
+                    href={`/b/${label.id}`}
+                    className={thumbCls}
+                    aria-label={`Brew guide for ${labelTitle(label)}`}
+                  >
+                    {thumb}
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    className={`${thumbCls} cursor-zoom-in`}
+                    onClick={() => setViewing(label)}
+                    aria-label={`View ${labelTitle(label)}`}
+                  >
+                    {thumb}
+                  </button>
+                )}
 
                 {restMeta && (
                   <span
@@ -446,6 +467,15 @@ export default function LibraryPage() {
 
                 {/* Siblings of the thumbnail button — interactive elements cannot nest. */}
                 <div className="flex shrink-0 flex-col gap-1.5 pr-3 pt-3 pb-3">
+                  <button
+                    type="button"
+                    title={tr("viewSticker")}
+                    aria-label={`View ${labelTitle(label)}`}
+                    className={ACTION_CLS}
+                    onClick={() => setViewing(label)}
+                  >
+                    <ZoomIcon />
+                  </button>
                   <Link
                     href={`/print/${label.id}`}
                     title={tr("printStickers")}
@@ -454,15 +484,14 @@ export default function LibraryPage() {
                   >
                     <PrinterIcon />
                   </Link>
-                  {/* Green once the label has a method to brew — the same
-                      test the brew guide uses to decide what to list. */}
+                  {/* Green once the label has a method to brew. */}
                   <Link
                     href={`/b/${label.id}`}
                     title={tr("brewTimer")}
                     aria-label={`Brew timer for ${labelTitle(label)}`}
                     className={ACTION_CLS}
                     style={
-                      label.brews.some((b) => b.name.trim() || b.steps.some((st) => st.text.trim()))
+                      hasMethods
                         ? {
                             color: "#2E6B4B",
                             borderColor: "#2E6B4B",
@@ -756,6 +785,16 @@ function TagIcon() {
     <Svg>
       <path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2.6 12.6A2 2 0 0 1 2 11.2V4a2 2 0 0 1 2-2h7.2a2 2 0 0 1 1.4.6l8 8a2 2 0 0 1 0 2.8Z" />
       <circle cx="7.5" cy="7.5" r="1.3" />
+    </Svg>
+  );
+}
+
+function ZoomIcon() {
+  return (
+    <Svg>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="M15.5 15.5 20.5 20.5" />
+      <path d="M10.5 8v5M8 10.5h5" />
     </Svg>
   );
 }

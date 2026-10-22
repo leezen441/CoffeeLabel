@@ -435,6 +435,7 @@ const DICT = {
   zoomIn: { en: "Zoom in", th: "ขยาย" },
   fitWord: { en: "Fit", th: "พอดีจอ" },
   closePreview: { en: "Close preview", th: "ปิดหน้าตัวอย่าง" },
+  viewSticker: { en: "View sticker", th: "ดูสติกเกอร์" },
   viewerHint: {
     en: "Pinch or scroll to zoom · drag to move · double-tap to toggle · Esc to close",
     th: "จีบนิ้วหรือเลื่อนเพื่อซูม · ลากเพื่อเลื่อน · แตะสองครั้งเพื่อสลับ · Esc เพื่อปิด",
