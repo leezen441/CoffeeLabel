@@ -446,20 +446,6 @@ export default function LabelEditor({ id }: { id: string }) {
             </div>
 
             <div className="mt-4 grid gap-3 border-t border-line pt-4 sm:grid-cols-2">
-              <label className="field">
-                <span>{tr("fRoastIndicator")}</span>
-                <select
-                  className="select"
-                  value={label.roastDisplay}
-                  onChange={(e) =>
-                    update({ roastDisplay: e.target.value as "beans" | "scale" })
-                  }
-                >
-                  <option value="scale">{tr("segScale")}</option>
-                  <option value="beans">{tr("coffeeBeans")}</option>
-                </select>
-              </label>
-
               <div className="field">
                 <span>{tr("fRestWindow")}</span>
                 <label className="flex h-[38px] items-center gap-2 text-sm">

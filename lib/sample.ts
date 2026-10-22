@@ -17,7 +17,6 @@ export function sampleLabel(): CoffeeLabel {
     bestBeforeDays: 90,
     tastingNotes: ["Jasmine", "Peach", "Black Tea"],
     netWeight: "250",
-    roastDisplay: "scale",
     showRest: true,
     showDoseBoxes: true,
     doseBoxes: 5,

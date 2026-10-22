@@ -176,25 +176,6 @@ function BurrIcon() {
   );
 }
 
-/** Segmented roast scale with a marker on the selected level. */
-function RoastScale({ level, accent, rule }: { level: number; accent: string; rule: string }) {
-  return (
-    <div className="cl-roast-scale" aria-label={`Roast level ${level} of 5`}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <span
-          key={n}
-          className="cl-roast-seg"
-          style={{
-            background: n <= level ? accent : rule,
-            opacity: n <= level ? 0.35 + n * 0.13 : 1,
-          }}
-        />
-      ))}
-      <span className="cl-roast-marker" style={{ left: `${(level - 0.5) * 20}%`, background: accent }} />
-    </div>
-  );
-}
-
 function Spec({
   icon,
   value,
@@ -472,15 +453,11 @@ export default function Sticker({
           <div className="cl-head">
             <div className="cl-roaster">{ph(label.roaster, "Roaster name")}</div>
             <div className="cl-roast">
-              {label.roastDisplay === "scale" ? (
-                <RoastScale level={label.roastLevel} accent={theme.bean} rule={theme.rule} />
-              ) : (
-                <div className="cl-beans">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <Bean key={n} filled={n <= label.roastLevel} color={theme.bean} />
-                  ))}
-                </div>
-              )}
+              <div className="cl-beans" aria-label={`Roast level ${label.roastLevel} of 5`}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Bean key={n} filled={n <= label.roastLevel} color={theme.bean} />
+                ))}
+              </div>
               <span className="cl-roast-name">{roast.name}</span>
             </div>
           </div>

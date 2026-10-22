@@ -280,8 +280,6 @@ export type CoffeeLabel = {
   tastingNotes: string[];
   netWeight: string;
   brews: BrewMethod[];
-  /** "beans" = five bean icons, "scale" = segmented roast bar */
-  roastDisplay: "beans" | "scale";
   /** resting window; 0/0 means derive it from the process */
   showRest: boolean;
   restFrom: number;
@@ -762,7 +760,6 @@ export function emptyLabel(): CoffeeLabel {
     bestBeforeDays: 90,
     tastingNotes: [],
     netWeight: "",
-    roastDisplay: "scale",
     showRest: true,
     restFrom: 0,
     restTo: 0,
@@ -844,9 +841,14 @@ export function normalizeLabel(raw: Partial<CoffeeLabel> & { id: string }): Coff
     : legacyProcess?.trim()
       ? [legacyProcess.trim()]
       : [];
-  // Drop the legacy singular so it cannot sit there contradicting the list.
-  const rest = { ...raw } as Partial<CoffeeLabel> & { process?: string };
+  // Drop fields that no longer exist, so a stored row cannot carry them back:
+  // the singular process, and the roast indicator, which is always beans now.
+  const rest = { ...raw } as Partial<CoffeeLabel> & {
+    process?: string;
+    roastDisplay?: string;
+  };
   delete rest.process;
+  delete rest.roastDisplay;
   return {
     ...base,
     ...rest,

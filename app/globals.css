@@ -323,31 +323,6 @@ body {
   flex-shrink: 0;
 }
 
-/* ---- segmented roast scale ---- */
-
-.cl-roast-scale {
-  position: relative;
-  display: flex;
-  gap: calc(0.3 * var(--u));
-  width: calc(22 * var(--u));
-  flex-shrink: 0;
-}
-
-.cl-roast-seg {
-  flex: 1;
-  height: calc(1.6 * var(--u));
-  border-radius: calc(0.3 * var(--u));
-}
-
-.cl-roast-marker {
-  position: absolute;
-  top: calc(-0.7 * var(--u));
-  width: calc(0.7 * var(--u));
-  height: calc(3 * var(--u));
-  border-radius: calc(0.35 * var(--u));
-  transform: translateX(-50%);
-}
-
 /* ---- pour timeline ribbon ---- */
 
 .cl-ribbon {
