@@ -359,7 +359,6 @@ const DICT = {
   },
 
   /* print */
-  editorWord: { en: "Editor", th: "แก้ไข" },
   printTitle: { en: "Print", th: "พิมพ์" },
   rendering: { en: "Rendering…", th: "กำลังสร้างรูป…" },
   saveImageFailed: { en: "Could not save the image:", th: "บันทึกรูปไม่สำเร็จ:" },

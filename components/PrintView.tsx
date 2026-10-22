@@ -239,8 +239,8 @@ export default function PrintView({ id }: { id: string }) {
 
       <header className="no-print sticky top-0 z-20 border-b border-line bg-card">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-5 py-3">
-          <Link href={`/editor/${label.id}`} className="btn btn-ghost">
-            ← {tr("editorWord")}
+          <Link href="/" className="btn btn-ghost">
+            ← {tr("library")}
           </Link>
           <h1 className="mr-auto truncate font-serif text-lg font-semibold">
             {tr("printTitle")} · {labelTitle(label)}
