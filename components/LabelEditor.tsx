@@ -35,16 +35,17 @@ export default function LabelEditor({ id }: { id: string }) {
   const [missing, setMissing] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [noteDraft, setNoteDraft] = useState("");
-  /** The one brew method open for editing, by id; the rest sit as tabs. */
-  const [pickedBrew, setPickedBrew] = useState<string | null>(null);
   const [groups, setGroups] = useState<LabelGroup[]>([]);
   const [customProcess, setCustomProcess] = useState(false);
   const [processDraft, setProcessDraft] = useState("");
   /**
    * The brew methods are long enough to deserve their own screen. `?view=brews`
-   * opens straight on them, which is what the brew guide links to.
+   * opens straight on them, which is what the brew guide links to, and
+   * `&brew=<id>` opens the method that was on screen there.
    */
   const params = useSearchParams();
+  /** The one brew method open for editing, by id; the rest sit as tabs. */
+  const [pickedBrew, setPickedBrew] = useState<string | null>(params.get("brew"));
   const remembered = useRememberedNames();
   /**
    * The methods you have saved yourself. One that shares a built-in name is
