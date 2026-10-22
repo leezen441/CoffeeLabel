@@ -301,6 +301,7 @@ export type CoffeeLabel = {
 
 export type SizeId =
   | "100x150"
+  | "150x100"
   | "100x100"
   | "100x70"
   | "90x60"
@@ -673,6 +674,12 @@ export const SIZES: Record<SizeId, { name: string; w: number; h: number; hint: s
     w: 100,
     h: 150,
     hint: "4×6in thermal label roll — biggest, most readable print",
+  },
+  "150x100": {
+    name: "150 × 100 mm",
+    w: 150,
+    h: 100,
+    hint: "The same 4×6in roll on its side — a wide label",
   },
   "100x100": { name: "100 × 100 mm", w: 100, h: 100, hint: "Square thermal label roll" },
   "100x70": { name: "100 × 70 mm", w: 100, h: 70, hint: "Bag label — fits all brew steps" },

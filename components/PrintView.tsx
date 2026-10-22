@@ -35,6 +35,10 @@ export default function PrintView({ id }: { id: string }) {
   const [label, setLabel] = useState<CoffeeLabel | null>(null);
   const [missing, setMissing] = useState(false);
   const [sheet, setSheet] = useState<SheetId>("a4");
+  /** null = not run yet, a number = how many stickers the last run resized */
+  const [resized, setResized] = useState<number | null>(null);
+  const [resizing, setResizing] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [copies, setCopies] = useState(1);
   const [gap, setGap] = useState(4);
   const [guides, setGuides] = useState(true);
@@ -92,6 +96,54 @@ export default function PrintView({ id }: { id: string }) {
       return next;
     });
   };
+
+  /**
+   * Give every other sticker this one's size.
+   *
+   * Labels that already match are saved too, untouched. The library is ordered
+   * by when a label was last written, so skipping them would shuffle them to
+   * the bottom; writing all of them oldest-first leaves that order exactly as
+   * it was. The count reported back is only the ones that actually moved.
+   */
+  async function applySizeToAll() {
+    if (!label || resizing) return;
+    const all = await store.listLabels();
+    const others = all.filter((l) => l.id !== label.id);
+    if (others.length === 0) {
+      setResized(0);
+      return;
+    }
+    if (!confirm(tr("sizeToAllConfirm"))) return;
+
+    const patch = {
+      size: label.size,
+      customW: label.customW,
+      customH: label.customH,
+    };
+    setResizing(true);
+    setFailed(false);
+    try {
+      let changed = 0;
+      for (const other of [...others].reverse()) {
+        if (
+          other.size !== patch.size ||
+          other.customW !== patch.customW ||
+          other.customH !== patch.customH
+        ) {
+          changed++;
+        }
+        await store.saveLabel({ ...other, ...patch });
+      }
+      // The debounced save for this label has not necessarily fired yet, and
+      // it is the one every other sticker was just matched to.
+      await store.saveLabel(label);
+      setResized(changed);
+    } catch {
+      setFailed(true);
+    } finally {
+      setResizing(false);
+    }
+  }
 
   const size = label ? labelSize(label) : null;
 
@@ -264,7 +316,10 @@ export default function PrintView({ id }: { id: string }) {
               <select
                 className="select"
                 value={label.size}
-                onChange={(e) => update({ size: e.target.value as SizeId })}
+                onChange={(e) => {
+                  setResized(null);
+                  update({ size: e.target.value as SizeId });
+                }}
               >
                 {(Object.keys(SIZES) as SizeId[]).map((k) => (
                   <option key={k} value={k}>
@@ -335,6 +390,30 @@ export default function PrintView({ id }: { id: string }) {
             {" · "}
             {tr("savedToLabel")}
           </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              className="btn text-xs shadow-[0_2px_0_rgba(0,0,0,0.18)] transition-transform active:translate-y-px disabled:shadow-none"
+              disabled={resizing}
+              onClick={applySizeToAll}
+              style={
+                resized !== null
+                  ? { background: "#2E6B4B", borderColor: "#2E6B4B", color: "#fff" }
+                  : failed
+                    ? { background: "var(--danger)", borderColor: "var(--danger)", color: "#fff" }
+                    : { background: "var(--brand)", borderColor: "var(--brand)", color: "#fff" }
+              }
+            >
+              {resizing
+                ? tr("sizeToAllBusy")
+                : failed
+                  ? tr("sizeToAllFailed")
+                  : resized === null
+                    ? tr("sizeToAll")
+                    : resized === 0
+                      ? tr("sizeToAllNone")
+                      : `${tr("sizeToAllDone")} ${resized} ${tr("stickersWord")}`}
+            </button>
+          </div>
         </div>
 
         <div className="panel grid gap-3 p-4 sm:grid-cols-5">

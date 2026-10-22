@@ -361,6 +361,16 @@ const DICT = {
   saveImageFailed: { en: "Could not save the image:", th: "บันทึกรูปไม่สำเร็จ:" },
   secSticker: { en: "Sticker", th: "สติกเกอร์" },
   fSize: { en: "Size", th: "ขนาด" },
+  sizeToAll: { en: "Use this size for every sticker", th: "ใช้ขนาดนี้กับสติกเกอร์ทุกใบ" },
+  sizeToAllBusy: { en: "Applying…", th: "กำลังปรับ…" },
+  sizeToAllDone: { en: "Applied to", th: "ปรับแล้ว" },
+  sizeToAllNone: { en: "Every sticker already matches", th: "ทุกใบขนาดนี้อยู่แล้ว" },
+  sizeToAllConfirm: {
+    en: "Every other sticker will be resized to this one. Continue?",
+    th: "สติกเกอร์ทุกใบจะถูกเปลี่ยนเป็นขนาดนี้ ดำเนินการต่อไหม",
+  },
+  sizeToAllFailed: { en: "Could not resize them all", th: "ปรับไม่สำเร็จ" },
+  stickersWord: { en: "stickers", th: "ใบ" },
   fLayout: { en: "Layout", th: "รูปแบบ" },
   layoutFull: { en: "Full — numbered steps", th: "เต็ม — ลำดับขั้นเป็นตัวเลข" },
   layoutRibbon: { en: "Ribbon — pour timeline", th: "แถบ — ไทม์ไลน์การริน" },
@@ -466,6 +476,7 @@ const DICT = {
  */
 const SIZE_HINT_TH: Record<string, string> = {
   "100x150": "ม้วนฉลากความร้อน 4×6 นิ้ว — ใหญ่สุด อ่านง่ายสุด",
+  "150x100": "ม้วน 4×6 นิ้ว วางแนวนอน — ป้ายทรงกว้าง",
   "100x100": "ม้วนฉลากความร้อนแบบสี่เหลี่ยมจัตุรัส",
   "100x70": "ฉลากติดถุง — ใส่ขั้นตอนการชงได้ครบ",
   "90x60": "แผ่นสติกเกอร์มาตรฐาน",

@@ -38,7 +38,12 @@ function writeLocal(labels: CoffeeLabel[]): void {
 }
 
 function sortByUpdated(labels: CoffeeLabel[]): CoffeeLabel[] {
-  return [...labels].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+  // Ties must return 0, or the sort is not stable and labels saved within the
+  // same millisecond — a run of writes, say — come back in a random order.
+  return [...labels].sort((a, b) => {
+    if (a.updatedAt === b.updatedAt) return 0;
+    return a.updatedAt < b.updatedAt ? 1 : -1;
+  });
 }
 
 export async function listLabels(): Promise<CoffeeLabel[]> {
