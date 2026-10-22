@@ -454,11 +454,22 @@ export default function LibraryPage() {
                   >
                     <PrinterIcon />
                   </Link>
+                  {/* Green once the label has a method to brew — the same
+                      test the brew guide uses to decide what to list. */}
                   <Link
                     href={`/b/${label.id}`}
                     title={tr("brewTimer")}
                     aria-label={`Brew timer for ${labelTitle(label)}`}
                     className={ACTION_CLS}
+                    style={
+                      label.brews.some((b) => b.name.trim() || b.steps.some((st) => st.text.trim()))
+                        ? {
+                            color: "#2E6B4B",
+                            borderColor: "#2E6B4B",
+                            background: "rgb(46 107 75 / 0.1)",
+                          }
+                        : undefined
+                    }
                   >
                     <TimerIcon />
                   </Link>
