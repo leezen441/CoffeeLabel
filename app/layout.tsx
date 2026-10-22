@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import BackToHome from "@/components/BackToHome";
+import { isDbConfigured } from "@/lib/db";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,7 +20,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
+    // Read by lib/store, so the browser knows where labels live without asking.
+    <html
+      lang="en"
+      className="h-full antialiased"
+      data-storage={isDbConfigured() ? "cloud" : "local"}
+    >
       <body className="min-h-full flex flex-col">
         <BackToHome />
         {children}

@@ -33,7 +33,10 @@ const SHEETS: Record<SheetId, { key: MsgKey; w: number; h: number; margin: numbe
 };
 
 export default function PrintView({ id }: { id: string }) {
-  const [label, setLabel] = useState<CoffeeLabel | null>(null);
+  // Opened from the library, the label is already in hand: draw it now.
+  const [label, setLabel] = useState<CoffeeLabel | null>(() => store.cachedLabel(id));
+  /** Set once a setting is changed here, so a late refresh cannot undo it. */
+  const touched = useRef(false);
   const [missing, setMissing] = useState(false);
   const [sheet, setSheet] = useState<SheetId>("a4");
   /** null = not run yet, a number = how many stickers the last run resized */
@@ -77,7 +80,10 @@ export default function PrintView({ id }: { id: string }) {
   }
 
   useEffect(() => {
-    void store.getLabel(id).then((l) => (l ? setLabel(l) : setMissing(true)));
+    void store.getLabel(id).then((l) => {
+      if (!l) setMissing(true);
+      else if (!touched.current) setLabel(l);
+    });
   }, [id]);
 
   useEffect(() => {
@@ -91,6 +97,7 @@ export default function PrintView({ id }: { id: string }) {
    * back — debounced, the same way the editor does it.
    */
   const update = (patch: Partial<CoffeeLabel>) => {
+    touched.current = true;
     setLabel((prev) => {
       if (!prev) return prev;
       const next = { ...prev, ...patch };

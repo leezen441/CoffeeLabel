@@ -32,7 +32,8 @@ import { brewFromTemplate } from "@/lib/brewTemplates";
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 export default function LabelEditor({ id }: { id: string }) {
-  const [label, setLabel] = useState<CoffeeLabel | null>(null);
+  // Opened from the library, the label is already in hand: draw it now.
+  const [label, setLabel] = useState<CoffeeLabel | null>(() => store.cachedLabel(id));
   const [missing, setMissing] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [noteDraft, setNoteDraft] = useState("");
@@ -76,7 +77,12 @@ export default function LabelEditor({ id }: { id: string }) {
   const dirty = useRef(false);
 
   useEffect(() => {
-    void store.getLabel(id).then((l) => (l ? setLabel(l) : setMissing(true)));
+    void store.getLabel(id).then((l) => {
+      if (!l) setMissing(true);
+      // The server's copy replaces the cached one only while nothing has been
+      // typed over it, or a quick first edit would be thrown away.
+      else if (!dirty.current) setLabel(l);
+    });
     void store.listGroups().then(setGroups);
   }, [id]);
 
@@ -210,7 +216,7 @@ export default function LabelEditor({ id }: { id: string }) {
     <div className="flex-1">
       <header className="sticky top-0 z-20 border-b border-line bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-5 py-3">
-          <Link href={backHref} className="btn btn-ghost">
+          <Link href={backHref} prefetch className="btn btn-ghost">
             ← {fromGuide ? tr("brewGuide") : tr("library")}
           </Link>
           <h1 className="mr-auto truncate font-serif text-lg font-semibold">
@@ -242,7 +248,7 @@ export default function LabelEditor({ id }: { id: string }) {
           >
             {tr("secBrews")} ({label.brews.length}/{MAX_BREWS})
           </button>
-          <Link href={`/print/${label.id}`} className="btn btn-primary">
+          <Link href={`/print/${label.id}`} prefetch className="btn btn-primary">
             {tr("printStickers")}
           </Link>
         </div>

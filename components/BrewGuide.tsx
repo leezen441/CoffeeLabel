@@ -33,16 +33,15 @@ import {
 
 export default function BrewGuide({
   id,
-  initial,
   initialBrew,
 }: {
   id: string;
-  initial: CoffeeLabel | null;
   initialBrew: string | null;
 }) {
-  const [label, setLabel] = useState<CoffeeLabel | null>(initial);
-  const [state, setState] = useState<"ready" | "loading" | "missing">(
-    initial ? "ready" : "loading",
+  // Opened from the library, the label is already in hand: draw it now.
+  const [label, setLabel] = useState<CoffeeLabel | null>(() => store.cachedLabel(id));
+  const [state, setState] = useState<"ready" | "loading" | "missing">(() =>
+    store.cachedLabel(id) ? "ready" : "loading",
   );
   /** The method on screen, by id, so it survives a round trip to the editor. */
   const [activeId, setActiveId] = useState<string | null>(initialBrew);
@@ -51,17 +50,18 @@ export default function BrewGuide({
   const lang = useLang();
   const tr = makeT(lang);
 
+  // Always refresh from the server: the cached copy may be minutes old.
   useEffect(() => {
-    if (initial) return;
     void store.getLabel(id).then((l) => {
       if (l) {
         setLabel(l);
         setState("ready");
       } else {
-        setState("missing");
+        // A failed refresh keeps showing what was already on screen.
+        setState((s) => (s === "ready" ? s : "missing"));
       }
     });
-  }, [id, initial]);
+  }, [id]);
 
   if (state === "loading") {
     return <p className="px-5 py-10 text-sm text-muted">{tr("loading")}</p>;
@@ -327,11 +327,12 @@ export default function BrewGuide({
         <div className="mt-10 flex gap-2 text-sm">
           <Link
             href={`/editor/${label.id}?view=brews&from=guide${rawBrew ? `&brew=${rawBrew.id}` : ""}`}
+            prefetch
             className="btn"
           >
             {tr("editMethods")}
           </Link>
-          <Link href={`/print/${label.id}`} className="btn">
+          <Link href={`/print/${label.id}`} prefetch className="btn">
             {tr("print")}
           </Link>
           <Link href="/" className="btn btn-ghost">

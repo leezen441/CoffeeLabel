@@ -308,18 +308,21 @@ export default function StickerViewer({
         </button>
         <Link
           href={`/b/${label.id}`}
+          prefetch
           className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20"
         >
           {tr("brewGuide")}
         </Link>
         <Link
           href={`/editor/${label.id}`}
+          prefetch
           className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20"
         >
           {tr("edit")}
         </Link>
         <Link
           href={`/print/${label.id}`}
+          prefetch
           className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20"
         >
           {tr("print")}

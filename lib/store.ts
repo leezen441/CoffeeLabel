@@ -11,12 +11,36 @@ let modePromise: Promise<StorageMode> | null = null;
 /** Cloud when a Postgres URL is configured on the server, otherwise localStorage. */
 export function storageMode(): Promise<StorageMode> {
   if (!modePromise) {
-    modePromise = fetch("/api/status")
-      .then((r) => (r.ok ? r.json() : { configured: false }))
-      .then((j) => (j.configured ? "cloud" : "local") as StorageMode)
-      .catch(() => "local" as StorageMode);
+    // The root layout writes the answer onto <html> as it renders. Asking the
+    // server instead cost a full round trip before every first load of data.
+    const written =
+      typeof document === "undefined" ? undefined : document.documentElement.dataset.storage;
+    modePromise =
+      written === "cloud" || written === "local"
+        ? Promise.resolve(written)
+        : fetch("/api/status")
+            .then((r) => (r.ok ? r.json() : { configured: false }))
+            .then((j) => (j.configured ? "cloud" : "local") as StorageMode)
+            .catch(() => "local" as StorageMode);
   }
   return modePromise;
+}
+
+/**
+ * Labels this tab has already seen, by id. The library loads every label, so a
+ * page opened from it can draw at once from here and refresh from the server
+ * behind it, instead of showing nothing until a round trip comes back.
+ */
+const seen = new Map<string, CoffeeLabel>();
+
+function remember(label: CoffeeLabel): CoffeeLabel {
+  if (typeof window !== "undefined") seen.set(label.id, label);
+  return label;
+}
+
+/** The label as this tab last saw it, or null. Never touches the network. */
+export function cachedLabel(id: string): CoffeeLabel | null {
+  return seen.get(id) ?? null;
 }
 
 function readLocal(): CoffeeLabel[] {
@@ -51,10 +75,10 @@ export async function listLabels(): Promise<CoffeeLabel[]> {
     const res = await fetch("/api/labels", { cache: "no-store" });
     if (res.ok) {
       const { labels } = await res.json();
-      return (labels as CoffeeLabel[]).map((l) => normalizeLabel(l));
+      return (labels as CoffeeLabel[]).map((l) => remember(normalizeLabel(l)));
     }
   }
-  return sortByUpdated(readLocal());
+  return sortByUpdated(readLocal()).map(remember);
 }
 
 export async function getLabel(id: string): Promise<CoffeeLabel | null> {
@@ -62,11 +86,15 @@ export async function getLabel(id: string): Promise<CoffeeLabel | null> {
     const res = await fetch(`/api/labels/${id}`, { cache: "no-store" });
     if (res.ok) {
       const { label } = await res.json();
-      return normalizeLabel(label);
+      return remember(normalizeLabel(label));
     }
-    if (res.status === 404) return null;
+    if (res.status === 404) {
+      seen.delete(id);
+      return null;
+    }
   }
-  return readLocal().find((l) => l.id === id) ?? null;
+  const local = readLocal().find((l) => l.id === id);
+  return local ? remember(local) : null;
 }
 
 export async function saveLabel(label: CoffeeLabel): Promise<CoffeeLabel> {
@@ -79,16 +107,17 @@ export async function saveLabel(label: CoffeeLabel): Promise<CoffeeLabel> {
     });
     if (res.ok) {
       const { label: saved } = await res.json();
-      return normalizeLabel(saved);
+      return remember(normalizeLabel(saved));
     }
     throw new Error(`Save failed (${res.status})`);
   }
   const all = readLocal().filter((l) => l.id !== next.id);
   writeLocal(sortByUpdated([next, ...all]));
-  return next;
+  return remember(next);
 }
 
 export async function deleteLabel(id: string): Promise<void> {
+  seen.delete(id);
   if ((await storageMode()) === "cloud") {
     const res = await fetch(`/api/labels/${id}`, { method: "DELETE" });
     if (res.ok) return;

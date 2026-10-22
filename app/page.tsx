@@ -432,9 +432,15 @@ export default function LibraryPage() {
                 {/* The biggest thing on the card leads to what you open it
                     for: the recipe, once there is one. Until then there is
                     nothing to brew, so it still opens the sticker large. */}
+                {/* `prefetch` on this card's links: dynamic routes are not warmed
+                    by default, so each tap used to wait on the server before the
+                    page could start. Their server side is an empty shell (the
+                    data comes from the store), so warming them is cheap and can
+                    never show a stale recipe. */}
                 {hasMethods ? (
                   <Link
                     href={`/b/${label.id}`}
+                    prefetch
                     className={thumbCls}
                     aria-label={`Brew guide for ${labelTitle(label)}`}
                   >
@@ -478,6 +484,7 @@ export default function LibraryPage() {
                   </button>
                   <Link
                     href={`/print/${label.id}`}
+                    prefetch
                     title={tr("printStickers")}
                     aria-label={`Print ${labelTitle(label)}`}
                     className={ACTION_CLS}
@@ -487,6 +494,7 @@ export default function LibraryPage() {
                   {/* Green once the label has a method to brew. */}
                   <Link
                     href={`/b/${label.id}`}
+                    prefetch
                     title={tr("brewTimer")}
                     aria-label={`Brew timer for ${labelTitle(label)}`}
                     className={ACTION_CLS}
@@ -504,6 +512,7 @@ export default function LibraryPage() {
                   </Link>
                   <Link
                     href={`/editor/${label.id}`}
+                    prefetch
                     title={tr("edit")}
                     aria-label={`Edit ${labelTitle(label)}`}
                     className={ACTION_CLS}
