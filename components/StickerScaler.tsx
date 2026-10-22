@@ -17,12 +17,14 @@ export default function StickerScaler({
   preview,
   maxScale = 1,
   shadow = true,
+  variant,
 }: {
   label: CoffeeLabel;
   qrUrl?: string;
   preview?: boolean;
   maxScale?: number;
   shadow?: boolean;
+  variant?: "full" | "brew" | "beans";
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
@@ -69,6 +71,7 @@ export default function StickerScaler({
           label={label}
           preview={preview}
           qrUrl={qrUrl}
+          variant={variant}
           style={
             shadow
               ? {

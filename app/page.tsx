@@ -424,6 +424,8 @@ export default function LibraryPage() {
                   <StickerScaler
                     label={label}
                     preview
+                    // The card is about the bag; the recipe has its own sticker.
+                    variant="beans"
                     qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
                   />
                 </button>

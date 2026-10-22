@@ -228,7 +228,8 @@ export default function Sticker({
   className?: string;
   style?: React.CSSProperties;
   /** "brew" drops the origin/notes/roast/footer blocks and prints only the recipes */
-  variant?: "full" | "brew";
+  /** "beans" is the bag detail alone, "brew" the recipe alone. */
+  variant?: "full" | "brew" | "beans";
   /**
    * On-screen the rest bar and "Nd rested" are useful. On paper they are frozen
    * the moment you print, so anything printed or exported passes live={false}
@@ -245,6 +246,7 @@ export default function Sticker({
   const roast = ROAST_LEVELS[label.roastLevel] ?? ROAST_LEVELS[3];
   const layout = label.layout;
   const brewOnly = variant === "brew";
+  const beansOnly = variant === "beans";
 
   useEffect(() => {
     if (!label.showQr || !qrUrl) return;
@@ -495,9 +497,9 @@ export default function Sticker({
           </div>
         )}
 
-        {brews.length > 0 && <div className="cl-rule" />}
+        {!beansOnly && brews.length > 0 && <div className="cl-rule" />}
 
-        {brews.length > 0 && (
+        {!beansOnly && brews.length > 0 && (
           <div className="cl-brews">
             <div className="cl-brews-label">
               {anyDetail ? "Brew Guide" : "Brewing Recommendation"}

@@ -335,6 +335,7 @@ export default function StickerViewer({
             label={label}
             qrUrl={qrUrl}
             preview
+            variant="beans"
             style={{ boxShadow: "0 24px 60px rgb(0 0 0 / 0.45)" }}
           />
         </div>
@@ -350,7 +351,7 @@ export default function StickerViewer({
         aria-hidden="true"
         className="pointer-events-none fixed left-[-10000px] top-0"
       >
-        <Sticker label={label} qrUrl={qrUrl} live={false} />
+        <Sticker label={label} qrUrl={qrUrl} live={false} variant="beans" />
       </div>
     </div>
   );

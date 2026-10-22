@@ -13,6 +13,7 @@ import {
   type LayoutId,
   type SizeId,
   MAX_MM,
+  brewHasDetail,
   MIN_MM,
   SIZES,
   clampMm,
@@ -37,7 +38,8 @@ export default function PrintView({ id }: { id: string }) {
   const [copies, setCopies] = useState(1);
   const [gap, setGap] = useState(4);
   const [guides, setGuides] = useState(true);
-  const [variant, setVariant] = useState<"full" | "brew">("full");
+  /** "both" prints the bag sticker and the recipe sticker, one after the other. */
+  const [variant, setVariant] = useState<"both" | "beans" | "brew" | "full">("both");
   const origin = useOrigin();
   const lang = useLang();
   const tr = makeT(lang);
@@ -93,10 +95,26 @@ export default function PrintView({ id }: { id: string }) {
 
   const size = label ? labelSize(label) : null;
 
+  /**
+   * One copy is one or two stickers. The recipe sticker is skipped when there
+   * is no recipe to put on it, rather than printing a sticker with a name and
+   * nothing else.
+   */
+  const sheetsPerCopy = useMemo<("beans" | "brew" | "full")[]>(() => {
+    const hasRecipe = (label?.brews ?? []).some(brewHasDetail);
+    if (variant === "both") return hasRecipe ? ["beans", "brew"] : ["beans"];
+    return [variant];
+  }, [variant, label]);
+
+  const stickers = useMemo(
+    () => Array.from({ length: copies }, () => sheetsPerCopy).flat(),
+    [copies, sheetsPerCopy],
+  );
+
   const grid = useMemo(() => {
     if (!size) return null;
     if (sheet === "exact") {
-      return { cols: 1, rows: 1, perPage: 1, pages: copies };
+      return { cols: 1, rows: 1, perPage: 1, pages: stickers.length };
     }
     const s = SHEETS[sheet];
     const usableW = s.w - s.margin * 2;
@@ -104,8 +122,13 @@ export default function PrintView({ id }: { id: string }) {
     const cols = Math.max(1, Math.floor((usableW + gap) / (size.w + gap)));
     const rows = Math.max(1, Math.floor((usableH + gap) / (size.h + gap)));
     const perPage = cols * rows;
-    return { cols, rows, perPage, pages: Math.max(1, Math.ceil(copies / perPage)) };
-  }, [sheet, size, gap, copies]);
+    return {
+      cols,
+      rows,
+      perPage,
+      pages: Math.max(1, Math.ceil(stickers.length / perPage)),
+    };
+  }, [sheet, size, gap, stickers.length]);
 
   useIsoLayoutEffect(() => {
     const wrap = wrapRef.current;
@@ -165,7 +188,7 @@ export default function PrintView({ id }: { id: string }) {
       key={n}
       label={label}
       qrUrl={brewUrl}
-      variant={variant}
+      variant={stickers[n] ?? "beans"}
       live={false}
       className={guides ? "cut-guide" : ""}
       style={guides ? { outline: "0.1mm dashed #c9c9c9" } : undefined}
@@ -174,7 +197,7 @@ export default function PrintView({ id }: { id: string }) {
 
   const pages = Array.from({ length: grid.pages }, (_, p) => {
     const start = p * grid.perPage;
-    const count = Math.min(grid.perPage, copies - start);
+    const count = Math.min(grid.perPage, stickers.length - start);
     if (sheet === "exact") {
       return (
         <div
@@ -320,10 +343,14 @@ export default function PrintView({ id }: { id: string }) {
             <select
               className="select"
               value={variant}
-              onChange={(e) => setVariant(e.target.value as "full" | "brew")}
+              onChange={(e) =>
+                setVariant(e.target.value as "both" | "beans" | "brew" | "full")
+              }
             >
-              <option value="full">{tr("fullLabel")}</option>
+              <option value="both">{tr("twoStickers")}</option>
+              <option value="beans">{tr("beansOnly")}</option>
               <option value="brew">{tr("brewOnly")}</option>
+              <option value="full">{tr("fullLabel")}</option>
             </select>
           </label>
           <label className="field">
@@ -382,7 +409,8 @@ export default function PrintView({ id }: { id: string }) {
 
         <p className="mt-3 text-xs text-muted">
           {tr("stickerWord")} {size.name} · {grid.cols} × {grid.rows} {tr("perPage")} ·{" "}
-          {grid.pages} {grid.pages === 1 ? tr("pageWord") : tr("pagesWord")}.
+          {grid.pages} {grid.pages === 1 ? tr("pageWord") : tr("pagesWord")}
+          {sheetsPerCopy.length > 1 && ` · ${tr("twoPerCopy")}`}.
         </p>
         <div className="mt-2 rounded-lg border border-line bg-brand-soft/50 px-3 py-2 text-xs text-muted">
           <b className="text-ink">{tr("printTipsTitle")}</b>
@@ -404,7 +432,13 @@ export default function PrintView({ id }: { id: string }) {
         aria-hidden="true"
         className="no-print pointer-events-none fixed left-[-10000px] top-0"
       >
-        <Sticker label={label} qrUrl={brewUrl} variant={variant} live={false} />
+        {/* Save image exports one sticker; with "both" that is the bag one. */}
+        <Sticker
+          label={label}
+          qrUrl={brewUrl}
+          variant={sheetsPerCopy[0] ?? "beans"}
+          live={false}
+        />
       </div>
 
       <div className="print-root mx-auto max-w-6xl px-5 py-5">
