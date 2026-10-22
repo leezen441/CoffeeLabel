@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import BrewEditor from "./BrewEditor";
 import { forgetMethod, recallBrew, useRememberedNames } from "@/lib/methodMemory";
+import MethodPicker from "./MethodPicker";
 import LangToggle from "./LangToggle";
 import { type MsgKey, makeT, useLang } from "@/lib/i18n";
 import * as store from "@/lib/store";
@@ -621,61 +622,22 @@ export default function LabelEditor({ id }: { id: string }) {
                 {tr("addMethod")}
               </button>
             </div>
-            {/* Both lists stay pinned to their placeholder: picking is an
-                action, not a setting, so the same entry can be picked twice. */}
-            <div className="mb-3 flex flex-wrap gap-2">
-              <select
-                className="select sm:max-w-xs"
-                value=""
-                aria-label={tr("addFromList")}
+            {/* Only your own methods carry a cross; a built-in one is reset
+                with Fill starter recipe instead. */}
+            <div className="mb-3">
+              <MethodPicker
+                starters={METHOD_PRESETS}
+                saved={savedMethods}
                 disabled={label.brews.length >= MAX_BREWS}
-                onChange={(e) => {
-                  if (e.target.value) addTemplatedBrew(e.target.value);
+                placeholder={tr("addFromList")}
+                startersLabel={tr("startersGroup")}
+                savedLabel={tr("savedGroup")}
+                forgetLabel={tr("forgetMethod")}
+                onPick={addTemplatedBrew}
+                onForget={(name) => {
+                  if (confirm(`${tr("forgetMethodQ")} "${name}"`)) forgetMethod(name);
                 }}
-              >
-                <option value="" disabled>
-                  {tr("addFromList")}
-                </option>
-                <optgroup label={tr("startersGroup")}>
-                  {METHOD_PRESETS.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </optgroup>
-                {savedMethods.length > 0 && (
-                  <optgroup label={tr("savedGroup")}>
-                    {savedMethods.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-              {/* Only your own methods can be dropped; a built-in one is reset
-                  with Fill starter recipe instead. */}
-              {savedMethods.length > 0 && (
-                <select
-                  className="select sm:max-w-xs"
-                  value=""
-                  aria-label={tr("forgetFromList")}
-                  onChange={(e) => {
-                    const name = e.target.value;
-                    if (!name || !confirm(`${tr("forgetMethodQ")} "${name}"`)) return;
-                    forgetMethod(name);
-                  }}
-                >
-                  <option value="" disabled>
-                    {tr("forgetFromList")}
-                  </option>
-                  {savedMethods.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-              )}
+              />
             </div>
             <p className="mb-3 text-xs text-muted">{tr("templateHint")}</p>
             <div className="flex flex-col gap-3">

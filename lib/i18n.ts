@@ -251,10 +251,7 @@ const DICT = {
   addFromList: { en: "Add a method…", th: "เพิ่มวิธีชง…" },
   startersGroup: { en: "Starters", th: "สูตรตั้งต้น" },
   savedGroup: { en: "Saved", th: "ที่บันทึกไว้" },
-  forgetFromList: {
-    en: "Forget a saved method…",
-    th: "ลบวิธีที่บันทึกไว้…",
-  },
+  forgetMethod: { en: "Forget", th: "ลบออกจากที่จำไว้" },
   pasteRecipe: { en: "Paste recipe", th: "วางสูตรจากที่อื่น" },
   pasteRecipeHint: {
     en: "Paste a recipe written in words — from an AI, a roaster's page, a note — and the figures are read out of it.",
