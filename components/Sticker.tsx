@@ -35,13 +35,6 @@ const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayout
  */
 const MIN_FIT = 0.3;
 const MAX_FIT = 1.9;
-/**
- * The bag sticker never grows past its designed size. Enlarging it meant the
- * same fields were drawn 1.1x on one bag and 1.55x on the next, so no two
- * labels looked alike; a long name now shrinks instead, and a short one simply
- * leaves room at the foot.
- */
-const MAX_FIT_BEANS = 1;
 
 function Bean({ filled, color }: { filled: boolean; color: string }) {
   return (
@@ -291,8 +284,7 @@ export default function Sticker({
       fit.style.width = untouched ? "100%" : `${100 / s}%`;
     };
 
-    const ceiling = beansOnly ? MAX_FIT_BEANS : MAX_FIT;
-    const clamp = (s: number) => Math.max(MIN_FIT, Math.min(ceiling, s));
+    const clamp = (s: number) => Math.max(MIN_FIT, Math.min(MAX_FIT, s));
 
     /**
      * The specs row must never wrap. Rather than shrinking the whole sticker to
@@ -356,9 +348,9 @@ export default function Sticker({
     };
 
     const measure = () => {
-      // Measure the content at its natural height; the filler below is applied
-      // only once the scale has settled.
-      fit.style.minHeight = "";
+      // Always measure the block at its natural height and spacing.
+      fit.style.height = "";
+      fit.style.justifyContent = "";
       const cs = getComputedStyle(frame);
       const avail =
         frame.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
@@ -394,18 +386,24 @@ export default function Sticker({
         fitRows();
       }
 
-      /**
-       * Hold the block open to the full label so the foot sits on the bottom
-       * edge. Without it a bag with fewer notes left its dates floating
-       * halfway up, which is the same layout drifting again.
-       */
-      if (beansOnly) fit.style.minHeight = `${avail / s}px`;
-
       // Backstop: if some row still can't be squeezed, shrink the whole block
       // rather than let anything be clipped at the edge.
       if (fit.scrollWidth > fit.clientWidth + 0.5) {
-        apply(clamp(s * (fit.clientWidth / fit.scrollWidth)));
+        s = clamp(s * (fit.clientWidth / fit.scrollWidth));
+        apply(s);
         fitRows();
+      }
+
+      /**
+       * A bag sticker has no brew guide to fill the lower half, and on a tall
+       * label like 100x150 the type cannot grow enough to cover it — past a
+       * point the narrower lines just wrap and it gains height it did not want.
+       * So the rows spread into the space instead of the text swelling into it.
+       * This has to come last: it is written in the final scale's units.
+       */
+      if (beansOnly && fit.scrollHeight * s < avail - 1) {
+        fit.style.height = `${avail / s}px`;
+        fit.style.justifyContent = "space-between";
       }
     };
 

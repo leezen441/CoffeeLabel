@@ -657,9 +657,6 @@ body {
 }
 
 .cl-foot {
-  /* Sits on the bottom edge whatever is above it, so every bag sticker
-     finishes in the same place. */
-  margin-top: auto;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
