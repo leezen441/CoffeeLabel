@@ -244,10 +244,16 @@ const DICT = {
   secBrews: { en: "Brew methods", th: "วิธีชง" },
   addMethod: { en: "+ Add method", th: "+ เพิ่มวิธีชง" },
   noBrewsYet: { en: "No brew methods yet — add up to", th: "ยังไม่มีวิธีชง — เพิ่มได้ถึง" },
-  addTemplate: { en: "Add starter recipe", th: "เพิ่มสูตรตั้งต้น" },
   templateHint: {
-    en: "Tap a method to add it with times and pours — your last recipe for that method if you have one, otherwise a starter.",
-    th: "แตะวิธีชงเพื่อเพิ่มพร้อมเวลาและกรัมน้ำ — ถ้าเคยตั้งไว้จะใช้สูตรล่าสุดของคุณ ถ้ายังไม่เคยจะใช้สูตรตั้งต้น",
+    en: "Pick a method to add it with times and pours — your last recipe for that method if you have one, otherwise a starter.",
+    th: "เลือกวิธีชงเพื่อเพิ่มพร้อมเวลาและกรัมน้ำ — ถ้าเคยตั้งไว้จะใช้สูตรล่าสุดของคุณ ถ้ายังไม่เคยจะใช้สูตรตั้งต้น",
+  },
+  addFromList: { en: "Add a method…", th: "เพิ่มวิธีชง…" },
+  startersGroup: { en: "Starters", th: "สูตรตั้งต้น" },
+  savedGroup: { en: "Saved", th: "ที่บันทึกไว้" },
+  forgetFromList: {
+    en: "Forget a saved method…",
+    th: "ลบวิธีที่บันทึกไว้…",
   },
   pasteRecipe: { en: "Paste recipe", th: "วางสูตรจากที่อื่น" },
   pasteRecipeHint: {
@@ -280,7 +286,6 @@ const DICT = {
     en: "Keep this recipe for next time — adding this method to another bag brings it back",
     th: "เก็บสูตรนี้ไว้ใช้ครั้งหน้า — เพิ่มวิธีชงนี้ในกาแฟถุงอื่นแล้วจะได้ค่าชุดนี้กลับมา",
   },
-  forgetMethod: { en: "Forget", th: "ลบออกจากที่จำไว้" },
   forgetMethodQ: {
     en: "Forget the saved recipe for",
     th: "ลบสูตรที่จำไว้ของ",

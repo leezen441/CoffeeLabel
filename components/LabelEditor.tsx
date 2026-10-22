@@ -43,13 +43,13 @@ export default function LabelEditor({ id }: { id: string }) {
    */
   const params = useSearchParams();
   const remembered = useRememberedNames();
-  /** Built-in starters first, then the methods you have set up yourself. */
-  const methodChips = useMemo(() => {
+  /**
+   * The methods you have saved yourself. One that shares a built-in name is
+   * already reached through the starter, which recalls your version first.
+   */
+  const savedMethods = useMemo(() => {
     const builtIn = new Set(METHOD_PRESETS.map((n) => n.toLowerCase()));
-    return [
-      ...METHOD_PRESETS,
-      ...remembered.filter((n) => !builtIn.has(n.toLowerCase())),
-    ];
+    return remembered.filter((n) => !builtIn.has(n.toLowerCase()));
   }, [remembered]);
 
   const [view, setView] = useState<"details" | "brews">(
@@ -621,41 +621,61 @@ export default function LabelEditor({ id }: { id: string }) {
                 {tr("addMethod")}
               </button>
             </div>
-            <div className="mb-3 flex flex-wrap gap-1.5">
-              {methodChips.map((name) => {
-                // Only your own methods can be dropped; a built-in one is reset
-                // with Fill starter recipe instead.
-                const mine = !METHOD_PRESETS.some(
-                  (p) => p.toLowerCase() === name.toLowerCase(),
-                );
-                return (
-                  <span key={name} className="inline-flex items-center">
-                    <button
-                      type="button"
-                      className={`btn text-xs ${mine ? "!rounded-r-none !border-r-0 !pr-2" : ""}`}
-                      title={`${tr("addTemplate")} ${name}`}
-                      disabled={label.brews.length >= MAX_BREWS}
-                      onClick={() => addTemplatedBrew(name)}
-                    >
+            {/* Both lists stay pinned to their placeholder: picking is an
+                action, not a setting, so the same entry can be picked twice. */}
+            <div className="mb-3 flex flex-wrap gap-2">
+              <select
+                className="select sm:max-w-xs"
+                value=""
+                aria-label={tr("addFromList")}
+                disabled={label.brews.length >= MAX_BREWS}
+                onChange={(e) => {
+                  if (e.target.value) addTemplatedBrew(e.target.value);
+                }}
+              >
+                <option value="" disabled>
+                  {tr("addFromList")}
+                </option>
+                <optgroup label={tr("startersGroup")}>
+                  {METHOD_PRESETS.map((name) => (
+                    <option key={name} value={name}>
                       {name}
-                    </button>
-                    {mine && (
-                      <button
-                        type="button"
-                        className="btn text-xs !rounded-l-none !px-2 !text-muted hover:!border-[var(--danger)] hover:!text-[var(--danger)]"
-                        aria-label={`${tr("forgetMethod")} ${name}`}
-                        title={`${tr("forgetMethod")} ${name}`}
-                        onClick={() => {
-                          if (!confirm(`${tr("forgetMethodQ")} "${name}"`)) return;
-                          forgetMethod(name);
-                        }}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </span>
-                );
-              })}
+                    </option>
+                  ))}
+                </optgroup>
+                {savedMethods.length > 0 && (
+                  <optgroup label={tr("savedGroup")}>
+                    {savedMethods.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+              {/* Only your own methods can be dropped; a built-in one is reset
+                  with Fill starter recipe instead. */}
+              {savedMethods.length > 0 && (
+                <select
+                  className="select sm:max-w-xs"
+                  value=""
+                  aria-label={tr("forgetFromList")}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    if (!name || !confirm(`${tr("forgetMethodQ")} "${name}"`)) return;
+                    forgetMethod(name);
+                  }}
+                >
+                  <option value="" disabled>
+                    {tr("forgetFromList")}
+                  </option>
+                  {savedMethods.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <p className="mb-3 text-xs text-muted">{tr("templateHint")}</p>
             <div className="flex flex-col gap-3">
