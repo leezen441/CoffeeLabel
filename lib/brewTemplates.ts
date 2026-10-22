@@ -179,15 +179,10 @@ export function brewFromTemplate(
   };
 }
 
-/** New label with Espresso, V60 and Aeropress already filled in. */
+/**
+ * A new label starts with no brew methods. Three prefilled starters had to be
+ * deleted on most bags; + Add method offers the same starters when wanted.
+ */
 export function newLabel(): CoffeeLabel {
-  const label = emptyLabel();
-  return {
-    ...label,
-    brews: [
-      brewFromTemplate("Espresso"),
-      brewFromTemplate("V60"),
-      brewFromTemplate("Aeropress"),
-    ],
-  };
+  return { ...emptyLabel(), brews: [] };
 }
