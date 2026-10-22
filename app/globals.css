@@ -245,11 +245,19 @@ body {
 
 .cl-name {
   font-family: var(--font-display);
-  font-size: calc(7 * var(--u));
+  /*
+   * One line, always. A name that wraps pushes every row below it down, which
+   * is the label laying itself out differently per bag; --name-fit shrinks just
+   * this line instead — see the name pass in Sticker.tsx.
+   */
+  font-size: calc(7 * var(--u) * var(--name-fit, 1));
   line-height: 1.05;
   font-weight: 600;
   letter-spacing: calc(-0.05 * var(--u));
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  /* for the rare name long enough that even the floor scale cannot hold it */
   overflow-wrap: anywhere;
 }
 
@@ -649,6 +657,9 @@ body {
 }
 
 .cl-foot {
+  /* Sits on the bottom edge whatever is above it, so every bag sticker
+     finishes in the same place. */
+  margin-top: auto;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
