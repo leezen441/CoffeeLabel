@@ -95,10 +95,38 @@ export default function StickerViewer({
     setZoom((z) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z * factor)));
   }, []);
 
+  /**
+   * The viewer sits on top of the library rather than on a route of its own,
+   * so without this the device Back button skips straight past it and walks
+   * out of the app. A spare history entry gives Back something to pop, and
+   * every other way of closing pops it too, so the stack is never left with a
+   * dead entry behind the library.
+   */
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+
+  const pushed = useRef(false);
+  useEffect(() => {
+    // A ref, not a flag on history.state: Next replaces that state for its own
+    // bookkeeping, and in development the effect runs twice on the same
+    // instance — two entries would mean two presses of Back.
+    if (!pushed.current) {
+      pushed.current = true;
+      window.history.pushState(null, "");
+    }
+    const onPop = () => closeRef.current();
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  const dismiss = useCallback(() => window.history.back(), []);
+
   // Keyboard shortcuts, and stop the page behind from scrolling.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") dismiss();
       else if (e.key === "+" || e.key === "=") nudge(1.25);
       else if (e.key === "-" || e.key === "_") nudge(0.8);
       else if (e.key === "0") reset();
@@ -121,7 +149,7 @@ export default function StickerViewer({
       document.body.style.overflow = prev;
       gestures.forEach((g) => document.removeEventListener(g, stopSafariPinch));
     };
-  }, [onClose, nudge, reset]);
+  }, [dismiss, nudge, reset]);
 
   /** centre of the viewing area in client coordinates — the transform origin */
   const areaCentre = () => {
@@ -298,7 +326,7 @@ export default function StickerViewer({
         </Link>
         <button
           className="h-9 w-9 rounded-lg bg-white/10 text-lg leading-none hover:bg-white/20"
-          onClick={onClose}
+          onClick={dismiss}
           aria-label={tr("closePreview")}
         >
           ✕
@@ -318,7 +346,7 @@ export default function StickerViewer({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onClick={() => {
-          if (!moved.current) onClose();
+          if (!moved.current) dismiss();
         }}
       >
         <div
