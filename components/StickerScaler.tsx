@@ -18,6 +18,7 @@ export default function StickerScaler({
   maxScale = 1,
   shadow = true,
   variant,
+  center,
 }: {
   label: CoffeeLabel;
   qrUrl?: string;
@@ -25,10 +26,12 @@ export default function StickerScaler({
   maxScale?: number;
   shadow?: boolean;
   variant?: "full" | "brew" | "beans";
+  /** Centre the sticker in the space it is given rather than leaving it left. */
+  center?: boolean;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
-  const [box, setBox] = useState({ scale: 1, h: 0 });
+  const [box, setBox] = useState({ scale: 1, h: 0, left: 0 });
 
   useIsoLayoutEffect(() => {
     const wrap = wrapRef.current;
@@ -43,10 +46,16 @@ export default function StickerScaler({
       const avail = wrap.clientWidth;
       if (!w || !avail) return;
       const scale = Math.min(maxScale, avail / w);
+      // Centring is a measured offset, not `margin: auto` with a centred
+      // transform origin: when the sticker is wider than the space, auto
+      // margins collapse to zero and that origin pushes it off to one side.
+      const left = center ? Math.max(0, (avail - w * scale) / 2) : 0;
       setBox((prev) =>
-        Math.abs(prev.scale - scale) < 0.001 && prev.h === h * scale
+        Math.abs(prev.scale - scale) < 0.001 &&
+        prev.h === h * scale &&
+        prev.left === left
           ? prev
-          : { scale, h: h * scale },
+          : { scale, h: h * scale, left },
       );
     };
 
@@ -55,14 +64,14 @@ export default function StickerScaler({
     ro.observe(wrap);
     return () => ro.disconnect();
     // customW/H matter too: the sticker resizes without the wrapper changing
-  }, [label.size, label.customW, label.customH, maxScale]);
+  }, [label.size, label.customW, label.customH, maxScale, center]);
 
   return (
     <div ref={wrapRef} style={{ width: "100%", height: box.h || undefined }}>
       <div
         ref={innerRef}
         style={{
-          transform: `scale(${box.scale})`,
+          transform: `translateX(${box.left}px) scale(${box.scale})`,
           transformOrigin: "top left",
           width: "max-content",
         }}

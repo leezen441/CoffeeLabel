@@ -5,27 +5,20 @@ import Link from "next/link";
 import BrewLog from "./BrewLog";
 import BrewTimer, { unlockTimerAudio } from "./BrewTimer";
 import LangToggle from "./LangToggle";
+import StickerScaler from "./StickerScaler";
 import { makeT, useLang } from "@/lib/i18n";
 import * as store from "@/lib/store";
+import { useOrigin } from "@/lib/useOrigin";
 import {
   type BrewMethod,
   type CoffeeLabel,
-  ROAST_LEVELS,
   type Palette,
   paletteFor,
-  processText,
-  addDays,
-  bestBefore,
-  daysSince,
   dialLabel,
   grinderOf,
-  formatDate,
-  formatDateRange,
-  restWindow,
   formatDoseYield,
   formatTime,
   formatWeight,
-  labelTitle,
   ratioOf,
   scaleBrew,
   stepTimeLabel,
@@ -49,6 +42,7 @@ export default function BrewGuide({
   const [factor, setFactor] = useState(1);
   const lang = useLang();
   const tr = makeT(lang);
+  const origin = useOrigin();
 
   // Always refresh from the server: the cached copy may be minutes old.
   useEffect(() => {
@@ -89,17 +83,6 @@ export default function BrewGuide({
   const rawBrew = brews[active];
   // Scaling is presentational — the stored recipe is never touched.
   const brew = rawBrew ? scaleBrew(rawBrew, factor) : rawBrew;
-  const age = daysSince(label.roastDate);
-  const bb = bestBefore(label.roastDate, label.bestBeforeDays);
-  const rest = restWindow(label);
-  const restDates = label.showRest
-    ? formatDateRange(
-        addDays(label.roastDate, rest.from),
-        addDays(label.roastDate, rest.to),
-      )
-    : "";
-  const originBits = [label.variety, processText(label), label.origin].filter(Boolean);
-  const altitude = (label.altitude ?? "").trim();
 
   /** Write a dialled-in recipe back over the stored one, by id. */
   async function applyBrew(next: BrewMethod) {
@@ -119,75 +102,25 @@ export default function BrewGuide({
   return (
     <div className="flex-1" style={{ background: theme.paper, color: theme.ink }}>
       <div className="mx-auto max-w-xl px-5 py-8">
-        <div className="flex items-start justify-between gap-3">
+        {/* The bag's own sticker, exactly as the library and the printer draw
+            it. It already carries the roaster, name, origin, notes, the roast
+            scale and the peak window, and reading the real label beats a
+            second, different arrangement of the same facts. */}
+        <div className="mb-5 flex items-start justify-between gap-3">
           <p
             className="text-xs font-bold uppercase tracking-[0.18em]"
             style={{ color: theme.accent }}
           >
-            {label.roaster || tr("brewGuide")}
+            {tr("brewGuide")}
           </p>
           <LangToggle tone={theme} />
         </div>
-        <h1 className="mt-1 font-serif text-4xl leading-tight font-semibold">
-          {labelTitle(label)}
-        </h1>
-        {originBits.length > 0 && (
-          <p className="mt-2 text-sm" style={{ color: theme.muted }}>
-            {originBits.join(" · ")}
-          </p>
-        )}
-        {altitude && (
-          <p className="text-sm" style={{ color: theme.muted }}>
-            {altitude}
-          </p>
-        )}
-
-        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-          <span className="flex items-center gap-2">
-            <span className="flex gap-0.5">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <svg key={n} width="16" height="16" viewBox="0 0 24 24">
-                  <g transform="rotate(-32 12 12)">
-                    <ellipse
-                      cx="12"
-                      cy="12"
-                      rx="6.6"
-                      ry="9.8"
-                      fill={n <= label.roastLevel ? theme.bean : "none"}
-                      stroke={theme.bean}
-                      strokeWidth="1.8"
-                    />
-                  </g>
-                </svg>
-              ))}
-            </span>
-            <b>{ROAST_LEVELS[label.roastLevel].name}</b>
-          </span>
-          {label.roastDate && (
-            <span style={{ color: theme.muted }}>
-              {tr("roasted")} <b style={{ color: theme.ink }}>{formatDate(label.roastDate)}</b>
-              {age !== null && age >= 0 && ` · ${age} ${tr("daysAgo")}`}
-            </span>
-          )}
-          {label.netWeight && (
-            <span style={{ color: theme.muted }}>
-              {tr("net")} <b style={{ color: theme.ink }}>{formatWeight(label.netWeight)}</b>
-            </span>
-          )}
-        </div>
-
-        {label.tastingNotes.length > 0 && (
-          <p className="mt-3 font-serif text-lg italic">
-            {label.tastingNotes.join("  ·  ")}
-          </p>
-        )}
-
-        {bb && (
-          <p className="mt-1 text-xs" style={{ color: theme.muted }}>
-            {tr("bestBefore")} {formatDate(bb)}
-            {restDates && <> · {tr("peak")} {restDates}</>}
-          </p>
-        )}
+        <StickerScaler
+          label={label}
+          center
+          variant="beans"
+          qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
+        />
 
         {brews.length > 0 && brew && (
           <>
