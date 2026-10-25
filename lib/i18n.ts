@@ -70,6 +70,13 @@ const DICT = {
   daysToGoPre: { en: "", th: "อีก " },
   daysToGo: { en: "d to go", th: " วัน" },
   ready: { en: "Ready", th: "พร้อม" },
+  peakInPre: { en: "Peak in", th: "อีก" },
+  peakInPost: { en: "", th: "ถึงช่วงดีที่สุด" },
+  inPeak: { en: "In peak", th: "อยู่ในช่วงดีที่สุด" },
+  daysLeftPre: { en: "", th: "เหลือ" },
+  daysLeftPost: { en: "left", th: "" },
+  dayOne: { en: "day", th: "วัน" },
+  dayMany: { en: "days", th: "วัน" },
   backup: { en: "Backup", th: "สำรองข้อมูล" },
   backupBlurb: {
     en: "Saves every label and group as one JSON file. Restoring merges by id — nothing is deleted.",

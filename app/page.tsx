@@ -408,6 +408,32 @@ export default function LibraryPage() {
               const hasMethods = label.brews.some(
                 (b) => b.name.trim() || b.steps.some((st) => st.text.trim()),
               );
+              // Where the bag stands against its peak window, in words.
+              const unit = (n: number) => (n === 1 ? tr("dayOne") : tr("dayMany"));
+              const words = (...parts: (string | number)[]) =>
+                parts.filter((p) => p !== "").join(" ");
+              const restLine =
+                rest.status === "resting"
+                  ? words(
+                      tr("peakInPre"),
+                      rest.daysToPeak,
+                      unit(rest.daysToPeak),
+                      tr("peakInPost"),
+                    )
+                  : rest.status === "peak"
+                    ? (() => {
+                        // The window is inclusive, so its last day still counts.
+                        const left = rest.to - (rest.age ?? rest.to) + 1;
+                        return `${tr("inPeak")} · ${words(
+                          tr("daysLeftPre"),
+                          left,
+                          unit(left),
+                          tr("daysLeftPost"),
+                        )}`;
+                      })()
+                    : rest.status === "past"
+                      ? tr("pastPeak")
+                      : "";
               const thumbCls = `block min-w-0 flex-1 bg-card ${
                 restMeta ? "pt-11" : "pt-4"
               } pb-4 pl-4 pr-2 text-left`;
@@ -437,6 +463,10 @@ export default function LibraryPage() {
                     page could start. Their server side is an empty shell (the
                     data comes from the store), so warming them is cheap and can
                     never show a stale recipe. */}
+                {/* A column, so the peak line sits at the foot of the card,
+                    in the space the taller action rail leaves under the
+                    sticker, rather than adding height of its own. */}
+                <div className="flex min-w-0 flex-1 flex-col self-stretch">
                 {hasMethods ? (
                   <Link
                     href={`/b/${label.id}`}
@@ -456,6 +486,20 @@ export default function LibraryPage() {
                     {thumb}
                   </button>
                 )}
+                {restMeta && restLine && (
+                  <p
+                    className="flex items-center justify-end gap-1.5 pb-3 pl-4 pr-2 text-xs font-semibold"
+                    style={{ color: restMeta.color }}
+                  >
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ background: restMeta.color }}
+                      aria-hidden="true"
+                    />
+                    {restLine}
+                  </p>
+                )}
+                </div>
 
                 {restMeta && (
                   <span
