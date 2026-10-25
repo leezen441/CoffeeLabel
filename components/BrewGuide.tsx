@@ -5,6 +5,7 @@ import Link from "next/link";
 import BrewLog from "./BrewLog";
 import BrewTimer, { unlockTimerAudio } from "./BrewTimer";
 import LangToggle from "./LangToggle";
+import PeakStatus from "./PeakStatus";
 import StickerScaler from "./StickerScaler";
 import { makeT, useLang } from "@/lib/i18n";
 import * as store from "@/lib/store";
@@ -19,6 +20,7 @@ import {
   formatDoseYield,
   formatTime,
   formatWeight,
+  labelSize,
   ratioOf,
   scaleBrew,
   stepTimeLabel,
@@ -115,12 +117,17 @@ export default function BrewGuide({
           </p>
           <LangToggle tone={theme} />
         </div>
-        <StickerScaler
-          label={label}
-          center
-          variant="beans"
-          qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
-        />
+        {/* Capped at the sticker's own width and centred, so it is shown at
+            real size on a wide screen and the peak line under it lines up
+            with its right edge rather than the column's. */}
+        <div className="mx-auto" style={{ maxWidth: `${labelSize(label, "beans").w}mm` }}>
+          <StickerScaler
+            label={label}
+            variant="beans"
+            qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
+          />
+          <PeakStatus label={label} className="mt-3 justify-end text-sm" />
+        </div>
 
         {brews.length > 0 && brew && (
           <>
