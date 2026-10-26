@@ -32,10 +32,12 @@ export default function BrewGuide({
   id,
   initialBrew,
   from,
+  startTimer,
 }: {
   id: string;
   initialBrew: string | null;
   from: string | null;
+  startTimer: boolean;
 }) {
   // Opened from the library, the label is already in hand: draw it now.
   const [label, setLabel] = useState<CoffeeLabel | null>(() => store.cachedLabel(id));
@@ -50,7 +52,9 @@ export default function BrewGuide({
   const [activeId, setActiveId] = useState<string | null>(
     () => initialBrew ?? lastMethod(id),
   );
-  const [timing, setTiming] = useState<BrewMethod | null>(null);
+  const [picked, setPicked] = useState<BrewMethod | null>(null);
+  /** The library can ask for the timer up front; closing it has to stick. */
+  const [autoClosed, setAutoClosed] = useState(false);
   const [factor, setFactor] = useState(1);
   const lang = useLang();
   const tr = makeT(lang);
@@ -103,6 +107,15 @@ export default function BrewGuide({
   const rawBrew = brews[active];
   // Scaling is presentational — the stored recipe is never touched.
   const brew = rawBrew ? scaleBrew(rawBrew, factor) : rawBrew;
+  /**
+   * Started from the library, the timer is already up when the page arrives.
+   * Derived rather than set from an effect, so closing it simply sticks.
+   */
+  const timing =
+    picked ??
+    (startTimer && !autoClosed && brew?.steps.some((s) => s.text.trim())
+      ? brew
+      : null);
 
   /** Write a dialled-in recipe back over the stored one, by id. */
   async function applyBrew(next: BrewMethod) {
@@ -116,7 +129,7 @@ export default function BrewGuide({
 
   function openTimer(next: BrewMethod) {
     unlockTimerAudio();
-    setTiming(next);
+    setPicked(next);
   }
 
   return (
@@ -303,7 +316,14 @@ export default function BrewGuide({
       </div>
 
       {timing && (
-        <BrewTimer brew={timing} theme={theme} onClose={() => setTiming(null)} />
+        <BrewTimer
+          brew={timing}
+          theme={theme}
+          onClose={() => {
+            setPicked(null);
+            setAutoClosed(true);
+          }}
+        />
       )}
     </div>
   );
