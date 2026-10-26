@@ -8,7 +8,7 @@ export type BrewStep = {
   startAt: string;
   /** mm:ss this step ends */
   endAt: string;
-  /** cumulative water in the brewer at the end of this step, drives the ribbon */
+  /** water poured during this step; the running total is the sum before it */
   waterG: string;
 };
 
@@ -1219,46 +1219,55 @@ export type RibbonBlock = {
 /**
  * How much water goes in at this step, and what the scale reads once it has.
  *
- * Steps store the running total, because that is the number you dial a scale
- * to. While brewing you also need the amount to add right now, which is the
- * difference from the last step that carried a figure.
+ * A step stores what is poured during it, because that is what you are asked
+ * to do. The running total — the figure on the scale — is everything poured
+ * up to and including this step.
  */
 export function pourAt(
   steps: { waterG: string }[],
   index: number,
 ): { added: number; total: number } | null {
-  const total = parseFloat(steps[index]?.waterG ?? "");
-  if (!Number.isFinite(total) || total <= 0) return null;
-  let prev = 0;
-  for (let i = 0; i < index; i += 1) {
+  let total = 0;
+  let added = 0;
+  for (let i = 0; i <= index; i += 1) {
     const n = parseFloat(steps[i]?.waterG ?? "");
-    if (Number.isFinite(n) && n > 0) prev = n;
+    if (!Number.isFinite(n) || n <= 0) continue;
+    total += n;
+    if (i === index) added = n;
   }
-  return { added: Math.max(0, total - prev), total };
+  if (added <= 0) return null;
+  // Tenths, so 45 + 52.5 does not come back as 97.49999999999999.
+  return { added, total: Math.round(total * 10) / 10 };
+}
+
+/**
+ * "50 g." on its own, or "50 g. (150)" once earlier steps have poured too —
+ * what to add now, and what the scale should read after it.
+ */
+export function pourLabel(steps: { waterG: string }[], index: number): string {
+  const pour = pourAt(steps, index);
+  if (!pour) return "";
+  const added = formatWeight(String(pour.added));
+  return pour.added === pour.total ? added : `${added} (${pour.total})`;
 }
 
 export function ribbonBlocks(brew: BrewMethod): RibbonBlock[] {
   const withWater = brew.steps
-    .map((s) => ({ ...s, n: parseFloat(s.waterG) }))
-    .filter((s) => Number.isFinite(s.n) && s.n > 0);
+    .map((s, i) => ({ ...s, pour: pourAt(brew.steps, i) }))
+    .filter((s) => s.pour !== null);
   if (withWater.length < 2) return [];
 
-  const total = withWater[withWater.length - 1].n;
+  const total = withWater[withWater.length - 1].pour!.total;
   if (!(total > 0)) return [];
 
-  let prev = 0;
-  const blocks = withWater.map((s) => {
-    const added = Math.max(0, s.n - prev);
-    prev = s.n;
-    return {
-      id: s.id,
-      share: added / total,
-      addedG: added,
-      totalG: s.n,
-      at: stepTimeLabel(s),
-      text: s.text,
-    };
-  });
+  const blocks = withWater.map((s) => ({
+    id: s.id,
+    share: s.pour!.added / total,
+    addedG: s.pour!.added,
+    totalG: s.pour!.total,
+    at: stepTimeLabel(s),
+    text: s.text,
+  }));
   // A zero-width first block would vanish; give every block a visible minimum.
   const floor = 0.06;
   const raised = blocks.map((b) => ({ ...b, share: Math.max(floor, b.share) }));

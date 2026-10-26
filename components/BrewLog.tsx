@@ -15,6 +15,7 @@ import {
   formatDoseYield,
   formatTime,
   formatWeight,
+  pourLabel,
   grinderOf,
   ratioOf,
   stepTimeLabel,
@@ -343,8 +344,10 @@ export default function BrewLog({
                           {i + 1}.
                         </span>
                         <span className="flex-1">{s.text}</span>
-                        {s.waterG && (
-                          <span className="font-mono text-xs">{formatWeight(s.waterG)}</span>
+                        {pourLabel(proposed.steps, i) && (
+                          <span className="font-mono text-xs">
+                            {pourLabel(proposed.steps, i)}
+                          </span>
                         )}
                         {stepTimeLabel(s) && (
                           <span className="font-mono text-xs" style={{ color: theme.muted }}>

@@ -36,9 +36,9 @@ export function sampleLabel(): CoffeeLabel {
         totalTime: "2:45",
         steps: [
           { id: uid(), text: "Bloom, swirl", startAt: "0:00", endAt: "0:45", waterG: "45" },
-          { id: uid(), text: "First pour", startAt: "0:45", endAt: "1:20", waterG: "150" },
-          { id: uid(), text: "Second pour", startAt: "1:20", endAt: "2:00", waterG: "250" },
-          { id: uid(), text: "Drawdown", startAt: "2:00", endAt: "2:45", waterG: "250" },
+          { id: uid(), text: "First pour", startAt: "0:45", endAt: "1:20", waterG: "105" },
+          { id: uid(), text: "Second pour", startAt: "1:20", endAt: "2:00", waterG: "100" },
+          { id: uid(), text: "Drawdown", startAt: "2:00", endAt: "2:45", waterG: "" },
         ],
       },
       {

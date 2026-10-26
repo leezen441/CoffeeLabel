@@ -19,7 +19,7 @@ import {
   grinderOf,
   formatDoseYield,
   formatTime,
-  formatWeight,
+  pourLabel,
   labelSize,
   ratioOf,
   scaleBrew,
@@ -230,12 +230,12 @@ export default function BrewGuide({
                         <span className="flex-1 pt-0.5 text-[0.95rem] leading-snug">
                           {step.text}
                         </span>
-                        {step.waterG && (
+                        {pourLabel(brew.steps, i) && (
                           <span
                             className="pt-1 font-mono text-xs whitespace-nowrap"
                             style={{ color: theme.ink }}
                           >
-                            {formatWeight(step.waterG)}
+                            {pourLabel(brew.steps, i)}
                           </span>
                         )}
                         {stepTimeLabel(step) && (

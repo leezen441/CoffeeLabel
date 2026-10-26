@@ -18,6 +18,7 @@ import {
   formatDoseYield,
   formatTime,
   formatWeight,
+  pourLabel,
   grinderOf,
   labelSize,
   ratioOf,
@@ -580,7 +581,7 @@ export default function Sticker({
                   )}
 
                   {/* Ribbon mode falls back to the numbered list for any method
-                      that has no cumulative water to plot. */}
+                      that has no water figures to plot. */}
                   {(layout === "full" || (layout === "ribbon" && ribbon.length === 0)) &&
                     steps.length > 0 && (
                     <ol className="cl-steps">
@@ -591,7 +592,7 @@ export default function Sticker({
                           <span className="cl-step-n">{i + 1}.</span>
                           <span className="cl-step-text">{step.text}</span>
                           <span className="cl-step-water">
-                            {step.waterG ? formatWeight(step.waterG) : ""}
+                            {pourLabel(steps, i)}
                           </span>
                           <span className="cl-step-at">{stepTimeLabel(step)}</span>
                         </li>

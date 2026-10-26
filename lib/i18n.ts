@@ -280,9 +280,9 @@ const DICT = {
     en: "Only the fields below are replaced; anything not read stays as it is.",
     th: "จะแทนที่เฉพาะช่องที่อ่านได้ ช่องที่อ่านไม่ออกยังคงค่าเดิมไว้",
   },
-  poursSummedNote: {
-    en: "Pours looked like separate amounts, so they were added into running totals.",
-    th: "ตัวเลขน้ำดูเหมือนเป็นปริมาณที่เทแต่ละรอบ ระบบจึงรวมให้เป็นยอดสะสม",
+  totalsSplitNote: {
+    en: "Figures looked like running totals, so each step kept only what it pours.",
+    th: "ตัวเลขน้ำดูเหมือนเป็นยอดสะสม ระบบจึงแยกเหลือเฉพาะน้ำที่เทในขั้นนั้น",
   },
   saveMethod: { en: "Save method", th: "บันทึกวิธีชงนี้" },
   methodSaved: { en: "Saved", th: "บันทึกแล้ว" },
@@ -341,14 +341,14 @@ const DICT = {
   },
   unitsHintOverrideTail: { en: "overrides it.", th: "จะใช้ตามที่พิมพ์" },
   brewSequence: { en: "Brew sequence", th: "ลำดับการชง" },
-  seqHintA: { en: "step · start · end · water — leave", th: "ขั้นตอน · เริ่ม · จบ · น้ำ — เว้น" },
+  seqHintA: { en: "step · start · end · water to add — leave", th: "ขั้นตอน · เริ่ม · จบ · น้ำที่เติม — เว้น" },
   seqHintB: {
     en: "blank to continue from the step above",
     th: "ว่างไว้ เพื่อชงต่อจากขั้นก่อนหน้า",
   },
   startWord: { en: "start", th: "เริ่ม" },
   endWord: { en: "end", th: "จบ" },
-  waterG: { en: "water g", th: "น้ำ (g)" },
+  waterG: { en: "add g", th: "เติม (g)" },
   addStep: { en: "+ Add step", th: "+ เพิ่มขั้นตอน" },
   stepFirstPlaceholder: {
     en: "Bloom 45 g, swirl gently",
@@ -361,8 +361,12 @@ const DICT = {
   },
   endHint: { en: "End of this step (mm:ss)", th: "เวลาที่จบขั้นนี้ (mm:ss)" },
   waterHint: {
-    en: "Total water in the brewer after this step — drives the pour ribbon",
-    th: "น้ำรวมในดริปเปอร์หลังจบขั้นนี้ — ใช้วาดแถบการริน",
+    en: "Water poured during this step. The running total is shown beside it.",
+    th: "น้ำที่เทในขั้นนี้ ยอดสะสมจะขึ้นให้ดูข้างๆ",
+  },
+  runningTotalHint: {
+    en: "The scale reads this once the step is poured",
+    th: "ตัวเลขบนตาชั่งหลังเทขั้นนี้เสร็จ",
   },
 
   /* print */

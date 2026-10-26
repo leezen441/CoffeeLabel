@@ -14,8 +14,8 @@ import {
   type BrewMethod,
   type Palette,
   brewTimeline,
-  formatWeight,
   pourAt,
+  pourLabel,
   stepSpan,
 } from "@/lib/types";
 
@@ -54,17 +54,16 @@ export function unlockTimerAudio(): AudioContext | null {
 
 function coachLine(
   lang: Lang,
-  step: { text: string; waterG: string },
+  step: { text: string; pour: { added: number; total: number } | null },
   kind: "now" | "next" | "first",
 ): string {
   const text = step.text.trim();
-  const g = parseFloat(step.waterG);
-  const water =
-    Number.isFinite(g) && g > 0
-      ? lang === "th"
-        ? ` ถึง ${g} กรัม`
-        : `, to ${g} grams`
-      : "";
+  // The figure to say is the one you watch on the scale, not the one you pour.
+  const water = step.pour
+    ? lang === "th"
+      ? ` ถึง ${step.pour.total} กรัม`
+      : `, to ${step.pour.total} grams`
+    : "";
   if (kind === "next") {
     return lang === "th" ? `ขั้นต่อไป ${text}${water}` : `Next. ${text}${water}`;
   }
@@ -109,6 +108,15 @@ export default function BrewTimer({
     return end === null ? mmss(start) : `${mmss(start)}–${mmss(end)}`;
   }
 
+  /** What the coach needs to say a step: its words and its running total. */
+  const withPour = useCallback(
+    (step: { id: string; text: string }) => ({
+      text: step.text,
+      pour: pourAt(steps, steps.findIndex((s) => s.id === step.id)),
+    }),
+    [steps],
+  );
+
   const voice = useVoiceOn();
   /** The step the coach reads out before the countdown, when there is one. */
   const firstSpoken = useMemo(() => {
@@ -122,12 +130,9 @@ export default function BrewTimer({
    * since the recipe stores running totals but you pour the difference.
    */
   function waterLabel(index: number): string {
-    const pour = pourAt(steps, index);
-    // Nothing is added during a drawdown; it just carries the running total.
-    if (!pour || pour.added === 0) return "";
-    const added = formatWeight(String(pour.added));
-    return pour.added === pour.total ? added : `${added} (${pour.total})`;
+    return pourLabel(steps, index);
   }
+
 
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
@@ -227,7 +232,7 @@ export default function BrewTimer({
         const beepable = at > 0;
         if (beepable && now >= at - SPEAK_ALERT && !fired.current.has(`speak${c.id}`)) {
           fired.current.add(`speak${c.id}`);
-          if (now < at) say(coachLine(lang, c, "next"));
+          if (now < at) say(coachLine(lang, withPour(c), "next"));
         }
         // One beep per second into the step, so the fourth lands on it.
         for (let left = PRE_ALERT; left >= 1 && beepable; left -= 1) {
@@ -244,7 +249,7 @@ export default function BrewTimer({
           // Don't talk over the 8s warning — only speak here if we never got one.
           if (!fired.current.has(`speak${c.id}`)) {
             fired.current.add(`speak${c.id}`);
-            say(coachLine(lang, c, "now"));
+            say(coachLine(lang, withPour(c), "now"));
           }
         }
       }
@@ -258,7 +263,7 @@ export default function BrewTimer({
       }
     }, 100);
     return () => clearInterval(id);
-  }, [running, cues, total, cuePre, cueStep, cueDone, say, lang]);
+  }, [running, cues, total, cuePre, cueStep, cueDone, say, lang, withPour]);
 
   /** Keep the screen awake while counting down or brewing. */
   useEffect(() => {
@@ -309,8 +314,8 @@ export default function BrewTimer({
     if (!briefing || !firstSpoken) return;
     ensureAudio();
     fired.current.add(`speak${firstSpoken.id}`);
-    speakCoach(coachLine(lang, firstSpoken, "first"), lang, 0, beginCountdown);
-  }, [briefing, beginCountdown, ensureAudio, lang, firstSpoken]);
+    speakCoach(coachLine(lang, withPour(firstSpoken), "first"), lang, 0, beginCountdown);
+  }, [briefing, beginCountdown, ensureAudio, lang, firstSpoken, withPour]);
 
   /**
    * `fresh` starts the brew from zero; without it this resumes a paused one.
@@ -467,8 +472,8 @@ export default function BrewTimer({
         )}
         <p className="mt-1 font-mono text-sm" style={{ color: theme.muted }}>
           {briefing
-            ? firstStep?.waterG
-              ? waterLabel(steps.indexOf(firstStep))
+            ? waterLabel(steps.indexOf(firstStep!))
+              ? waterLabel(steps.indexOf(firstStep!))
               : tr("briefingHint")
             : countdown !== null
               ? tr("startingIn")
@@ -520,10 +525,7 @@ export default function BrewTimer({
               </p>
               {steps[currentIndex] && (
                 <p className="mt-0.5 font-mono text-sm" style={{ color: theme.muted }}>
-                  {[
-                    windowOf(currentIndex),
-                    steps[currentIndex].waterG ? waterLabel(currentIndex) : "",
-                  ]
+                  {[windowOf(currentIndex), waterLabel(currentIndex)]
                     .filter(Boolean)
                     .join("  ·  ")}
                 </p>
@@ -557,7 +559,7 @@ export default function BrewTimer({
               >
                 <span className="font-mono font-bold">{i + 1}.</span>
                 <span className="flex-1">{s.text}</span>
-                {s.waterG && (
+                {waterLabel(i) && (
                   <span className="font-mono text-xs whitespace-nowrap">
                     {waterLabel(i)}
                   </span>

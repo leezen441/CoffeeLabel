@@ -179,11 +179,11 @@ export function parseRecipe(raw: string): ParsedRecipe {
   }
   if (steps.length) mark("steps");
 
-  /* ---- water figures: cumulative is what we store ---- */
+  /* ---- water figures: what each step pours is what we store ---- */
   const figures = steps.map((s) => parseFloat(s.waterG)).filter((n) => Number.isFinite(n));
   const rising = figures.every((n, i) => i === 0 || n >= figures[i - 1]);
   /**
-   * Rising figures are not proof of a running total — "add 50, add 70, add 90"
+   * Rising figures are not proof of running totals — "add 50, add 70, add 90"
    * rises too — so the wording decides it. Arithmetic cannot: a recipe whose
    * pours genuinely run 50 then 175 sums to exactly the 225 it declares, and
    * rewriting those figures would be changing numbers the person can read.
@@ -191,16 +191,17 @@ export function parseRecipe(raw: string): ParsedRecipe {
   const stepWords = steps.map((s) => s.text).join(" ");
   const saysAdd = /\b(?:add|another|more)\b|เพิ่ม|อีก/i.test(stepWords);
   const saysUpTo = /\b(?:to|until)\b|ถึง|รวม/i.test(stepWords);
-  if (figures.length > 1 && (!rising || (saysAdd && !saysUpTo))) {
-    // Written as separate pours — add them up into the running total.
-    let sum = 0;
+  if (figures.length > 1 && rising && saysUpTo && !saysAdd) {
+    // Written as running totals — keep what each step actually pours.
+    let prev = 0;
     for (const step of steps) {
       const n = parseFloat(step.waterG);
       if (!Number.isFinite(n)) continue;
-      sum += n;
-      step.waterG = String(Math.round(sum * 10) / 10);
+      const added = Math.round((n - prev) * 10) / 10;
+      prev = n;
+      step.waterG = added > 0 ? String(added) : "";
     }
-    mark("poursSummed");
+    mark("totalsSplit");
   }
 
   /* ---- total time ---- */
@@ -236,9 +237,12 @@ export function parseRecipe(raw: string): ParsedRecipe {
   }
 
   if (!yieldG && figures.length) {
-    const top = steps.map((s) => parseFloat(s.waterG)).filter(Number.isFinite).pop();
-    if (top) {
-      yieldG = String(top);
+    const poured = steps
+      .map((s) => parseFloat(s.waterG))
+      .filter(Number.isFinite)
+      .reduce((a, b) => a + b, 0);
+    if (poured > 0) {
+      yieldG = String(Math.round(poured * 10) / 10);
       mark("yieldG");
     }
   }

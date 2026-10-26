@@ -11,6 +11,8 @@ import {
   grinderModelOf,
   grinderModels,
   ratioOf,
+  pourAt,
+  pourLabel,
   stepTimeLabel,
 } from "@/lib/types";
 import { brewFromTemplate, isBrewBlank, templateFor } from "@/lib/brewTemplates";
@@ -86,6 +88,16 @@ export default function BrewEditor({
       ...brew,
       steps: brew.steps.map((s) => (s.id === id ? { ...s, ...patch } : s)),
     });
+
+  /**
+   * What the scale reads once a step is poured, or "" when saying so would
+   * only repeat the box — nothing poured yet, or nothing poured before it.
+   */
+  const runningTotal = (i: number): string => {
+    const pour = pourAt(brew.steps, i);
+    return !pour || pour.added === pour.total ? "" : String(pour.total);
+  };
+  const hasRunningTotals = brew.steps.some((_, i) => runningTotal(i) !== "");
 
   const addStep = () => onChange({ ...brew, steps: [...brew.steps, emptyStep()] });
 
@@ -420,7 +432,7 @@ export default function BrewEditor({
                             <span className="font-mono text-muted">{i + 1}.</span>
                             <span className="flex-1">{step.text}</span>
                             <span className="font-mono text-muted">
-                              {[step.waterG && `${step.waterG} g`, stepTimeLabel(step)]
+                              {[pourLabel(parsed.steps, i), stepTimeLabel(step)]
                                 .filter(Boolean)
                                 .join("  ")}
                             </span>
@@ -429,7 +441,7 @@ export default function BrewEditor({
                       </ol>
                     )}
                     {parsed.found.includes("poursSummed") && (
-                      <p className="mt-1.5 text-muted">{tr("poursSummedNote")}</p>
+                      <p className="mt-1.5 text-muted">{tr("totalsSplitNote")}</p>
                     )}
                     <p className="mt-1.5 text-muted">{tr("pasteOverwrites")}</p>
                   </>
@@ -446,7 +458,9 @@ export default function BrewEditor({
                nothing and the text box becomes untypable. */
             <div
               key={step.id}
-              className="flex flex-wrap items-center gap-1.5 rounded-lg border border-line p-1.5 sm:border-0 sm:p-0"
+              className={`flex flex-wrap items-center gap-1.5 rounded-lg border border-line p-1.5 sm:border-0 sm:p-0 ${
+                hasRunningTotals ? "pb-5 sm:pb-4" : ""
+              }`}
             >
               <div className="flex min-w-0 basis-full items-center gap-1.5 sm:flex-1 sm:basis-0">
                 <span className="w-5 shrink-0 text-center font-mono text-xs text-muted">
@@ -475,14 +489,26 @@ export default function BrewEditor({
                 value={step.endAt}
                 onChange={(e) => setStep(step.id, { endAt: e.target.value })}
               />
-              <input
-                className="input w-16 shrink-0 text-center font-mono sm:w-20"
-                inputMode="decimal"
-                placeholder={tr("waterG")}
-                title={tr("waterHint")}
-                value={step.waterG}
-                onChange={(e) => setStep(step.id, { waterG: e.target.value })}
-              />
+              {/* The running total hangs under its own box rather than taking
+                  a column: six controls and a number do not fit a phone row. */}
+              <div className="relative shrink-0">
+                <input
+                  className="input w-16 text-center font-mono sm:w-20"
+                  inputMode="decimal"
+                  placeholder={tr("waterG")}
+                  title={tr("waterHint")}
+                  value={step.waterG}
+                  onChange={(e) => setStep(step.id, { waterG: e.target.value })}
+                />
+                {runningTotal(i) && (
+                  <span
+                    className="absolute inset-x-0 top-full pt-0.5 text-center font-mono text-[0.65rem] leading-none text-muted"
+                    title={tr("runningTotalHint")}
+                  >
+                    ({runningTotal(i)})
+                  </span>
+                )}
+              </div>
               <button
                 className="btn btn-ghost ml-auto px-1 sm:ml-0 sm:px-1.5"
                 title={tr("moveUp")}

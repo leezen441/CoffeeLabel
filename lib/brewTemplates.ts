@@ -37,9 +37,9 @@ export const BREW_TEMPLATES: Record<string, BrewTemplate> = {
     totalTime: "2:45",
     steps: [
       { text: "Bloom, swirl", startAt: "0:00", endAt: "0:45", waterG: "45" },
-      { text: "First pour", startAt: "0:45", endAt: "1:20", waterG: "150" },
-      { text: "Second pour", startAt: "1:20", endAt: "2:00", waterG: "250" },
-      { text: "Drawdown", startAt: "2:00", endAt: "2:45", waterG: "250" },
+      { text: "First pour", startAt: "0:45", endAt: "1:20", waterG: "105" },
+      { text: "Second pour", startAt: "1:20", endAt: "2:00", waterG: "100" },
+      { text: "Drawdown", startAt: "2:00", endAt: "2:45", waterG: "" },
     ],
   },
   Filter: {
@@ -49,8 +49,8 @@ export const BREW_TEMPLATES: Record<string, BrewTemplate> = {
     totalTime: "3:00",
     steps: [
       { text: "Bloom", startAt: "0:00", endAt: "0:45", waterG: "60" },
-      { text: "Fill", startAt: "0:45", endAt: "2:00", waterG: "320" },
-      { text: "Drawdown", startAt: "2:00", endAt: "3:00", waterG: "320" },
+      { text: "Fill", startAt: "0:45", endAt: "2:00", waterG: "260" },
+      { text: "Drawdown", startAt: "2:00", endAt: "3:00", waterG: "" },
     ],
   },
   Aeropress: {
@@ -60,9 +60,9 @@ export const BREW_TEMPLATES: Record<string, BrewTemplate> = {
     totalTime: "2:15",
     steps: [
       { text: "Add water, stir", startAt: "0:00", endAt: "0:20", waterG: "220" },
-      { text: "Steep", startAt: "0:20", endAt: "1:30", waterG: "220" },
-      { text: "Cap and flip", startAt: "1:30", endAt: "1:45", waterG: "220" },
-      { text: "Press", startAt: "1:45", endAt: "2:15", waterG: "220" },
+      { text: "Steep", startAt: "0:20", endAt: "1:30", waterG: "" },
+      { text: "Cap and flip", startAt: "1:30", endAt: "1:45", waterG: "" },
+      { text: "Press", startAt: "1:45", endAt: "2:15", waterG: "" },
     ],
   },
   "French Press": {
@@ -72,8 +72,8 @@ export const BREW_TEMPLATES: Record<string, BrewTemplate> = {
     totalTime: "4:30",
     steps: [
       { text: "Add water, stir", startAt: "0:00", endAt: "0:30", waterG: "350" },
-      { text: "Steep", startAt: "0:30", endAt: "4:00", waterG: "350" },
-      { text: "Plunge", startAt: "4:00", endAt: "4:30", waterG: "350" },
+      { text: "Steep", startAt: "0:30", endAt: "4:00", waterG: "" },
+      { text: "Plunge", startAt: "4:00", endAt: "4:30", waterG: "" },
     ],
   },
   "Moka Pot": {
@@ -84,7 +84,7 @@ export const BREW_TEMPLATES: Record<string, BrewTemplate> = {
     steps: [
       { text: "Heat until brew starts", startAt: "0:00", endAt: "0:45", waterG: "" },
       { text: "Brew", startAt: "0:45", endAt: "2:00", waterG: "90" },
-      { text: "Stop at first sputter", startAt: "2:00", endAt: "2:15", waterG: "90" },
+      { text: "Stop at first sputter", startAt: "2:00", endAt: "2:15", waterG: "" },
     ],
   },
   Chemex: {
@@ -94,10 +94,10 @@ export const BREW_TEMPLATES: Record<string, BrewTemplate> = {
     totalTime: "4:00",
     steps: [
       { text: "Bloom", startAt: "0:00", endAt: "0:45", waterG: "60" },
-      { text: "First pour", startAt: "0:45", endAt: "1:45", waterG: "250" },
-      { text: "Second pour", startAt: "1:45", endAt: "2:45", waterG: "400" },
-      { text: "Third pour", startAt: "2:45", endAt: "3:30", waterG: "500" },
-      { text: "Drawdown", startAt: "3:30", endAt: "4:00", waterG: "500" },
+      { text: "First pour", startAt: "0:45", endAt: "1:45", waterG: "190" },
+      { text: "Second pour", startAt: "1:45", endAt: "2:45", waterG: "150" },
+      { text: "Third pour", startAt: "2:45", endAt: "3:30", waterG: "100" },
+      { text: "Drawdown", startAt: "3:30", endAt: "4:00", waterG: "" },
     ],
   },
   "Cold Brew": {
@@ -107,7 +107,7 @@ export const BREW_TEMPLATES: Record<string, BrewTemplate> = {
     totalTime: "",
     steps: [
       { text: "Combine coffee and cold water", startAt: "", endAt: "", waterG: "640" },
-      { text: "Steep 12 hours, then filter", startAt: "", endAt: "", waterG: "640" },
+      { text: "Steep 12 hours, then filter", startAt: "", endAt: "", waterG: "" },
     ],
   },
   "Kalita Wave": {
@@ -117,10 +117,10 @@ export const BREW_TEMPLATES: Record<string, BrewTemplate> = {
     totalTime: "3:00",
     steps: [
       { text: "Bloom", startAt: "0:00", endAt: "0:45", waterG: "60" },
-      { text: "Pulse 1", startAt: "0:45", endAt: "1:20", waterG: "150" },
-      { text: "Pulse 2", startAt: "1:20", endAt: "2:00", waterG: "230" },
-      { text: "Pulse 3", startAt: "2:00", endAt: "2:30", waterG: "300" },
-      { text: "Drawdown", startAt: "2:30", endAt: "3:00", waterG: "300" },
+      { text: "Pulse 1", startAt: "0:45", endAt: "1:20", waterG: "90" },
+      { text: "Pulse 2", startAt: "1:20", endAt: "2:00", waterG: "80" },
+      { text: "Pulse 3", startAt: "2:00", endAt: "2:30", waterG: "70" },
+      { text: "Drawdown", startAt: "2:30", endAt: "3:00", waterG: "" },
     ],
   },
   Siphon: {
@@ -130,8 +130,8 @@ export const BREW_TEMPLATES: Record<string, BrewTemplate> = {
     totalTime: "1:45",
     steps: [
       { text: "Attach and stir", startAt: "0:00", endAt: "0:45", waterG: "300" },
-      { text: "Steep", startAt: "0:45", endAt: "1:15", waterG: "300" },
-      { text: "Draw down", startAt: "1:15", endAt: "1:45", waterG: "300" },
+      { text: "Steep", startAt: "0:45", endAt: "1:15", waterG: "" },
+      { text: "Draw down", startAt: "1:15", endAt: "1:45", waterG: "" },
     ],
   },
 };

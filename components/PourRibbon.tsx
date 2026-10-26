@@ -3,6 +3,7 @@
 import {
   type TimelineStep,
   type Palette,
+  pourAt,
   stepSpan,
 } from "@/lib/types";
 
@@ -24,7 +25,6 @@ export function timerRibbonBlocks(
   total: number,
 ): TimerRibbonBlock[] {
   const raw: TimerRibbonBlock[] = [];
-  let prevWater = 0;
 
   for (let i = 0; i < steps.length; i++) {
     const s = steps[i];
@@ -33,17 +33,14 @@ export function timerRibbonBlocks(
       start !== null && end !== null && end > start ? end - start : 0;
     if (duration <= 0) continue;
 
-    const totalG = parseFloat(s.waterG);
-    const hasWater = Number.isFinite(totalG) && totalG > 0;
-    const addedG = hasWater ? Math.max(0, totalG - prevWater) : 0;
-    if (hasWater) prevWater = totalG;
+    const pour = pourAt(steps, i);
 
     raw.push({
       id: s.id,
       text: s.text,
       at: s.raw,
-      addedG,
-      totalG: hasWater ? totalG : 0,
+      addedG: pour?.added ?? 0,
+      totalG: pour?.total ?? 0,
       start,
       end,
       duration,
