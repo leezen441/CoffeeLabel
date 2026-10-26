@@ -43,10 +43,6 @@ export default function LibraryPage() {
   /** open "move to group" popover, anchored to the card's tag button */
   /** The library of bags, or everything brewable on one page. */
   const [view, setView] = useState<"library" | "brew">("library");
-  /** Which card's "start a brew" menu is open, and where to hang it. */
-  const [brewMenu, setBrewMenu] = useState<
-    { label: CoffeeLabel; x: number; y: number } | null
-  >(null);
   const [menu, setMenu] = useState<{ label: CoffeeLabel; x: number; y: number } | null>(
     null,
   );
@@ -73,15 +69,13 @@ export default function LibraryPage() {
   }, [refresh]);
 
   useEffect(() => {
-    if (!menu && !brewMenu) return;
+    if (!menu) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setMenu(null);
-      setBrewMenu(null);
+      if (e.key === "Escape") setMenu(null);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [menu, brewMenu]);
+  }, [menu]);
 
   const groupOf = useCallback(
     (l: CoffeeLabel) => l.groupId || UNGROUPED,
@@ -442,19 +436,9 @@ export default function LibraryPage() {
               // Named methods, for the chips under the sticker. An unnamed one
               // has nothing to put on a chip, so it is reached by the sticker.
               const named = label.brews.filter((b) => b.name.trim());
-              // Only a method with steps can be counted down.
-              const timeable = label.brews.filter((b) => b.steps.some((s) => s.text.trim()));
               const thumbCls = `block w-full bg-card ${
                 restMeta ? "pt-11" : "pt-4"
               } pb-4 pl-4 pr-2 text-left`;
-              const greenIfMethods = hasMethods
-                ? {
-                    // Green once the label has a method to brew.
-                    color: "#2E6B4B",
-                    borderColor: "#2E6B4B",
-                    background: "rgb(46 107 75 / 0.1)",
-                  }
-                : undefined;
               const thumb = (
                 <StickerScaler
                   label={label}
@@ -553,44 +537,6 @@ export default function LibraryPage() {
                   >
                     <PrinterIcon />
                   </Link>
-                  {/* Straight to the countdown. One method needs no choosing;
-                      several open a menu to pick from. */}
-                  {timeable.length === 1 ? (
-                    <Link
-                      href={`/b/${label.id}?brew=${timeable[0].id}&timer=1`}
-                      prefetch
-                      title={tr("startABrew")}
-                      aria-label={`Brew timer for ${labelTitle(label)}`}
-                      className={ACTION_CLS}
-                      style={greenIfMethods}
-                    >
-                      <TimerIcon />
-                    </Link>
-                  ) : timeable.length > 1 ? (
-                    <button
-                      type="button"
-                      title={tr("startABrew")}
-                      aria-label={`Brew timer for ${labelTitle(label)}`}
-                      className={ACTION_CLS}
-                      style={greenIfMethods}
-                      onClick={(e) => {
-                        const r = e.currentTarget.getBoundingClientRect();
-                        setBrewMenu({ label, x: r.left - 6, y: r.top });
-                      }}
-                    >
-                      <TimerIcon />
-                    </button>
-                  ) : (
-                    <Link
-                      href={`/b/${label.id}`}
-                      prefetch
-                      title={tr("brewTimer")}
-                      aria-label={`Brew timer for ${labelTitle(label)}`}
-                      className={ACTION_CLS}
-                    >
-                      <TimerIcon />
-                    </Link>
-                  )}
                   <Link
                     href={`/editor/${label.id}`}
                     prefetch
@@ -679,42 +625,6 @@ export default function LibraryPage() {
           </footer>
         )}
       </main>
-
-      {brewMenu && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setBrewMenu(null)}
-            aria-hidden="true"
-          />
-          <div
-            role="menu"
-            className="panel fixed z-50 max-h-80 w-56 max-w-[calc(100vw-2rem)] overflow-y-auto py-1 shadow-lg"
-            style={{ left: brewMenu.x, top: brewMenu.y, transform: "translateX(-100%)" }}
-          >
-            <p className="truncate px-3 py-1.5 text-xs text-muted">
-              {tr("startABrew")}
-            </p>
-            {brewMenu.label.brews
-              .filter((b) => b.steps.some((s) => s.text.trim()))
-              .map((b, i) => (
-                <Link
-                  key={b.id}
-                  role="menuitem"
-                  href={`/b/${brewMenu.label.id}?brew=${b.id}&timer=1`}
-                  prefetch
-                  onClick={() => setBrewMenu(null)}
-                  className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-brand-soft"
-                >
-                  <span className="shrink-0 text-brand">▶</span>
-                  <span className="truncate">
-                    {b.name.trim() || `${tr("methodWord")} ${i + 1}`}
-                  </span>
-                </Link>
-              ))}
-          </div>
-        </>
-      )}
 
       {menu && (
         <>
@@ -925,15 +835,6 @@ function ZoomIcon() {
   );
 }
 
-function TimerIcon() {
-  return (
-    <Svg>
-      <circle cx="12" cy="13.5" r="8" />
-      <path d="M12 9.5v4l2.5 1.8" />
-      <path d="M9.5 2.5h5" />
-    </Svg>
-  );
-}
 
 function PrinterIcon() {
   return (

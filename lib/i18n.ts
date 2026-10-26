@@ -105,8 +105,6 @@ const DICT = {
   del: { en: "Delete", th: "ลบ" },
   brewGuide: { en: "Brew guide", th: "วิธีชง" },
   editMethods: { en: "Edit methods", th: "แก้ไขวิธีชง" },
-  brewTimer: { en: "Brew timer", th: "จับเวลาชง" },
-  startABrew: { en: "Start a brew", th: "เริ่มชง" },
   library: { en: "Library", th: "คลังกาแฟ" },
   editorWord: { en: "Editor", th: "หน้าแก้ไข" },
   saveImage: { en: "Save image", th: "บันทึกรูป" },
