@@ -408,7 +408,10 @@ export default function LibraryPage() {
               const hasMethods = label.brews.some(
                 (b) => b.name.trim() || b.steps.some((st) => st.text.trim()),
               );
-              const thumbCls = `block min-w-0 flex-1 bg-card ${
+              // Named methods, for the chips under the sticker. An unnamed one
+              // has nothing to put on a chip, so it is reached by the sticker.
+              const named = label.brews.filter((b) => b.name.trim());
+              const thumbCls = `block w-full bg-card ${
                 restMeta ? "pt-11" : "pt-4"
               } pb-4 pl-4 pr-2 text-left`;
               const thumb = (
@@ -429,6 +432,7 @@ export default function LibraryPage() {
                 {/* A row, not an overlay: a sparse label made the card shorter
                     than the rail, and overflow-hidden cut the last icons off. */}
                 <div className="flex items-start">
+                <div className="flex min-w-0 flex-1 flex-col self-stretch">
                 {/* The biggest thing on the card leads to what you open it
                     for: the recipe, once there is one. Until then there is
                     nothing to brew, so it still opens the sticker large. */}
@@ -456,6 +460,23 @@ export default function LibraryPage() {
                     {thumb}
                   </button>
                 )}
+                {/* One tap from the library to the recipe you meant, in the
+                    space the taller action rail leaves under the sticker. */}
+                {named.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pb-3 pl-4 pr-2">
+                    {named.map((b) => (
+                      <Link
+                        key={b.id}
+                        href={`/b/${label.id}?brew=${b.id}`}
+                        prefetch
+                        className="max-w-full truncate rounded-full border border-line bg-card px-3 py-1 text-xs font-semibold text-muted transition hover:border-brand hover:text-brand"
+                      >
+                        {b.name.trim()}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+                </div>
 
                 {restMeta && (
                   <span
