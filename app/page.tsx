@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import StickerScaler from "@/components/StickerScaler";
 import StickerViewer from "@/components/StickerViewer";
+import BrewNow from "@/components/BrewNow";
 import { sampleLabel } from "@/lib/sample";
 import * as store from "@/lib/store";
 import type { StorageMode } from "@/lib/store";
@@ -40,6 +41,8 @@ export default function LibraryPage() {
   const [busy, setBusy] = useState(false);
   const [viewing, setViewing] = useState<CoffeeLabel | null>(null);
   /** open "move to group" popover, anchored to the card's tag button */
+  /** The library of bags, or everything brewable on one page. */
+  const [view, setView] = useState<"library" | "brew">("library");
   /** Which card's "start a brew" menu is open, and where to hang it. */
   const [brewMenu, setBrewMenu] = useState<
     { label: CoffeeLabel; x: number; y: number } | null
@@ -289,6 +292,25 @@ export default function LibraryPage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-5 py-6">
+        {/* Two ways to look at the same bags: by bag, or by what you could
+            brew from them right now. */}
+        <div className="mb-4 flex flex-wrap gap-2">
+          {(["library", "brew"] as const).map((v) => (
+            <button
+              key={v}
+              className={`btn text-xs ${view === v ? "btn-primary" : "btn-ghost"}`}
+              aria-pressed={view === v}
+              onClick={() => setView(v)}
+            >
+              {v === "library" ? tr("viewLibrary") : tr("viewBrewNow")}
+            </button>
+          ))}
+        </div>
+
+        {labels && view === "brew" && <BrewNow labels={labels} />}
+
+        {view === "library" && (
+          <>
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <input
             className="input max-w-xs"
@@ -382,9 +404,12 @@ export default function LibraryPage() {
           </div>
         )}
 
+          </>
+        )}
+
         {labels === null && <p className="text-sm text-muted">{tr("loading")}</p>}
 
-        {labels && labels.length === 0 && (
+        {labels && labels.length === 0 && view === "library" && (
           <div className="panel flex flex-col items-center gap-4 px-6 py-16 text-center">
             <Logo big />
             <div>
@@ -404,7 +429,7 @@ export default function LibraryPage() {
           </div>
         )}
 
-        {labels && labels.length > 0 && (
+        {labels && labels.length > 0 && view === "library" && (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((label) => {
               const rest = restStatus(label);

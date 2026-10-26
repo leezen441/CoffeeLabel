@@ -60,6 +60,17 @@ const DICT = {
   labelsWord: { en: "labels", th: "รายการ" },
   all: { en: "All", th: "ทั้งหมด" },
   drinkingNow: { en: "Drinking now", th: "ดื่มได้เลย" },
+  viewLibrary: { en: "Library", th: "คลังกาแฟ" },
+  viewBrewNow: { en: "Brew now", th: "ชงตอนนี้" },
+  outsidePeak: { en: "Outside the peak window", th: "นอกช่วงดีที่สุด" },
+  nothingInPeak: {
+    en: "Nothing is in its peak window",
+    th: "ตอนนี้ยังไม่มีถุงไหนอยู่ช่วงดีที่สุด",
+  },
+  brewNowEmpty: {
+    en: "No bag has a recipe with steps yet — add one from a label's Brew methods.",
+    th: "ยังไม่มีถุงไหนที่มีสูตรพร้อมขั้นตอน — เพิ่มได้จาก Brew methods ของแต่ละถุง",
+  },
   resting: { en: "Resting", th: "กำลังพัก" },
   pastPeak: { en: "Past peak", th: "เลยช่วงดีแล้ว" },
   ungrouped: { en: "Ungrouped", th: "ยังไม่จัดกลุ่ม" },
