@@ -6,6 +6,8 @@ import BrewLog from "./BrewLog";
 import BrewTimer, { unlockTimerAudio } from "./BrewTimer";
 import LangToggle from "./LangToggle";
 import PeakStatus from "./PeakStatus";
+import { useBackTarget } from "./BackToHome";
+import { lastMethod, rememberMethod } from "@/lib/lastMethod";
 import StickerScaler from "./StickerScaler";
 import { makeT, useLang } from "@/lib/i18n";
 import * as store from "@/lib/store";
@@ -29,22 +31,38 @@ import {
 export default function BrewGuide({
   id,
   initialBrew,
+  from,
 }: {
   id: string;
   initialBrew: string | null;
+  from: string | null;
 }) {
   // Opened from the library, the label is already in hand: draw it now.
   const [label, setLabel] = useState<CoffeeLabel | null>(() => store.cachedLabel(id));
   const [state, setState] = useState<"ready" | "loading" | "missing">(() =>
     store.cachedLabel(id) ? "ready" : "loading",
   );
-  /** The method on screen, by id, so it survives a round trip to the editor. */
-  const [activeId, setActiveId] = useState<string | null>(initialBrew);
+  /**
+   * The method on screen, by id, so it survives a round trip to the editor.
+   * Without one in the URL it is whichever was picked here last, because a bag
+   * is usually brewed the same way twice.
+   */
+  const [activeId, setActiveId] = useState<string | null>(
+    () => initialBrew ?? lastMethod(id),
+  );
   const [timing, setTiming] = useState<BrewMethod | null>(null);
   const [factor, setFactor] = useState(1);
   const lang = useLang();
   const tr = makeT(lang);
   const origin = useOrigin();
+
+  /**
+   * Opened from the editor, Back returns there rather than to the library —
+   * the button used to open a new tab, which kept the editor for you.
+   */
+  const fromEditor = from === "editor";
+  const backHref = fromEditor ? `/editor/${id}?view=brews` : "/";
+  useBackTarget(fromEditor ? backHref : null);
 
   // Always refresh from the server: the cached copy may be minutes old.
   useEffect(() => {
@@ -135,7 +153,10 @@ export default function BrewGuide({
               {brews.map((b, i) => (
                 <button
                   key={b.id}
-                  onClick={() => setActiveId(b.id)}
+                  onClick={() => {
+                    setActiveId(b.id);
+                    rememberMethod(label.id, b.id);
+                  }}
                   className="rounded-full px-4 py-2 text-sm font-semibold transition"
                   style={{
                     background: i === active ? theme.accent : "transparent",
@@ -275,8 +296,8 @@ export default function BrewGuide({
           <Link href={`/print/${label.id}`} prefetch className="btn">
             {tr("print")}
           </Link>
-          <Link href="/" className="btn btn-ghost">
-            {tr("library")}
+          <Link href={backHref} prefetch className="btn btn-ghost">
+            {fromEditor ? tr("editorWord") : tr("library")}
           </Link>
         </div>
       </div>

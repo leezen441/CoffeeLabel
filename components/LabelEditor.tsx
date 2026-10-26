@@ -224,7 +224,9 @@ export default function LabelEditor({ id }: { id: string }) {
           </h1>
           <LangToggle />
           <SaveIndicator state={saveState} tr={tr} />
-          <Link href={`/b/${label.id}`} className="btn" target="_blank">
+          {/* Same tab, not a new one. `from=editor` sends Back here rather
+              than to the library, which a new tab used to take care of. */}
+          <Link href={`/b/${label.id}?from=editor`} prefetch className="btn">
             {tr("brewGuide")}
           </Link>
           <select
