@@ -53,11 +53,15 @@ const FIELD_KEYS: { field: keyof ScanResult | "roastWord"; src: string }[] = [
 /** The key, wherever it sits, and whatever follows it on the line. */
 function keyMatch(line: string, src: string): RegExpExecArray | null {
   // A colon is the usual separator, a semicolon is a misread one, and a wide
-  // gap is what is left when OCR drops the punctuation altogether.
-  return new RegExp(
+  // gap is what is left when a label sets its keys in a column.
+  const clear = new RegExp(
     String.raw`(?:^|[^A-Za-z])(?:${src})\s*(?:[:;：]\s*|\s{2,})(.*)$`,
     "i",
   ).exec(line);
+  if (clear) return clear;
+  // OCR reads a column gap as a single space, which on its own would make
+  // any sentence a field, so a value has to be long enough to be one.
+  return new RegExp(String.raw`(?:^|[^A-Za-z])(?:${src})\s+(.{4,})$`, "i").exec(line);
 }
 
 /** Is this line one of the labelled fields, under any amount of OCR noise? */
@@ -323,6 +327,16 @@ export function parseLabelText(lines: ScannedLine[], today = new Date()): ScanRe
         // A title is words. OCR noise is symbols and one-letter fragments, and
         // a wrong name is worse than none, so anything scruffy is left out.
         r.text.split(/\s+/).length <= 4 &&
+        // One proper word at least: "GEE Een ER EER" is noise that happens
+        // to be spellable, and a wrong name is worse than none.
+        dequote(r.text)
+          .split(/\s+/)
+          .some((word) => /^[A-Za-z]{4,}$/.test(word) && /[aeiouy]/i.test(word)) &&
+        // Words have vowels. "YHI | NVN" is "NAN | THAILAND" upside down.
+        dequote(r.text)
+          .split(/\s+/)
+          .filter((word) => word.length >= 3)
+          .every((word) => /[aeiouy]/i.test(word)) &&
         // Real titles are made of real words. "B hoe Ne eo" is four letter
         // groups that happen to be letters, and is not a name.
         (dequote(r.text).split(/\s+/).filter((w) => w.length >= 3).length >= 2 ||
@@ -353,4 +367,47 @@ export function parseLabelText(lines: ScannedLine[], today = new Date()): ScanRe
   if (!out.roastDate) out.unsure.push("roast date");
 
   return out;
+}
+
+/** How much of a label a reading actually filled in. */
+export function filledFields(r: ScanResult): number {
+  return (
+    [r.roaster, r.coffeeName, r.variety, r.origin, r.altitude, r.netWeight, r.roastDate].filter(
+      (v) => v.trim(),
+    ).length +
+    (r.processes.length ? 1 : 0) +
+    (r.tastingNotes.length ? 1 : 0) +
+    (r.roastLevel ? 1 : 0) +
+    (r.restFrom || r.restTo ? 1 : 0)
+  );
+}
+
+/**
+ * Two readings of the same bag, taken together. A cropped read is cleaner, so
+ * it wins any field both of them found; the wider one is there to supply the
+ * fields the crop cut off.
+ */
+export function mergeScans(first: ScanResult, second: ScanResult): ScanResult {
+  const text = (a: string, b: string) => (a.trim() ? a : b);
+  const merged: ScanResult = {
+    // Not the name or the roaster: those are the biggest print on the label,
+    // so if the crop could not read them the wider, noisier frame will only
+    // offer something that looks like words.
+    roaster: first.roaster,
+    coffeeName: first.coffeeName,
+    variety: text(first.variety, second.variety),
+    origin: text(first.origin, second.origin),
+    processes: first.processes.length ? first.processes : second.processes,
+    altitude: text(first.altitude, second.altitude),
+    roastLevel: first.roastLevel || second.roastLevel,
+    roastDate: text(first.roastDate, second.roastDate),
+    netWeight: text(first.netWeight, second.netWeight),
+    tastingNotes: first.tastingNotes.length ? first.tastingNotes : second.tastingNotes,
+    restFrom: first.restFrom || second.restFrom,
+    restTo: first.restTo || second.restTo,
+    unsure: [],
+  };
+  // Only still unsure about what neither reading managed.
+  merged.unsure = first.unsure.filter((u) => second.unsure.includes(u));
+  return merged;
 }
