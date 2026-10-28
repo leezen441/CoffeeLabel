@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import StickerScaler from "@/components/StickerScaler";
 import StickerViewer from "@/components/StickerViewer";
-import BrewNow from "@/components/BrewNow";
 import ScanLabel from "@/components/ScanLabel";
 import { rememberCorrections, stashScan } from "@/lib/scanMemory";
 import type { ScanResult } from "@/lib/scanRules";
@@ -22,6 +21,7 @@ import {
   type LabelGroup,
   type RestStatus,
   REST_STATUS_META,
+  ROAST_LEVELS,
   emptyGroup,
   labelTitle,
   restStatus,
@@ -44,8 +44,6 @@ export default function LibraryPage() {
   const [busy, setBusy] = useState(false);
   const [viewing, setViewing] = useState<CoffeeLabel | null>(null);
   /** open "move to group" popover, anchored to the card's tag button */
-  /** The library of bags, or everything brewable on one page. */
-  const [view, setView] = useState<"library" | "brew">("library");
   const [menu, setMenu] = useState<{ label: CoffeeLabel; x: number; y: number } | null>(
     null,
   );
@@ -106,20 +104,52 @@ export default function LibraryPage() {
    *   scope  — restricts the text search to one group
    *   query  — the text itself
    */
+  /**
+   * Everything written on a label, as one lowercase string to search. The
+   * brew methods are in it too: the grinder you use for a bag is as good a
+   * way to find it as its name.
+   */
+  const searchText = useCallback(
+    (l: CoffeeLabel) =>
+      [
+        l.coffeeName,
+        l.roaster,
+        l.variety,
+        l.origin,
+        l.altitude,
+        l.netWeight,
+        l.roastDate,
+        ROAST_LEVELS[l.roastLevel]?.name ?? "",
+        groups.find((g) => g.id === l.groupId)?.name ?? "",
+        ...l.processes,
+        ...l.tastingNotes,
+        ...l.brews.flatMap((b) => [
+          b.name,
+          b.grinderBrand,
+          b.grinderModel,
+          ...b.steps.map((step) => step.text),
+        ]),
+      ]
+        .join(" ")
+        .toLowerCase(),
+    [groups],
+  );
+
   const filtered = useMemo(() => {
     if (!labels) return [];
-    const q = query.trim().toLowerCase();
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
     return labels.filter((l) => {
       if (active.size > 0 && !active.has(groupOf(l))) return false;
       if (scope && l.groupId !== scope) return false;
       if (ready !== "all" && restStatus(l).status !== ready) return false;
-      if (!q) return true;
-      return [l.coffeeName, l.roaster, l.variety, l.origin, ...l.processes, ...l.tastingNotes]
-        .join(" ")
-        .toLowerCase()
-        .includes(q);
+      if (words.length === 0) return true;
+      // Every word has to appear somewhere on the label, in any order and in
+      // any field: "kenya washed" finds the washed Kenyan, and so does
+      // "washed kenya".
+      const hay = searchText(l);
+      return words.every((word) => hay.includes(word));
     });
-  }, [labels, query, active, scope, ready, groupOf]);
+  }, [labels, query, active, scope, ready, groupOf, searchText]);
 
   const readyCounts = useMemo(() => {
     const m = { peak: 0, resting: 0, past: 0 };
@@ -306,25 +336,6 @@ export default function LibraryPage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-5 py-6">
-        {/* Two ways to look at the same bags: by bag, or by what you could
-            brew from them right now. */}
-        <div className="mb-4 flex flex-wrap gap-2">
-          {(["library", "brew"] as const).map((v) => (
-            <button
-              key={v}
-              className={`btn text-xs ${view === v ? "btn-primary" : "btn-ghost"}`}
-              aria-pressed={view === v}
-              onClick={() => setView(v)}
-            >
-              {v === "library" ? tr("viewLibrary") : tr("viewBrewNow")}
-            </button>
-          ))}
-        </div>
-
-        {labels && view === "brew" && <BrewNow labels={labels} />}
-
-        {view === "library" && (
-          <>
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <input
             className="input max-w-xs"
@@ -418,12 +429,9 @@ export default function LibraryPage() {
           </div>
         )}
 
-          </>
-        )}
-
         {labels === null && <p className="text-sm text-muted">{tr("loading")}</p>}
 
-        {labels && labels.length === 0 && view === "library" && (
+        {labels && labels.length === 0 && (
           <div className="panel flex flex-col items-center gap-4 px-6 py-16 text-center">
             <Logo big />
             <div>
@@ -443,7 +451,7 @@ export default function LibraryPage() {
           </div>
         )}
 
-        {labels && labels.length > 0 && view === "library" && (
+        {labels && labels.length > 0 && (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((label) => {
               const rest = restStatus(label);
