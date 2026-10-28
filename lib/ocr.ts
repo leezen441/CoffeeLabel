@@ -92,7 +92,14 @@ async function readOnce(worker: Worker, canvas: HTMLCanvasElement): Promise<Read
 }
 
 export type OcrOutcome =
-  | { ok: true; result: ScanResult; confidence: number; text: string }
+  | {
+      ok: true;
+      result: ScanResult;
+      confidence: number;
+      text: string;
+      /** the rotation that read best, so the photo can be shown upright */
+      turn: 0 | 90 | 180 | 270;
+    }
   | { ok: false; error: "unreadable" | "failed" };
 
 /**
@@ -139,6 +146,7 @@ export async function readLabelLocally(
       result: parseLabelText(lines),
       confidence: Math.max(full.confidence, best.read.confidence),
       text,
+      turn: best.turn,
     };
   } catch {
     return { ok: false, error: "failed" };

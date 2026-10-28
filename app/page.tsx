@@ -7,7 +7,7 @@ import StickerScaler from "@/components/StickerScaler";
 import StickerViewer from "@/components/StickerViewer";
 import BrewNow from "@/components/BrewNow";
 import ScanLabel from "@/components/ScanLabel";
-import { stashScan } from "@/lib/scanMemory";
+import { rememberCorrections, stashScan } from "@/lib/scanMemory";
 import type { ScanResult } from "@/lib/scanRules";
 import { sampleLabel } from "@/lib/sample";
 import * as store from "@/lib/store";
@@ -225,6 +225,9 @@ export default function LibraryPage() {
     setBusy(true);
     try {
       await store.saveLabel(label);
+      // Anything corrected on the review screen is a correction already.
+      rememberCorrections(scan, label);
+      // Kept so later fixes in the editor count too.
       stashScan(label.id, scan);
       router.push(`/editor/${label.id}`);
     } finally {

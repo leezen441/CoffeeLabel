@@ -2,11 +2,24 @@
 
 import { useRef, useState } from "react";
 import { makeT, useLang } from "@/lib/i18n";
-import { type ScanError, labelFromScan, scanLabelImage, shrinkImage } from "@/lib/scan";
+import {
+  type ScanError,
+  labelFromScan,
+  scanLabelImage,
+  rotateImage,
+  shrinkImage,
+  thumbnail,
+} from "@/lib/scan";
 import { correctionHints } from "@/lib/scanMemory";
 import { readLabelLocally } from "@/lib/ocr";
 import type { ScanResult } from "@/lib/scanRules";
-import { type CoffeeLabel, ROAST_LEVELS, formatWeight, processText } from "@/lib/types";
+import {
+  type CoffeeLabel,
+  type RoastLevel,
+  MAX_PROCESSES,
+  ROAST_LEVELS,
+  clampMm,
+} from "@/lib/types";
 
 /** Which reader produced a result, so the screen can say what to expect. */
 type Via = "claude" | "device";
@@ -15,23 +28,37 @@ type Stage =
   | { at: "idle" }
   | { at: "working"; via: Via; progress: number }
   | { at: "failed"; error: ScanError }
-  | { at: "review"; scan: ScanResult; label: CoffeeLabel; via: Via };
+  | {
+      at: "review";
+      /** what was read, kept as it was so corrections can be measured */
+      scan: ScanResult;
+      /** what will be saved, which is the reading plus whatever you fix here */
+      draft: CoffeeLabel;
+      /** a small copy of the photo, for checking against; never stored */
+      photo: string;
+      via: Via;
+    };
 
 /**
  * Photograph a bag, get a label. The reading is never saved straight away —
- * it is shown first, because a misread roast date is worse than no roast date.
+ * it is shown first, next to the photo and open to correction, because a
+ * misread roast date is worse than no roast date.
  */
 export default function ScanLabel({
   onUse,
   busy,
 }: {
-  /** The scan the person accepted, plus what was read, for the corrections log. */
+  /** The label to save, and the raw reading, for the corrections log. */
   onUse: (label: CoffeeLabel, scan: ScanResult) => void;
   busy?: boolean;
 }) {
   const tr = makeT(useLang());
   const [stage, setStage] = useState<Stage>({ at: "idle" });
   const file = useRef<HTMLInputElement>(null);
+
+  /** Change one field of the draft, leaving the reading it came from alone. */
+  const edit = (patch: Partial<CoffeeLabel>) =>
+    setStage((s) => (s.at === "review" ? { ...s, draft: { ...s.draft, ...patch } } : s));
 
   /**
    * Claude reads the photo when the deployment has a key. Without one it is
@@ -41,13 +68,14 @@ export default function ScanLabel({
   async function read(chosen: File) {
     setStage({ at: "working", via: "claude", progress: 0 });
     try {
-      const photo = await shrinkImage(chosen);
+      const [photo, small] = await Promise.all([shrinkImage(chosen), thumbnail(chosen)]);
       const res = await scanLabelImage(photo, correctionHints());
       if (res.ok) {
         setStage({
           at: "review",
           scan: res.result,
-          label: labelFromScan(res.result),
+          draft: labelFromScan(res.result),
+          photo: small,
           via: "claude",
         });
         return;
@@ -68,7 +96,9 @@ export default function ScanLabel({
       setStage({
         at: "review",
         scan: local.result,
-        label: labelFromScan(local.result),
+        draft: labelFromScan(local.result),
+        // The reader already worked out which way up the bag was.
+        photo: local.turn === 0 ? small : await rotateImage(small, local.turn),
         via: "device",
       });
     } catch {
@@ -106,7 +136,7 @@ export default function ScanLabel({
           <div
             role="dialog"
             aria-modal="true"
-            className="panel fixed inset-x-4 top-[6vh] z-50 mx-auto max-h-[88vh] max-w-lg overflow-y-auto p-5"
+            className="panel fixed inset-x-4 top-[5vh] z-50 mx-auto max-h-[90vh] max-w-lg overflow-y-auto p-5"
           >
             {stage.at === "working" && (
               <>
@@ -148,35 +178,146 @@ export default function ScanLabel({
                   {stage.via === "device" ? tr("scanOnDeviceRead") : tr("scanReviewHint")}
                 </p>
 
-                <dl className="mt-4 flex flex-col gap-1.5 text-sm">
-                  <Row name={tr("fRoaster")} value={stage.label.roaster} />
-                  <Row name={tr("fCoffeeName")} value={stage.label.coffeeName} />
-                  <Row name={tr("fOrigin")} value={stage.label.origin} />
-                  <Row name={tr("fVariety")} value={stage.label.variety} />
-                  <Row name={tr("fProcess")} value={processText(stage.label)} />
-                  <Row name={tr("fAltitude")} value={stage.label.altitude} />
-                  {/* The label's own default is Medium, which would read as
-                      a confident answer for something nothing was read for. */}
-                  <Row
-                    name={tr("fRoastLevel")}
-                    value={
-                      stage.scan.roastLevel >= 1 && stage.scan.roastLevel <= 5
-                        ? ROAST_LEVELS[stage.label.roastLevel].name
-                        : ""
-                    }
+                {/* The bag, to read the fields against. It is held here only
+                    while this dialog is open; no photo is ever saved. */}
+                <div className="relative mt-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={stage.photo}
+                    alt={tr("scanPhotoAlt")}
+                    className="max-h-44 w-full rounded-xl border border-line object-contain"
                   />
-                  <Row name={tr("fRoastDate")} value={stage.label.roastDate} />
-                  <Row name={tr("fNetWeight")} value={formatWeight(stage.label.netWeight)} />
-                  <Row name={tr("secNotes")} value={stage.label.tastingNotes.join(", ")} />
-                  <Row
-                    name={tr("fRestWindow")}
-                    value={
-                      stage.label.restFrom || stage.label.restTo
-                        ? `${stage.label.restFrom}–${stage.label.restTo} ${tr("dayMany")}`
-                        : ""
-                    }
-                  />
-                </dl>
+                  <button
+                    type="button"
+                    className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-card text-muted shadow-sm hover:border-brand hover:text-brand"
+                    title={tr("scanRotate")}
+                    aria-label={tr("scanRotate")}
+                    onClick={async () => {
+                      const turned = await rotateImage(stage.photo, 90);
+                      setStage((st) =>
+                        st.at === "review" ? { ...st, photo: turned } : st,
+                      );
+                    }}
+                  >
+                    ⟳
+                  </button>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3">
+                  <Field label={tr("fRoaster")}>
+                    <input
+                      className="input"
+                      value={stage.draft.roaster}
+                      onChange={(e) => edit({ roaster: e.target.value })}
+                    />
+                  </Field>
+                  <Field label={tr("fCoffeeName")}>
+                    <input
+                      className="input"
+                      value={stage.draft.coffeeName}
+                      onChange={(e) => edit({ coffeeName: e.target.value })}
+                    />
+                  </Field>
+                  <Field label={tr("fOrigin")}>
+                    <input
+                      className="input"
+                      value={stage.draft.origin}
+                      onChange={(e) => edit({ origin: e.target.value })}
+                    />
+                  </Field>
+                  <Field label={tr("fVariety")}>
+                    <input
+                      className="input"
+                      value={stage.draft.variety}
+                      onChange={(e) => edit({ variety: e.target.value })}
+                    />
+                  </Field>
+                  <Field label={tr("fProcess")} hint={tr("scanCommaHint")}>
+                    <input
+                      className="input"
+                      value={stage.draft.processes.join(", ")}
+                      onChange={(e) =>
+                        edit({
+                          processes: splitCommas(e.target.value).slice(0, MAX_PROCESSES),
+                        })
+                      }
+                    />
+                  </Field>
+                  <Field label={tr("fAltitude")}>
+                    <input
+                      className="input"
+                      value={stage.draft.altitude}
+                      onChange={(e) => edit({ altitude: e.target.value })}
+                    />
+                  </Field>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label={tr("fRoastLevel")}>
+                      <select
+                        className="select"
+                        value={stage.draft.roastLevel}
+                        onChange={(e) =>
+                          edit({ roastLevel: Number(e.target.value) as RoastLevel })
+                        }
+                      >
+                        {([1, 2, 3, 4, 5] as RoastLevel[]).map((n) => (
+                          <option key={n} value={n}>
+                            {ROAST_LEVELS[n].name}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label={tr("fRoastDate")}>
+                      <input
+                        type="date"
+                        className="input"
+                        value={stage.draft.roastDate}
+                        onChange={(e) => edit({ roastDate: e.target.value })}
+                      />
+                    </Field>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <Field label={tr("fNetWeight")}>
+                      <input
+                        className="input"
+                        inputMode="decimal"
+                        value={stage.draft.netWeight}
+                        onChange={(e) =>
+                          edit({ netWeight: e.target.value.replace(/[^\d.]/g, "") })
+                        }
+                      />
+                    </Field>
+                    <Field label={tr("fRestFrom")}>
+                      <input
+                        className="input"
+                        inputMode="numeric"
+                        value={stage.draft.restFrom || ""}
+                        onChange={(e) =>
+                          edit({ restFrom: clampMm(Number(e.target.value), 0) || 0 })
+                        }
+                      />
+                    </Field>
+                    <Field label={tr("fRestTo")}>
+                      <input
+                        className="input"
+                        inputMode="numeric"
+                        value={stage.draft.restTo || ""}
+                        onChange={(e) =>
+                          edit({ restTo: clampMm(Number(e.target.value), 0) || 0 })
+                        }
+                      />
+                    </Field>
+                  </div>
+
+                  <Field label={tr("secNotes")} hint={tr("scanCommaHint")}>
+                    <input
+                      className="input"
+                      value={stage.draft.tastingNotes.join(", ")}
+                      onChange={(e) => edit({ tastingNotes: splitCommas(e.target.value) })}
+                    />
+                  </Field>
+                </div>
 
                 {stage.scan.unsure.length > 0 && (
                   <p className="mt-3 text-xs" style={{ color: "var(--danger)" }}>
@@ -189,8 +330,9 @@ export default function ScanLabel({
                     className="btn btn-primary"
                     disabled={busy}
                     onClick={() => {
+                      const { draft, scan } = stage;
                       close();
-                      onUse(stage.label, stage.scan);
+                      onUse(draft, scan);
                     }}
                   >
                     {tr("scanUse")}
@@ -211,14 +353,34 @@ export default function ScanLabel({
   );
 }
 
-function Row({ name, value }: { name: string; value: string }) {
+function splitCommas(v: string): string[] {
+  return v
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex gap-3 border-b border-line pb-1.5 last:border-0">
-      <dt className="w-32 shrink-0 text-xs font-bold uppercase tracking-[0.08em] text-muted">
-        {name}
-      </dt>
-      <dd className={`min-w-0 flex-1 ${value ? "" : "text-muted"}`}>{value || "—"}</dd>
-    </div>
+    <label className="field">
+      <span>
+        {label}
+        {hint && (
+          <span className="ml-1 font-normal normal-case tracking-normal text-muted">
+            {hint}
+          </span>
+        )}
+      </span>
+      {children}
+    </label>
   );
 }
 

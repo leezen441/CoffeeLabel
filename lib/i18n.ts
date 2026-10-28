@@ -189,6 +189,9 @@ const DICT = {
   scanUse: { en: "Create this label", th: "สร้างเป็นฉลาก" },
   scanAgain: { en: "Another photo", th: "ถ่ายใหม่" },
   scanFailed: { en: "Could not read it", th: "อ่านไม่สำเร็จ" },
+  scanCommaHint: { en: "comma separated", th: "คั่นด้วยลูกน้ำ" },
+  scanRotate: { en: "Rotate the photo", th: "หมุนรูป" },
+  scanPhotoAlt: { en: "The bag you photographed", th: "รูปถุงที่ถ่ายไว้" },
   scanUnsure: { en: "Not sure about:", th: "ไม่มั่นใจช่อง:" },
   scanTipsTitle: { en: "For a better read", th: "ถ่ายอย่างไรให้อ่านง่าย" },
   scanTip1: {

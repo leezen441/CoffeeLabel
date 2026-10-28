@@ -22,9 +22,9 @@ export type ScanError =
   | "failed";
 
 /** Draw the photo smaller and re-encode it as JPEG. Returns a data URL. */
-export async function shrinkImage(file: File): Promise<string> {
+export async function shrinkImage(file: File, edge = MAX_EDGE): Promise<string> {
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+  const scale = Math.min(1, edge / Math.max(bitmap.width, bitmap.height));
   const w = Math.round(bitmap.width * scale);
   const h = Math.round(bitmap.height * scale);
   const canvas = document.createElement("canvas");
@@ -90,4 +90,33 @@ export function labelFromScan(scan: ScanResult): CoffeeLabel {
     // No brew method comes off a bag label.
     brews: [],
   });
+}
+
+/**
+ * A small copy of the photo, to show beside the fields while they are checked.
+ * It lives in the dialog's state and goes when the dialog does — nothing about
+ * a photo is ever written to a label, to storage, or to the database.
+ */
+export function thumbnail(file: File): Promise<string> {
+  return shrinkImage(file, 640);
+}
+
+/** Turn a data URL by quarter turns, for a photo taken side-on. */
+export async function rotateImage(dataUrl: string, turn: 90 | 180 | 270): Promise<string> {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = reject;
+    el.src = dataUrl;
+  });
+  const swap = turn === 90 || turn === 270;
+  const canvas = document.createElement("canvas");
+  canvas.width = swap ? img.height : img.width;
+  canvas.height = swap ? img.width : img.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return dataUrl;
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate((turn * Math.PI) / 180);
+  ctx.drawImage(img, -img.width / 2, -img.height / 2);
+  return canvas.toDataURL("image/jpeg", 0.82);
 }
