@@ -4,14 +4,18 @@ import { useRef, useState } from "react";
 import { makeT, useLang } from "@/lib/i18n";
 import { type ScanError, labelFromScan, scanLabelImage, shrinkImage } from "@/lib/scan";
 import { correctionHints } from "@/lib/scanMemory";
+import { readLabelLocally } from "@/lib/ocr";
 import type { ScanResult } from "@/lib/scanRules";
 import { type CoffeeLabel, ROAST_LEVELS, formatWeight, processText } from "@/lib/types";
 
+/** Which reader produced a result, so the screen can say what to expect. */
+type Via = "claude" | "device";
+
 type Stage =
   | { at: "idle" }
-  | { at: "working" }
+  | { at: "working"; via: Via; progress: number }
   | { at: "failed"; error: ScanError }
-  | { at: "review"; scan: ScanResult; label: CoffeeLabel; photo: string };
+  | { at: "review"; scan: ScanResult; label: CoffeeLabel; via: Via };
 
 /**
  * Photograph a bag, get a label. The reading is never saved straight away —
@@ -29,16 +33,44 @@ export default function ScanLabel({
   const [stage, setStage] = useState<Stage>({ at: "idle" });
   const file = useRef<HTMLInputElement>(null);
 
+  /**
+   * Claude reads the photo when the deployment has a key. Without one it is
+   * read here on the phone instead — free, slower, and plainly worse, so the
+   * review screen says which one did it.
+   */
   async function read(chosen: File) {
-    setStage({ at: "working" });
+    setStage({ at: "working", via: "claude", progress: 0 });
     try {
       const photo = await shrinkImage(chosen);
       const res = await scanLabelImage(photo, correctionHints());
-      if (!res.ok) {
+      if (res.ok) {
+        setStage({
+          at: "review",
+          scan: res.result,
+          label: labelFromScan(res.result),
+          via: "claude",
+        });
+        return;
+      }
+      if (res.error !== "no-key" && res.error !== "bad-key") {
         setStage({ at: "failed", error: res.error });
         return;
       }
-      setStage({ at: "review", scan: res.result, label: labelFromScan(res.result), photo });
+
+      setStage({ at: "working", via: "device", progress: 0 });
+      const local = await readLabelLocally(chosen, (progress) =>
+        setStage({ at: "working", via: "device", progress }),
+      );
+      if (!local.ok) {
+        setStage({ at: "failed", error: local.error });
+        return;
+      }
+      setStage({
+        at: "review",
+        scan: local.result,
+        label: labelFromScan(local.result),
+        via: "device",
+      });
     } catch {
       setStage({ at: "failed", error: "bad-image" });
     }
@@ -79,7 +111,17 @@ export default function ScanLabel({
             {stage.at === "working" && (
               <>
                 <h2 className="font-serif text-xl font-semibold">{tr("scanWorking")}</h2>
-                <p className="mt-2 text-sm text-muted">{tr("scanWorkingHint")}</p>
+                <p className="mt-2 text-sm text-muted">
+                  {stage.via === "device" ? tr("scanOnDeviceHint") : tr("scanWorkingHint")}
+                </p>
+                {stage.via === "device" && (
+                  <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-line">
+                    <div
+                      className="h-full rounded-full bg-brand transition-[width]"
+                      style={{ width: `${Math.round(stage.progress * 100)}%` }}
+                    />
+                  </div>
+                )}
               </>
             )}
 
@@ -102,7 +144,9 @@ export default function ScanLabel({
             {stage.at === "review" && (
               <>
                 <h2 className="font-serif text-xl font-semibold">{tr("scanReview")}</h2>
-                <p className="mt-1 text-sm text-muted">{tr("scanReviewHint")}</p>
+                <p className="mt-1 text-sm text-muted">
+                  {stage.via === "device" ? tr("scanOnDeviceRead") : tr("scanReviewHint")}
+                </p>
 
                 <dl className="mt-4 flex flex-col gap-1.5 text-sm">
                   <Row name={tr("fRoaster")} value={stage.label.roaster} />
@@ -111,9 +155,15 @@ export default function ScanLabel({
                   <Row name={tr("fVariety")} value={stage.label.variety} />
                   <Row name={tr("fProcess")} value={processText(stage.label)} />
                   <Row name={tr("fAltitude")} value={stage.label.altitude} />
+                  {/* The label's own default is Medium, which would read as
+                      a confident answer for something nothing was read for. */}
                   <Row
                     name={tr("fRoastLevel")}
-                    value={ROAST_LEVELS[stage.label.roastLevel].name}
+                    value={
+                      stage.scan.roastLevel >= 1 && stage.scan.roastLevel <= 5
+                        ? ROAST_LEVELS[stage.label.roastLevel].name
+                        : ""
+                    }
                   />
                   <Row name={tr("fRoastDate")} value={stage.label.roastDate} />
                   <Row name={tr("fNetWeight")} value={formatWeight(stage.label.netWeight)} />

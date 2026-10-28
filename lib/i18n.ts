@@ -169,6 +169,14 @@ const DICT = {
   /* scan a bag label from a photo */
   scanLabel: { en: "⌗ Scan a bag", th: "⌗ สแกนถุง" },
   scanWorking: { en: "Reading the label…", th: "กำลังอ่านฉลาก…" },
+  scanOnDeviceHint: {
+    en: "Reading it on this device — no key is set up, so this takes a few seconds longer.",
+    th: "กำลังอ่านในเครื่องนี้ — ยังไม่ได้ตั้งค่าคีย์ จึงใช้เวลานานกว่าปกติเล็กน้อย",
+  },
+  scanOnDeviceRead: {
+    en: "Read on this device, so expect gaps — check every line before using it.",
+    th: "อ่านในเครื่องนี้ จะมีช่องที่อ่านไม่ได้ ตรวจทุกบรรทัดก่อนใช้",
+  },
   scanWorkingHint: {
     en: "A few seconds. The photo is sent to be read and is not kept.",
     th: "ใช้เวลาสักครู่ รูปจะถูกส่งไปอ่านเท่านั้น ไม่ได้เก็บไว้",
