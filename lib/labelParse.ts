@@ -10,8 +10,11 @@
 
 import type { ScanResult } from "./scanRules";
 
-/** A line of text, with the height of its letters where OCR reported one. */
-export type ScannedLine = { text: string; height?: number };
+/**
+ * A line of text, with the height of its letters and how far down the label
+ * it sits (0 at the top, 1 at the bottom), where OCR reported them.
+ */
+export type ScannedLine = { text: string; height?: number; top?: number };
 
 const EMPTY: ScanResult = {
   roaster: "",
@@ -78,8 +81,30 @@ function dequote(v: string): string {
   return v.replace(/^["“”'‘’]+|["“”'‘’]+$/g, "").trim();
 }
 
+/** Are all the words of a line set the same way — all caps, or not? */
+function sameCase(v: string): boolean {
+  const words = v.split(/\s+/).filter((w) => /^[A-Za-z]{2,}$/.test(w));
+  if (words.length < 2) return true;
+  const caps = words.filter((w) => w === w.toUpperCase()).length;
+  return caps === 0 || caps === words.length;
+}
+
+/** Is this token a fragment of the artwork rather than a word? */
+function isNoise(token: string): boolean {
+  if (!/[A-Za-z0-9]/.test(token)) return true;
+  if (token.length <= 2) return true;
+  return /^[A-Za-z]{3,4}$/.test(token) && !/[aeiouy]/i.test(token);
+}
+
 function scrub(v: string): string {
   let out = cleanValue(v);
+  // Junk arrives at the front of a line as often as at the end.
+  for (let i = 0; i < 4; i += 1) {
+    const lead = /^(\S{1,3})\s+(\S.*)$/.exec(out);
+    // A number at the front is the value itself: "7 - 12 Days", "250 g".
+    if (!lead || /\d/.test(lead[1]) || !isNoise(lead[1])) break;
+    out = cleanValue(lead[2]);
+  }
   for (let i = 0; i < 4; i += 1) {
     const m = /^(.*\S)\s+(\S{1,3})$/.exec(out);
     if (!m) break;
@@ -291,10 +316,18 @@ export function parseLabelText(lines: ScannedLine[], today = new Date()): ScanRe
     out.unsure.push("roast level");
   }
 
-  // A process word standing alone, the way a tin label prints it.
+  // A process word on a line of its own, the way a tin label prints it. Only
+  // the word itself: on a tin the columns sit at the same height, so its line
+  // may also carry a tasting note and a roast scale.
   if (out.processes.length === 0) {
-    const row = rows.find((r, i) => !used.has(i) && r.text.length < 30 && PROCESS_WORDS.test(r.text));
-    if (row) out.processes = [cleanValue(row.text)];
+    for (let i = 0; i < rows.length; i += 1) {
+      if (used.has(i)) continue;
+      const m = PROCESS_WORDS.exec(rows[i].text);
+      if (m) {
+        out.processes = [cleanValue(m[0])];
+        break;
+      }
+    }
   }
 
   if (!out.netWeight) {
@@ -314,7 +347,8 @@ export function parseLabelText(lines: ScannedLine[], today = new Date()): ScanRe
   // The name is the tallest line OCR found that is not a field or a slogan.
   // Without letter heights there is nothing to rank by, so nothing is claimed.
   const titles = rows
-    .map((r, i) => ({ ...r, i }))
+    // Scrubbed first: "RUMUKIA |:" is a name with a scrap of a border on it.
+    .map((r, i) => ({ ...r, i, text: scrub(r.text) }))
     .filter(
       (r) =>
         !used.has(r.i) &&
@@ -327,6 +361,9 @@ export function parseLabelText(lines: ScannedLine[], today = new Date()): ScanRe
         // A title is words. OCR noise is symbols and one-letter fragments, and
         // a wrong name is worse than none, so anything scruffy is left out.
         r.text.split(/\s+/).length <= 4 &&
+        // A printed title is set in one style throughout. "Rea ETRE" mixes
+        // Title case with CAPS, which no label does and OCR noise often does.
+        sameCase(dequote(r.text)) &&
         // One proper word at least: "GEE Een ER EER" is noise that happens
         // to be spellable, and a wrong name is worse than none.
         dequote(r.text)
@@ -345,7 +382,14 @@ export function parseLabelText(lines: ScannedLine[], today = new Date()): ScanRe
         /^[A-Za-z][A-Za-z'’\-\s|]+$/.test(dequote(r.text)) &&
         /[A-Za-z]{3,}/.test(r.text),
     )
-    .sort((a, b) => (b.height ?? 0) - (a.height ?? 0));
+    // Tallest first — but a name is printed at the top of a label, and a line
+    // height is unreliable where the lettering overlaps artwork. On the tins a
+    // tasting note measured taller than the coffee's own name.
+    .sort((a, b) => {
+      const rank = (r: { height?: number; top?: number }) =>
+        (r.height ?? 0) * (r.top !== undefined && r.top < 0.4 ? 1 : 0.6);
+      return rank(b) - rank(a);
+    });
 
   if (!out.coffeeName && titles[0]) {
     const first = titles[0];

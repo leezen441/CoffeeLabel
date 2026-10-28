@@ -109,11 +109,13 @@ function findLabelBox(bitmap: ImageBitmap): Box | null {
   const [x0, x1] = longestRun(cols);
   const area = ((x1 - x0) * (y1 - y0)) / (w * h);
   // Too small to be the label, or so big that cropping gains nothing.
-  if (!(area > 0.06) || area > 0.85) return null;
+  if (!(area > 0.06) || area > 0.92) return null;
 
-  // A generous border: the run stops at the first dim column, which on this
-  // label is inside the "C" of its own title.
-  const m = 0.14;
+  // The run stops at the first dim column, which on a label with a white
+  // background is inside the "C" of its own title — so a border is added.
+  // A label that already fills the frame needs almost none; one photographed
+  // from a distance needs plenty.
+  const m = area > 0.4 ? 0.04 : 0.12;
   return {
     x0: Math.max(0, x0 / w - m),
     x1: Math.min(1, x1 / w + m),
@@ -122,12 +124,45 @@ function findLabelBox(bitmap: ImageBitmap): Box | null {
   };
 }
 
-/** Rotate and stretch the photo into something an OCR engine can read. */
+/** How bright the label is, which says which way round its printing is. */
+function meanBrightness(bitmap: ImageBitmap, box: Box | null): number {
+  const sx = box ? box.x0 * bitmap.width : 0;
+  const sy = box ? box.y0 * bitmap.height : 0;
+  const sw = box ? (box.x1 - box.x0) * bitmap.width : bitmap.width;
+  const sh = box ? (box.y1 - box.y0) * bitmap.height : bitmap.height;
+  const canvas = document.createElement("canvas");
+  canvas.width = 200;
+  canvas.height = Math.max(1, Math.round((200 * sh) / sw));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return 255;
+  ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  const px = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  let sum = 0;
+  for (let i = 0; i < px.length; i += 4) {
+    sum += px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114;
+  }
+  return sum / (px.length / 4);
+}
+
+/**
+ * Rotate, crop and threshold the photo into something an OCR engine can read.
+ *
+ * Each pixel is judged against the average of its own neighbourhood rather
+ * than against the whole photo. A global stretch cannot help a dark tin that
+ * also carries a bright highlight — the two ends of the range are already
+ * taken, and the orange label in between stays grey. Locally, the lettering
+ * is plainly lighter than the few millimetres around it.
+ *
+ * `lightText` says which way round the printing is: white on orange, or black
+ * on white. Either way the output is dark text on white, which is what
+ * Tesseract was trained on.
+ */
 function prepare(
   bitmap: ImageBitmap,
   turn: 0 | 90 | 180 | 270,
   longEdge: number,
   box: Box | null,
+  lightText: boolean,
 ): HTMLCanvasElement {
   const sx = box ? box.x0 * bitmap.width : 0;
   const sy = box ? box.y0 * bitmap.height : 0;
@@ -146,23 +181,51 @@ function prepare(
   ctx.translate(canvas.width / 2, canvas.height / 2);
   ctx.rotate((turn * Math.PI) / 180);
   ctx.drawImage(bitmap, sx, sy, sw, sh, -w / 2, -h / 2, w, h);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-  // Grey, then stretch the contrast: print on a coloured bag or a dark tin is
-  // far from the black-on-white Tesseract was trained on.
-  const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const W = canvas.width;
+  const H = canvas.height;
+  const img = ctx.getImageData(0, 0, W, H);
   const px = img.data;
-  let lo = 255;
-  let hi = 0;
-  for (let i = 0; i < px.length; i += 4) {
-    const g = (px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114) | 0;
-    px[i] = px[i + 1] = px[i + 2] = g;
-    if (g < lo) lo = g;
-    if (g > hi) hi = g;
+  const grey = new Float64Array(W * H);
+  for (let i = 0, p = 0; i < px.length; i += 4, p += 1) {
+    grey[p] = px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114;
   }
-  const span = Math.max(1, hi - lo);
-  for (let i = 0; i < px.length; i += 4) {
-    const v = ((px[i] - lo) * 255) / span;
-    px[i] = px[i + 1] = px[i + 2] = v;
+
+  // A summed-area table, so each pixel's neighbourhood mean costs four reads
+  // however wide the window is.
+  const sums = new Float64Array((W + 1) * (H + 1));
+  for (let y = 0; y < H; y += 1) {
+    let row = 0;
+    for (let x = 0; x < W; x += 1) {
+      row += grey[y * W + x];
+      sums[(y + 1) * (W + 1) + x + 1] = sums[y * (W + 1) + x + 1] + row;
+    }
+  }
+
+  const radius = Math.max(4, Math.round(W * 0.025));
+  const bias = 16;
+  for (let y = 0; y < H; y += 1) {
+    const y0 = Math.max(0, y - radius);
+    const y1 = Math.min(H - 1, y + radius);
+    for (let x = 0; x < W; x += 1) {
+      const x0 = Math.max(0, x - radius);
+      const x1 = Math.min(W - 1, x + radius);
+      const total =
+        sums[(y1 + 1) * (W + 1) + x1 + 1] -
+        sums[y0 * (W + 1) + x1 + 1] -
+        sums[(y1 + 1) * (W + 1) + x0] +
+        sums[y0 * (W + 1) + x0];
+      const mean = total / ((x1 - x0 + 1) * (y1 - y0 + 1));
+      const v = grey[y * W + x];
+      const isText = lightText ? v > mean + bias : v < mean - bias;
+      const out = isText ? 0 : 255;
+      const o = (y * W + x) * 4;
+      px[o] = out;
+      px[o + 1] = out;
+      px[o + 2] = out;
+      px[o + 3] = 255;
+    }
   }
   ctx.putImageData(img, 0, 0);
   return canvas;
@@ -179,7 +242,11 @@ async function readOnce(worker: Worker, canvas: HTMLCanvasElement): Promise<Read
         const text = (line.text ?? "").replace(/\s+/g, " ").trim();
         if (!text) continue;
         const box = line.bbox;
-        lines.push({ text, height: box ? box.y1 - box.y0 : undefined });
+        lines.push({
+          text,
+          height: box ? box.y1 - box.y0 : undefined,
+          top: box && canvas.height ? box.y0 / canvas.height : undefined,
+        });
       }
     }
   }
@@ -211,12 +278,15 @@ export async function readLabelLocally(
     const w = await getWorker(onProgress);
     const bitmap = await createImageBitmap(file);
     const box = findLabelBox(bitmap);
+    // White lettering on a dark tin, or black on a white sticker. The label's
+    // own brightness says which to expect; the other is tried if this fails.
+    const lightText = meanBrightness(bitmap, box) < 110;
     onProgress?.(0.45);
 
     let best: { turn: 0 | 90 | 180 | 270; read: Read } | null = null;
     const turns: (0 | 90 | 180 | 270)[] = [0, 90, 180, 270];
     for (let i = 0; i < turns.length; i += 1) {
-      const read = await readOnce(w, prepare(bitmap, turns[i], 620, box));
+      const read = await readOnce(w, prepare(bitmap, turns[i], 620, box, lightText));
       // Characters matter as much as confidence: a blank read scores well.
       const score = read.confidence * Math.min(1, read.lines.join(" ").length / 120);
       const bestScore = best
@@ -229,7 +299,7 @@ export async function readLabelLocally(
 
     // 1600px is the sweet spot: a bigger canvas is several seconds slower and
     // reads no better, because the limit is the photo, not the pixels.
-    const full = await readOnce(w, prepare(bitmap, best.turn, 1600, box));
+    const full = await readOnce(w, prepare(bitmap, best.turn, 1700, box, lightText));
     onProgress?.(0.8);
 
     // The full-size read wins on merit; more lines only ever meant more noise.
@@ -238,14 +308,30 @@ export async function readLabelLocally(
     if (text.replace(/\s/g, "").length < 12) return { ok: false, error: "unreadable" };
 
     let result = parseLabelText(lines);
-    // A crop can cut a line off at its edge. When it has come back thin, the
-    // whole frame is read once more and the two are taken together — slower,
-    // but only on the labels that were going badly anyway.
-    if (box && filledFields(result) < 6) {
+
+    // Two ways a reading comes back thin, each with one more pass to spend on
+    // it — and only on the labels that were going badly anyway.
+    const THIN = 6;
+
+    // The printing was the other way round from what the brightness suggested.
+    if (filledFields(result) < THIN) {
       onProgress?.(0.85);
-      const wide = await readOnce(w, prepare(bitmap, best.turn, 1600, null));
+      const flipped = await readOnce(
+        w,
+        prepare(bitmap, best.turn, 1700, box, !lightText),
+      );
+      if (flipped.lines.length > 0) {
+        result = mergeScans(result, parseLabelText(flipped.lines));
+      }
+    }
+
+    // The crop cut a line off at its edge.
+    if (box && filledFields(result) < THIN) {
+      onProgress?.(0.92);
+      const wide = await readOnce(w, prepare(bitmap, best.turn, 1700, null, lightText));
       if (wide.lines.length > 0) result = mergeScans(result, parseLabelText(wide.lines));
     }
+
     bitmap.close();
     onProgress?.(1);
 
