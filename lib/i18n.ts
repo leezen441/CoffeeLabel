@@ -165,6 +165,64 @@ const DICT = {
   howRun: { en: "How did it run", th: "การไหลเป็นยังไง" },
   saveBrew: { en: "Save brew", th: "บันทึก" },
   cancel: { en: "Cancel", th: "ยกเลิก" },
+
+  /* scan a bag label from a photo */
+  scanLabel: { en: "⌗ Scan a bag", th: "⌗ สแกนถุง" },
+  scanWorking: { en: "Reading the label…", th: "กำลังอ่านฉลาก…" },
+  scanWorkingHint: {
+    en: "A few seconds. The photo is sent to be read and is not kept.",
+    th: "ใช้เวลาสักครู่ รูปจะถูกส่งไปอ่านเท่านั้น ไม่ได้เก็บไว้",
+  },
+  scanReview: { en: "What the label says", th: "อ่านได้ดังนี้" },
+  scanReviewHint: {
+    en: "Check it before using — you can fix anything in the editor.",
+    th: "ตรวจก่อนใช้ แก้เพิ่มในหน้าแก้ไขได้",
+  },
+  scanUse: { en: "Create this label", th: "สร้างเป็นฉลาก" },
+  scanAgain: { en: "Another photo", th: "ถ่ายใหม่" },
+  scanFailed: { en: "Could not read it", th: "อ่านไม่สำเร็จ" },
+  scanUnsure: { en: "Not sure about:", th: "ไม่มั่นใจช่อง:" },
+  scanTipsTitle: { en: "For a better read", th: "ถ่ายอย่างไรให้อ่านง่าย" },
+  scanTip1: {
+    en: "Fill the frame with the label, nothing else.",
+    th: "ให้ฉลากเต็มกรอบ ไม่เอาอย่างอื่นติดมา",
+  },
+  scanTip2: {
+    en: "Hold it flat and straight on — a curved tin hides a line.",
+    th: "ถ่ายตรงๆ ให้ฉลากแบนราบ กระป๋องโค้งจะบังตัวหนังสือ",
+  },
+  scanTip3: {
+    en: "Bright, even light. No flash glare across the print.",
+    th: "แสงสว่างเสมอกัน อย่าให้แฟลชสะท้อนทับตัวหนังสือ",
+  },
+  scanTip4: {
+    en: "Include the roast-date sticker, even if it is beside the label.",
+    th: "ถ่ายสติกเกอร์วันคั่วเข้ามาด้วย ถึงแม้จะอยู่คนละที่",
+  },
+  scanNoKey: {
+    en: "Scanning is not set up on this deployment — ANTHROPIC_API_KEY is missing.",
+    th: "ยังไม่ได้ตั้งค่าสแกนไว้ — ขาด ANTHROPIC_API_KEY",
+  },
+  scanTooLarge: {
+    en: "That photo is too big. Try again — it is shrunk before sending.",
+    th: "รูปใหญ่เกินไป ลองใหม่อีกครั้ง",
+  },
+  scanRateLimited: {
+    en: "Too many scans just now. Wait a moment and try again.",
+    th: "สแกนถี่เกินไป รอสักครู่แล้วลองใหม่",
+  },
+  scanOffline: {
+    en: "No connection to the server.",
+    th: "ติดต่อเซิร์ฟเวอร์ไม่ได้",
+  },
+  scanUnreadable: {
+    en: "Nothing legible in that photo.",
+    th: "รูปนี้อ่านอะไรไม่ออกเลย",
+  },
+  scanGeneric: {
+    en: "Something went wrong reading it.",
+    th: "มีบางอย่างผิดพลาดระหว่างอ่าน",
+  },
   noteOptional: { en: "Note (optional)", th: "โน้ต (ไม่บังคับ)" },
   nothingLogged: {
     en: "Nothing logged yet. Record a brew and the next-time advice appears here.",

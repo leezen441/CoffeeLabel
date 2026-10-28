@@ -1,5 +1,6 @@
 import type { BrewEntry, CoffeeLabel, LabelGroup } from "./types";
 import { normalizeLabel } from "./types";
+import { forgetScan } from "./scanMemory";
 
 export type StorageMode = "cloud" | "local";
 
@@ -118,6 +119,7 @@ export async function saveLabel(label: CoffeeLabel): Promise<CoffeeLabel> {
 
 export async function deleteLabel(id: string): Promise<void> {
   seen.delete(id);
+  forgetScan(id);
   if ((await storageMode()) === "cloud") {
     const res = await fetch(`/api/labels/${id}`, { method: "DELETE" });
     if (res.ok) return;

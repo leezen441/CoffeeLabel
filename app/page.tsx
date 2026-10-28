@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import StickerScaler from "@/components/StickerScaler";
 import StickerViewer from "@/components/StickerViewer";
 import BrewNow from "@/components/BrewNow";
+import ScanLabel from "@/components/ScanLabel";
+import { stashScan } from "@/lib/scanMemory";
+import type { ScanResult } from "@/lib/scanRules";
 import { sampleLabel } from "@/lib/sample";
 import * as store from "@/lib/store";
 import type { StorageMode } from "@/lib/store";
@@ -216,6 +219,19 @@ export default function LibraryPage() {
     }
   }
 
+  /** A label read off a bag photo. What was read is kept so the next scan
+   *  can be told about anything you change afterwards. */
+  async function createFromScan(label: CoffeeLabel, scan: ScanResult) {
+    setBusy(true);
+    try {
+      await store.saveLabel(label);
+      stashScan(label.id, scan);
+      router.push(`/editor/${label.id}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function createNew() {
     setBusy(true);
     try {
@@ -279,6 +295,7 @@ export default function LibraryPage() {
           <button className="btn" onClick={addGroup} disabled={busy}>
             {tr("newGroup")}
           </button>
+          <ScanLabel onUse={createFromScan} busy={busy} />
           <button className="btn btn-primary" onClick={createNew} disabled={busy}>
             {tr("newLabel")}
           </button>

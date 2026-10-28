@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import BrewEditor from "./BrewEditor";
 import { forgetMethod, recallBrew, useRememberedNames } from "@/lib/methodMemory";
 import { useBackTarget } from "./BackToHome";
+import { learnFromSave } from "@/lib/scanMemory";
 import MethodPicker from "./MethodPicker";
 import LangToggle from "./LangToggle";
 import { type MsgKey, makeT, useLang } from "@/lib/i18n";
@@ -90,6 +91,8 @@ export default function LabelEditor({ id }: { id: string }) {
     setSaveState("saving");
     try {
       await store.saveLabel(next);
+      // Scanned labels learn from what you fixed afterwards.
+      learnFromSave(next);
       dirty.current = false;
       setSaveState("saved");
     } catch {
