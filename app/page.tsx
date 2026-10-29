@@ -38,7 +38,6 @@ export default function LibraryPage() {
   const [mode, setMode] = useState<StorageMode | null>(null);
   const [query, setQuery] = useState("");
   /** "" = search everything, otherwise restrict the text search to one group */
-  const [scope, setScope] = useState("");
   const savedGroups = useSavedGroups();
   const [ready, setReady] = useState<"all" | RestStatus>("all");
   const [busy, setBusy] = useState(false);
@@ -101,7 +100,7 @@ export default function LibraryPage() {
   /**
    * Three independent filters, intersected:
    *   chips  — which groups are shown (none selected = all)
-   *   scope  — restricts the text search to one group
+   *   ready  — how far a bag is through its peak window
    *   query  — the text itself
    */
   /**
@@ -140,7 +139,6 @@ export default function LibraryPage() {
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);
     return labels.filter((l) => {
       if (active.size > 0 && !active.has(groupOf(l))) return false;
-      if (scope && l.groupId !== scope) return false;
       if (ready !== "all" && restStatus(l).status !== ready) return false;
       if (words.length === 0) return true;
       // Every word has to appear somewhere on the label, in any order and in
@@ -149,7 +147,7 @@ export default function LibraryPage() {
       const hay = searchText(l);
       return words.every((word) => hay.includes(word));
     });
-  }, [labels, query, active, scope, ready, groupOf, searchText]);
+  }, [labels, query, active, ready, groupOf, searchText]);
 
   const readyCounts = useMemo(() => {
     const m = { peak: 0, resting: 0, past: 0 };
@@ -262,7 +260,6 @@ export default function LibraryPage() {
       const next = new Set(active);
       next.delete(group.id);
       saveGroups(next);
-      if (scope === group.id) setScope("");
       await refresh();
     } finally {
       setBusy(false);
@@ -357,29 +354,12 @@ export default function LibraryPage() {
 
       <main className="mx-auto max-w-6xl px-5 py-6">
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          {/* The box and the group it looks in stay on one line, phone
-              included: the dropdown says what the box is searching. */}
-          <div className="flex w-full items-center gap-2 sm:w-auto sm:max-w-lg sm:flex-1">
-            <input
-              className="input min-w-0 flex-1"
-              placeholder={tr("searchPlaceholder")}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <select
-              className="select w-auto max-w-[55%] shrink-0"
-              value={scope}
-              onChange={(e) => setScope(e.target.value)}
-              title={tr("limitSearch")}
-            >
-              <option value="">{tr("searchAllGroups")}</option>
-              {groups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {tr("searchIn")} {g.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <input
+            className="input w-full sm:w-auto sm:max-w-sm sm:flex-1"
+            placeholder={tr("searchPlaceholder")}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
           {labels && (
             <span className="text-xs text-muted">
               {filtered.length} {tr("ofLabels")} {labels.length} {tr("labelsWord")}

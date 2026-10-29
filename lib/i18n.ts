@@ -54,8 +54,6 @@ const DICT = {
     en: "Search anything on a label…",
     th: "ค้นหาจากทุกคำบนฉลาก…",
   },
-  searchAllGroups: { en: "Search all groups", th: "ค้นทุกกลุ่ม" },
-  searchIn: { en: "Search in", th: "ค้นเฉพาะ" },
   ofLabels: { en: "of", th: "จาก" },
   labelsWord: { en: "labels", th: "รายการ" },
   drinkingNow: { en: "Drinking now", th: "ดื่มได้เลย" },
@@ -537,7 +535,6 @@ const DICT = {
   },
   deleteLabelQ: { en: "Delete", th: "ลบ" },
   cannotUndo: { en: "This cannot be undone.", th: "ย้อนกลับไม่ได้" },
-  limitSearch: { en: "Limit the search to one group", th: "จำกัดการค้นหาไว้ที่กลุ่มเดียว" },
   emptyBlurb: {
     en: "Create a sticker with your roaster details, roast level and up to five brew recipes — then print it and stick it on the bag.",
     th: "สร้างสติกเกอร์ที่มีชื่อร้านคั่ว ระดับคั่ว และสูตรชงได้ถึงห้าวิธี — แล้วพิมพ์ออกมาติดบนถุงได้เลย",
