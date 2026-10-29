@@ -357,25 +357,29 @@ export default function LibraryPage() {
 
       <main className="mx-auto max-w-6xl px-5 py-6">
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <input
-            className="input max-w-xs"
-            placeholder={tr("searchPlaceholder")}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <select
-            className="select w-auto"
-            value={scope}
-            onChange={(e) => setScope(e.target.value)}
-            title={tr("limitSearch")}
-          >
-            <option value="">{tr("searchAllGroups")}</option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {tr("searchIn")} {g.name}
-              </option>
-            ))}
-          </select>
+          {/* The box and the group it looks in stay on one line, phone
+              included: the dropdown says what the box is searching. */}
+          <div className="flex w-full items-center gap-2 sm:w-auto sm:max-w-lg sm:flex-1">
+            <input
+              className="input min-w-0 flex-1"
+              placeholder={tr("searchPlaceholder")}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <select
+              className="select w-auto max-w-[55%] shrink-0"
+              value={scope}
+              onChange={(e) => setScope(e.target.value)}
+              title={tr("limitSearch")}
+            >
+              <option value="">{tr("searchAllGroups")}</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {tr("searchIn")} {g.name}
+                </option>
+              ))}
+            </select>
+          </div>
           {labels && (
             <span className="text-xs text-muted">
               {filtered.length} {tr("ofLabels")} {labels.length} {tr("labelsWord")}
@@ -383,44 +387,11 @@ export default function LibraryPage() {
           )}
         </div>
 
-        {/* Which bags are actually drinkable today */}
-        {labels && labels.length > 0 && (
-          <div className="mb-3 flex flex-wrap items-center gap-1.5">
-            {(
-              [
-                ["all", tr("all"), labels.length],
-                ["peak", tr("drinkingNow"), readyCounts.peak],
-                ["resting", tr("resting"), readyCounts.resting],
-                ["past", tr("pastPeak"), readyCounts.past],
-              ] as const
-            ).map(([key, text, count]) => {
-              const on = ready === key;
-              const color =
-                key === "all" ? "var(--brand)" : REST_STATUS_META[key].color;
-              return (
-                <button
-                  key={key}
-                  onClick={() => setReady(key)}
-                  aria-pressed={on}
-                  className="rounded-full border px-3 py-1 text-xs font-semibold transition"
-                  style={{
-                    background: on ? color : "transparent",
-                    borderColor: on ? color : "var(--line)",
-                    color: on ? "#fff" : "var(--muted)",
-                  }}
-                >
-                  {text} <span className="tabular-nums opacity-80">{count}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
         {(groups.length > 0 || (counts.get(UNGROUPED) ?? 0) > 0) && (
           /* A wide gap on purpose: each chip's rename and delete buttons hang
              over its edges, and at the usual spacing one chip's cross sits on
              top of the next chip's pencil. */
-          <div className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-3">
             {groups.map((g) => (
               <GroupChip
                 key={g.id}
@@ -450,6 +421,38 @@ export default function LibraryPage() {
                 {tr("clearFilter")}
               </button>
             )}
+          </div>
+        )}
+
+        {/* Which bags are actually drinkable today. Picking none of these
+            means all of them, so the chip that is on toggles back off. */}
+        {labels && labels.length > 0 && (
+          <div className="mb-5 flex flex-wrap items-center gap-1.5">
+            {(
+              [
+                ["peak", tr("drinkingNow"), readyCounts.peak],
+                ["resting", tr("resting"), readyCounts.resting],
+                ["past", tr("pastPeak"), readyCounts.past],
+              ] as const
+            ).map(([key, text, count]) => {
+              const on = ready === key;
+              const color = REST_STATUS_META[key].color;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setReady(on ? "all" : key)}
+                  aria-pressed={on}
+                  className="rounded-full border px-3 py-1 text-xs font-semibold transition"
+                  style={{
+                    background: on ? color : "transparent",
+                    borderColor: on ? color : "var(--line)",
+                    color: on ? "#fff" : "var(--muted)",
+                  }}
+                >
+                  {text} <span className="tabular-nums opacity-80">{count}</span>
+                </button>
+              );
+            })}
           </div>
         )}
 

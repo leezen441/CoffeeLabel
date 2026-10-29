@@ -58,7 +58,6 @@ const DICT = {
   searchIn: { en: "Search in", th: "ค้นเฉพาะ" },
   ofLabels: { en: "of", th: "จาก" },
   labelsWord: { en: "labels", th: "รายการ" },
-  all: { en: "All", th: "ทั้งหมด" },
   drinkingNow: { en: "Drinking now", th: "ดื่มได้เลย" },
   resting: { en: "Resting", th: "กำลังพัก" },
   pastPeak: { en: "Past peak", th: "เลยช่วงดีแล้ว" },
