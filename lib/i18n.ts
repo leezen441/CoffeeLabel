@@ -61,6 +61,8 @@ const DICT = {
   pastPeak: { en: "Past peak", th: "เลยช่วงดีแล้ว" },
   ungrouped: { en: "Ungrouped", th: "ยังไม่จัดกลุ่ม" },
   clearFilter: { en: "Clear filter", th: "ล้างตัวกรอง" },
+  allMethods: { en: "All methods", th: "ทุกวิธีชง" },
+  filterByMethod: { en: "Show bags with this brew method", th: "แสดงเมล็ดที่มีวิธีชงนี้" },
   noLabelsYet: { en: "No labels yet", th: "ยังไม่มีกาแฟ" },
   createFirst: { en: "Create your first label", th: "สร้างรายการแรก" },
   loadSample: { en: "Load a sample", th: "ใส่ตัวอย่าง" },

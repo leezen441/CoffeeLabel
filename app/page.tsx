@@ -37,9 +37,10 @@ export default function LibraryPage() {
   const [groups, setGroups] = useState<LabelGroup[]>([]);
   const [mode, setMode] = useState<StorageMode | null>(null);
   const [query, setQuery] = useState("");
-  /** "" = search everything, otherwise restrict the text search to one group */
   const savedGroups = useSavedGroups();
   const [ready, setReady] = useState<"all" | RestStatus>("all");
+  /** lowercase brew-method name, "" = any method */
+  const [pickedMethod, setMethod] = useState("");
   const [busy, setBusy] = useState(false);
   const [viewing, setViewing] = useState<CoffeeLabel | null>(null);
   /** open "move to group" popover, anchored to the card's tag button */
@@ -98,9 +99,35 @@ export default function LibraryPage() {
   }, [labels, groupOf]);
 
   /**
-   * Three independent filters, intersected:
+   * Every brew-method name used on any label, with how many bags carry it.
+   * Names are matched without case or stray spaces, so "V60" and "v60 " are
+   * one entry, shown as first spelled.
+   */
+  const methods = useMemo(() => {
+    const m = new Map<string, { name: string; count: number }>();
+    (labels ?? []).forEach((l) => {
+      const seen = new Set<string>();
+      l.brews.forEach((b) => {
+        const key = b.name.trim().toLowerCase();
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        const hit = m.get(key);
+        if (hit) hit.count += 1;
+        else m.set(key, { name: b.name.trim(), count: 1 });
+      });
+    });
+    return [...m.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name));
+  }, [labels]);
+
+  // A method that no label has any more (its last one was deleted or renamed)
+  // stops filtering instead of leaving an empty library.
+  const method = methods.some(([key]) => key === pickedMethod) ? pickedMethod : "";
+
+  /**
+   * Four independent filters, intersected:
    *   chips  — which groups are shown (none selected = all)
    *   ready  — how far a bag is through its peak window
+   *   method — bags that have a brew method of that name
    *   query  — the text itself
    */
   /**
@@ -140,6 +167,8 @@ export default function LibraryPage() {
     return labels.filter((l) => {
       if (active.size > 0 && !active.has(groupOf(l))) return false;
       if (ready !== "all" && restStatus(l).status !== ready) return false;
+      if (method && !l.brews.some((b) => b.name.trim().toLowerCase() === method))
+        return false;
       if (words.length === 0) return true;
       // Every word has to appear somewhere on the label, in any order and in
       // any field: "kenya washed" finds the washed Kenyan, and so does
@@ -147,7 +176,7 @@ export default function LibraryPage() {
       const hay = searchText(l);
       return words.every((word) => hay.includes(word));
     });
-  }, [labels, query, active, ready, groupOf, searchText]);
+  }, [labels, query, active, ready, method, groupOf, searchText]);
 
   const readyCounts = useMemo(() => {
     const m = { peak: 0, resting: 0, past: 0 };
@@ -364,6 +393,22 @@ export default function LibraryPage() {
             <span className="text-xs text-muted">
               {filtered.length} {tr("ofLabels")} {labels.length} {tr("labelsWord")}
             </span>
+          )}
+          {methods.length > 0 && (
+            <select
+              className="select w-auto py-1 text-xs"
+              value={method}
+              onChange={(e) => setMethod(e.target.value)}
+              title={tr("filterByMethod")}
+              aria-label={tr("filterByMethod")}
+            >
+              <option value="">{tr("allMethods")}</option>
+              {methods.map(([key, m]) => (
+                <option key={key} value={key}>
+                  {m.name} ({m.count})
+                </option>
+              ))}
+            </select>
           )}
           {active.size > 0 && (
             <button className="btn btn-ghost text-xs" onClick={() => saveGroups([])}>
