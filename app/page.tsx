@@ -365,6 +365,11 @@ export default function LibraryPage() {
               {filtered.length} {tr("ofLabels")} {labels.length} {tr("labelsWord")}
             </span>
           )}
+          {active.size > 0 && (
+            <button className="btn btn-ghost text-xs" onClick={() => saveGroups([])}>
+              {tr("clearFilter")}
+            </button>
+          )}
         </div>
 
         {(groups.length > 0 || (counts.get(UNGROUPED) ?? 0) > 0) && (
@@ -392,14 +397,6 @@ export default function LibraryPage() {
                 on={active.has(UNGROUPED)}
                 onToggle={() => toggleGroup(UNGROUPED)}
               />
-            )}
-            {active.size > 0 && (
-              <button
-                className="btn btn-ghost text-xs"
-                onClick={() => saveGroups([])}
-              >
-                {tr("clearFilter")}
-              </button>
             )}
           </div>
         )}
