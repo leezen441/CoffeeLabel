@@ -164,8 +164,13 @@ export async function saveGroup(group: LabelGroup): Promise<LabelGroup> {
     if (res.ok) return (await res.json()).group as LabelGroup;
     throw new Error(`Save group failed (${res.status})`);
   }
-  const all = readLocalGroups().filter((g) => g.id !== group.id);
-  writeLocalGroups([...all, group]);
+  // Replaced where it already sits, so renaming one does not send its chip
+  // to the end of the row.
+  const all = readLocalGroups();
+  const at = all.findIndex((g) => g.id === group.id);
+  if (at >= 0) all[at] = group;
+  else all.push(group);
+  writeLocalGroups(all);
   return group;
 }
 

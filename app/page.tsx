@@ -183,6 +183,26 @@ export default function LibraryPage() {
     }
   }
 
+  async function renameGroup(group: LabelGroup) {
+    const name = prompt(tr("groupNamePrompt"), group.name)?.trim();
+    if (!name || name === group.name) return;
+    const clash = groups.some(
+      (g) => g.id !== group.id && g.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (clash) {
+      alert(`${tr("aGroupCalled")} "${name}" ${tr("groupExists")}`);
+      return;
+    }
+    setBusy(true);
+    try {
+      // Labels point at the group by id, so nothing else has to change.
+      await store.saveGroup({ ...group, name });
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function exportBackup() {
     setBusy(true);
     try {
@@ -397,7 +417,10 @@ export default function LibraryPage() {
         )}
 
         {(groups.length > 0 || (counts.get(UNGROUPED) ?? 0) > 0) && (
-          <div className="mb-5 flex flex-wrap items-center gap-2">
+          /* A wide gap on purpose: each chip's rename and delete buttons hang
+             over its edges, and at the usual spacing one chip's cross sits on
+             top of the next chip's pencil. */
+          <div className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-3">
             {groups.map((g) => (
               <GroupChip
                 key={g.id}
@@ -406,6 +429,7 @@ export default function LibraryPage() {
                 count={counts.get(g.id) ?? 0}
                 on={active.has(g.id)}
                 onToggle={() => toggleGroup(g.id)}
+                onRename={() => renameGroup(g)}
                 onDelete={() => removeGroup(g)}
               />
             ))}
@@ -738,6 +762,7 @@ function GroupChip({
   count,
   on,
   onToggle,
+  onRename,
   onDelete,
 }: {
   name: string;
@@ -745,6 +770,7 @@ function GroupChip({
   count: number;
   on: boolean;
   onToggle: () => void;
+  onRename?: () => void;
   onDelete?: () => void;
 }) {
   return (
@@ -779,6 +805,19 @@ function GroupChip({
           {count}
         </span>
       </button>
+      {onRename && (
+        /* Always visible, like the cross: a hover-only control is
+           unreachable on a phone. */
+        <button
+          type="button"
+          onClick={onRename}
+          aria-label={`Rename group ${name}`}
+          title={`Rename group ${name}`}
+          className="absolute -left-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-line bg-card text-[0.6rem] leading-none text-muted shadow-sm transition hover:border-brand hover:text-brand"
+        >
+          ✎
+        </button>
+      )}
       {onDelete && (
         /* Always visible — a hover-only control is unreachable on a phone. */
         <button
