@@ -395,9 +395,9 @@ export default function LibraryPage() {
             </span>
           )}
           {methods.length > 0 && (
-            /* A small dripper button: the phone's own picker opens on tap, so
-               the button only has to say whether a method is picked, and
-               which. The real select lies invisibly on top to take the tap. */
+            /* A small button: the phone's own picker opens on tap, so the
+               button only has to say whether a method is picked, and which.
+               The real select lies invisibly on top to take the tap. */
             <span
               className="relative inline-flex h-7 items-center gap-1 rounded-full border px-2 text-xs font-semibold transition"
               style={
@@ -407,8 +407,9 @@ export default function LibraryPage() {
               }
               title={tr("filterByMethod")}
             >
-              <DripperIcon />
-              {method && methods.find(([key]) => key === method)?.[1].name}
+              {method
+                ? methods.find(([key]) => key === method)?.[1].name
+                : tr("methodFilter")}
               <span aria-hidden="true" className="text-[0.6rem] opacity-70">▾</span>
               <select
                 className="absolute inset-0 cursor-pointer opacity-0"
@@ -920,27 +921,6 @@ function GroupOption({
       <span className="truncate">{name}</span>
       {on && <span className="ml-auto text-brand">✓</span>}
     </button>
-  );
-}
-
-function DripperIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 5h18l-6 9H9Z" />
-      <path d="M12 14v3" />
-      <path d="M6 21h12" />
-      <path d="M8 17h8l-1 4H9Z" />
-    </svg>
   );
 }
 
