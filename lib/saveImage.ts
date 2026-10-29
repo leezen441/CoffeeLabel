@@ -104,7 +104,11 @@ export async function saveStickerImage(
   el: HTMLElement,
   coffeeName: string,
 ): Promise<SaveResult> {
-  const blob = await stickerToPng(el);
+  return deliverPng(await stickerToPng(el), coffeeName);
+}
+
+/** Hands a picture already made to the user: share sheet on a phone, else a download. */
+export async function deliverPng(blob: Blob, coffeeName: string): Promise<SaveResult> {
   const filename = `${slug(coffeeName)}.png`;
   const file = new File([blob], filename, { type: "image/png" });
 

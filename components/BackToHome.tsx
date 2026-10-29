@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 
 /**
@@ -36,6 +36,41 @@ export function useBackTarget(href: string | null) {
   }, [href]);
 }
 
+/** Sheets open on top of a page; while any is, Back closes it instead. */
+let sheetsOpen = 0;
+
+/**
+ * Lets the device Back button close a sheet laid over a page, instead of
+ * leaving the page. A spare history entry gives Back something to pop; the
+ * returned function closes the sheet the same way, so no dead entry is left
+ * behind for the next Back to swallow.
+ */
+export function useBackClosesSheet(onClose: () => void) {
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+
+  const pushed = useRef(false);
+  useEffect(() => {
+    // A ref, for the same reason as below: in development the effect runs
+    // twice on one instance, and two entries would take two presses of Back.
+    if (!pushed.current) {
+      pushed.current = true;
+      window.history.pushState(null, "");
+    }
+    sheetsOpen += 1;
+    const onPop = () => closeRef.current();
+    window.addEventListener("popstate", onPop);
+    return () => {
+      sheetsOpen -= 1;
+      window.removeEventListener("popstate", onPop);
+    };
+  }, []);
+
+  return useCallback(() => window.history.back(), []);
+}
+
 export default function BackToHome() {
   const pathname = usePathname();
   const pushedFor = useRef<string | null>(null);
@@ -52,6 +87,8 @@ export default function BackToHome() {
     }
 
     const onPop = () => {
+      // That Back was for the sheet on top, which closes itself.
+      if (sheetsOpen > 0) return;
       window.location.href = backTarget ?? "/";
     };
     window.addEventListener("popstate", onPop);

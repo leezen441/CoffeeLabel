@@ -93,6 +93,17 @@ const DICT = {
   duplicate: { en: "Duplicate", th: "ทำซ้ำ" },
   del: { en: "Delete", th: "ลบ" },
   brewGuide: { en: "Brew guide", th: "วิธีชง" },
+  close: { en: "Close", th: "ปิด" },
+  makingImage: { en: "Making the picture…", th: "กำลังสร้างรูป…" },
+  imageFailed: { en: "Couldn't make the picture.", th: "สร้างรูปไม่สำเร็จ" },
+  holdToSave: {
+    en: "Or press and hold the picture to save it.",
+    th: "หรือกดค้างที่รูปเพื่อบันทึก",
+  },
+  holdSticker: {
+    en: "Press and hold the sticker to save it as a picture",
+    th: "กดค้างที่สติกเกอร์เพื่อบันทึกเป็นรูป",
+  },
   editMethods: { en: "Edit methods", th: "แก้ไขวิธีชง" },
   library: { en: "Library", th: "คลังกาแฟ" },
   editorWord: { en: "Editor", th: "หน้าแก้ไข" },

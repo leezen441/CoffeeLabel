@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import BrewLog from "./BrewLog";
 import BrewTimer, { unlockTimerAudio } from "./BrewTimer";
@@ -9,6 +9,7 @@ import PeakStatus from "./PeakStatus";
 import { useBackTarget } from "./BackToHome";
 import { lastMethod, rememberMethod } from "@/lib/lastMethod";
 import StickerScaler from "./StickerScaler";
+import SaveImageSheet, { noCallout, useLongPress } from "./SaveImageSheet";
 import { makeT, useLang } from "@/lib/i18n";
 import * as store from "@/lib/store";
 import { useOrigin } from "@/lib/useOrigin";
@@ -23,6 +24,7 @@ import {
   formatTime,
   pourLabel,
   labelSize,
+  labelTitle,
   ratioOf,
   scaleBrew,
   stepTimeLabel,
@@ -59,6 +61,14 @@ export default function BrewGuide({
   const lang = useLang();
   const tr = makeT(lang);
   const origin = useOrigin();
+
+  /** the sticker being saved as a picture, while its sheet is open */
+  const stickerRef = useRef<HTMLDivElement>(null);
+  const [saving, setSaving] = useState<HTMLElement | null>(null);
+  const hold = useLongPress(() => {
+    const node = stickerRef.current?.querySelector<HTMLElement>(".cl-frame");
+    if (node) setSaving(node);
+  });
 
   /**
    * Opened from the editor, Back returns there rather than to the library —
@@ -152,11 +162,19 @@ export default function BrewGuide({
             real size on a wide screen and the peak line under it lines up
             with its right edge rather than the column's. */}
         <div className="mx-auto" style={{ maxWidth: `${labelSize(label, "beans").w}mm` }}>
-          <StickerScaler
-            label={label}
-            variant="beans"
-            qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
-          />
+          {/* Press and hold to save the sticker as a picture. */}
+          <div
+            ref={stickerRef}
+            {...hold}
+            style={noCallout}
+            title={tr("holdSticker")}
+          >
+            <StickerScaler
+              label={label}
+              variant="beans"
+              qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
+            />
+          </div>
           <PeakStatus label={label} className="mt-3 justify-end text-sm" />
         </div>
 
@@ -323,6 +341,13 @@ export default function BrewGuide({
             setPicked(null);
             setAutoClosed(true);
           }}
+        />
+      )}
+      {saving && label && (
+        <SaveImageSheet
+          node={saving}
+          name={labelTitle(label)}
+          onClose={() => setSaving(null)}
         />
       )}
     </div>
