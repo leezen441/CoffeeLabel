@@ -671,15 +671,6 @@ export default function LibraryPage() {
                   >
                     <StarIcon filled={label.favorite} />
                   </button>
-                  <button
-                    type="button"
-                    title={tr("viewSticker")}
-                    aria-label={`View ${labelTitle(label)}`}
-                    className={ACTION_CLS}
-                    onClick={() => setViewing(label)}
-                  >
-                    <ZoomIcon />
-                  </button>
                   <Link
                     href={`/print/${label.id}`}
                     prefetch
@@ -1009,16 +1000,6 @@ function TagIcon() {
     <Svg>
       <path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2.6 12.6A2 2 0 0 1 2 11.2V4a2 2 0 0 1 2-2h7.2a2 2 0 0 1 1.4.6l8 8a2 2 0 0 1 0 2.8Z" />
       <circle cx="7.5" cy="7.5" r="1.3" />
-    </Svg>
-  );
-}
-
-function ZoomIcon() {
-  return (
-    <Svg>
-      <circle cx="10.5" cy="10.5" r="6.5" />
-      <path d="M15.5 15.5 20.5 20.5" />
-      <path d="M10.5 8v5M8 10.5h5" />
     </Svg>
   );
 }
