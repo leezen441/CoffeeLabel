@@ -526,6 +526,7 @@ const DICT = {
   zoomIn: { en: "Zoom in", th: "ขยาย" },
   fitWord: { en: "Fit", th: "พอดีจอ" },
   closePreview: { en: "Close preview", th: "ปิดหน้าตัวอย่าง" },
+  viewSticker: { en: "View sticker", th: "ดูสติกเกอร์" },
   addFavorite: { en: "Add to favourites", th: "เพิ่มเป็นรายการโปรด" },
   removeFavorite: { en: "Remove from favourites", th: "เอาออกจากรายการโปรด" },
   favorites: { en: "Favourites", th: "รายการโปรด" },

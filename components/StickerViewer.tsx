@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useBackClosesSheet } from "./BackToHome";
 import { makeT, useLang } from "@/lib/i18n";
 import Sticker from "./Sticker";
 import { saveStickerImage } from "@/lib/saveImage";
@@ -17,10 +18,13 @@ export default function StickerViewer({
   label,
   qrUrl,
   onClose,
+  brewGuideLink = true,
 }: {
   label: CoffeeLabel;
   qrUrl?: string;
   onClose: () => void;
+  /** false when the viewer was opened from the brew guide itself */
+  brewGuideLink?: boolean;
 }) {
   const areaRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
@@ -96,32 +100,11 @@ export default function StickerViewer({
   }, []);
 
   /**
-   * The viewer sits on top of the library rather than on a route of its own,
-   * so without this the device Back button skips straight past it and walks
-   * out of the app. A spare history entry gives Back something to pop, and
-   * every other way of closing pops it too, so the stack is never left with a
-   * dead entry behind the library.
+   * The viewer sits on top of whatever page opened it rather than on a route
+   * of its own, so without this the device Back button skips straight past it
+   * and leaves that page.
    */
-  const closeRef = useRef(onClose);
-  useEffect(() => {
-    closeRef.current = onClose;
-  }, [onClose]);
-
-  const pushed = useRef(false);
-  useEffect(() => {
-    // A ref, not a flag on history.state: Next replaces that state for its own
-    // bookkeeping, and in development the effect runs twice on the same
-    // instance — two entries would mean two presses of Back.
-    if (!pushed.current) {
-      pushed.current = true;
-      window.history.pushState(null, "");
-    }
-    const onPop = () => closeRef.current();
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, []);
-
-  const dismiss = useCallback(() => window.history.back(), []);
+  const dismiss = useBackClosesSheet(onClose);
 
   // Keyboard shortcuts, and stop the page behind from scrolling.
   useEffect(() => {
@@ -306,13 +289,15 @@ export default function StickerViewer({
         >
           {saving ? tr("rendering") : tr("saveImage")}
         </button>
-        <Link
-          href={`/b/${label.id}`}
-          prefetch
-          className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20"
-        >
-          {tr("brewGuide")}
-        </Link>
+        {brewGuideLink && (
+          <Link
+            href={`/b/${label.id}`}
+            prefetch
+            className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20"
+          >
+            {tr("brewGuide")}
+          </Link>
+        )}
         <Link
           href={`/editor/${label.id}`}
           prefetch

@@ -10,6 +10,7 @@ import { useBackTarget } from "./BackToHome";
 import { lastMethod, rememberMethod } from "@/lib/lastMethod";
 import StickerScaler from "./StickerScaler";
 import SaveImageSheet, { noCallout, useLongPress } from "./SaveImageSheet";
+import StickerViewer from "./StickerViewer";
 import { makeT, useLang } from "@/lib/i18n";
 import * as store from "@/lib/store";
 import { useOrigin } from "@/lib/useOrigin";
@@ -65,6 +66,7 @@ export default function BrewGuide({
   /** the sticker being saved as a picture, while its sheet is open */
   const stickerRef = useRef<HTMLDivElement>(null);
   const [saving, setSaving] = useState<HTMLElement | null>(null);
+  const [zooming, setZooming] = useState(false);
   const hold = useLongPress(() => {
     const node = stickerRef.current?.querySelector<HTMLElement>(".cl-frame");
     if (node) setSaving(node);
@@ -175,7 +177,39 @@ export default function BrewGuide({
               qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
             />
           </div>
-          <PeakStatus label={label} className="mt-3 justify-end text-sm" />
+          {/* The magnifier used to live on the library card. The peak line
+              keeps the right-hand end of this row to itself. */}
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setZooming(true)}
+              title={tr("viewSticker")}
+              aria-label={`${tr("viewSticker")}: ${labelTitle(label)}`}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition"
+              style={{
+                border: `1px solid ${theme.rule}`,
+                color: theme.muted,
+                background: "rgb(255 255 255 / 0.6)",
+              }}
+            >
+              <svg
+                width="17"
+                height="17"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="10.5" cy="10.5" r="6.5" />
+                <path d="M15.5 15.5 20.5 20.5" />
+                <path d="M10.5 8v5M8 10.5h5" />
+              </svg>
+            </button>
+            <PeakStatus label={label} className="text-sm" />
+          </div>
         </div>
 
         {brews.length > 0 && brew && (
@@ -341,6 +375,14 @@ export default function BrewGuide({
             setPicked(null);
             setAutoClosed(true);
           }}
+        />
+      )}
+      {zooming && label && (
+        <StickerViewer
+          label={label}
+          qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
+          brewGuideLink={false}
+          onClose={() => setZooming(false)}
         />
       )}
       {saving && label && (
