@@ -279,6 +279,8 @@ export type CoffeeLabel = {
   bestBeforeDays: number;
   tastingNotes: string[];
   netWeight: string;
+  /** starred in the library — a bag that brewed well and is worth repeating */
+  favorite: boolean;
   brews: BrewMethod[];
   /** resting window; 0/0 means derive it from the process */
   showRest: boolean;
@@ -781,6 +783,7 @@ export function emptyLabel(): CoffeeLabel {
     bestBeforeDays: 90,
     tastingNotes: [],
     netWeight: "",
+    favorite: false,
     showRest: true,
     restFrom: 0,
     restTo: 0,

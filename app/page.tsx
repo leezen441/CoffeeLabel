@@ -41,6 +41,7 @@ export default function LibraryPage() {
   const [ready, setReady] = useState<"all" | RestStatus>("all");
   /** lowercase brew-method name, "" = any method */
   const [pickedMethod, setMethod] = useState("");
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [busy, setBusy] = useState(false);
   const [viewing, setViewing] = useState<CoffeeLabel | null>(null);
   /** open "move to group" popover, anchored to the card's tag button */
@@ -98,6 +99,11 @@ export default function LibraryPage() {
     return m;
   }, [labels, groupOf]);
 
+  const favoriteCount = (labels ?? []).filter((l) => l.favorite).length;
+  // Unstarring the last one hides the pill, so the filter stops with it rather
+  // than leaving an empty library and nothing left to switch off.
+  const favoritesOnly = favoriteCount > 0 && onlyFavorites;
+
   /**
    * Every brew-method name used on any label, with how many bags carry it.
    * Names are matched without case or stray spaces, so "V60" and "v60 " are
@@ -127,6 +133,7 @@ export default function LibraryPage() {
    * Four independent filters, intersected:
    *   chips  — which groups are shown (none selected = all)
    *   ready  — how far a bag is through its peak window
+   *   stars  — only the bags worth repeating
    *   method — bags that have a brew method of that name
    *   query  — the text itself
    */
@@ -167,6 +174,7 @@ export default function LibraryPage() {
     return labels.filter((l) => {
       if (active.size > 0 && !active.has(groupOf(l))) return false;
       if (ready !== "all" && restStatus(l).status !== ready) return false;
+      if (favoritesOnly && !l.favorite) return false;
       if (method && !l.brews.some((b) => b.name.trim().toLowerCase() === method))
         return false;
       if (words.length === 0) return true;
@@ -176,7 +184,7 @@ export default function LibraryPage() {
       const hay = searchText(l);
       return words.every((word) => hay.includes(word));
     });
-  }, [labels, query, active, ready, method, groupOf, searchText]);
+  }, [labels, query, active, ready, favoritesOnly, method, groupOf, searchText]);
 
   const readyCounts = useMemo(() => {
     const m = { peak: 0, resting: 0, past: 0 };
@@ -186,6 +194,24 @@ export default function LibraryPage() {
     });
     return m;
   }, [labels]);
+
+  /**
+   * Starring is a quick, frequent tap, so the card is updated where it sits
+   * rather than refreshed: the library is ordered by when a label was last
+   * saved, and a refresh would send the card you just starred to the top,
+   * out from under your thumb.
+   */
+  async function toggleFavorite(label: CoffeeLabel) {
+    const next = { ...label, favorite: !label.favorite };
+    const put = (l: CoffeeLabel) => (all: CoffeeLabel[] | null) =>
+      all?.map((x) => (x.id === l.id ? l : x)) ?? all;
+    setLabels(put(next));
+    try {
+      setLabels(put(await store.saveLabel(next)));
+    } catch {
+      await refresh(); // the save did not land; show what is really stored
+    }
+  }
 
   const toggleGroup = (id: string) => {
     const next = new Set(active);
@@ -393,6 +419,22 @@ export default function LibraryPage() {
             <span className="text-xs text-muted">
               {filtered.length} {tr("ofLabels")} {labels.length} {tr("labelsWord")}
             </span>
+          )}
+          {favoriteCount > 0 && (
+            <button
+              onClick={() => setOnlyFavorites((on) => !on)}
+              aria-pressed={favoritesOnly}
+              className="inline-flex h-7 items-center gap-1 rounded-full border px-2 text-xs font-semibold transition"
+              style={
+                favoritesOnly
+                  ? { background: STAR_ON, borderColor: STAR_ON, color: "#fff" }
+                  : { borderColor: "var(--line)", color: "var(--muted)" }
+              }
+            >
+              <StarIcon filled />
+              {tr("favorites")}
+              <span className="tabular-nums opacity-80">{favoriteCount}</span>
+            </button>
           )}
           {methods.length > 0 && (
             /* A small button: the phone's own picker opens on tap, so the
@@ -612,6 +654,23 @@ export default function LibraryPage() {
 
                 {/* Siblings of the thumbnail button — interactive elements cannot nest. */}
                 <div className="flex shrink-0 flex-col gap-1.5 pr-3 pt-3 pb-3">
+                  <button
+                    type="button"
+                    title={label.favorite ? tr("removeFavorite") : tr("addFavorite")}
+                    aria-label={`${
+                      label.favorite ? tr("removeFavorite") : tr("addFavorite")
+                    }: ${labelTitle(label)}`}
+                    aria-pressed={label.favorite}
+                    className={ACTION_CLS}
+                    style={
+                      label.favorite
+                        ? { color: STAR_ON, borderColor: STAR_ON }
+                        : undefined
+                    }
+                    onClick={() => toggleFavorite(label)}
+                  >
+                    <StarIcon filled={label.favorite} />
+                  </button>
                   <button
                     type="button"
                     title={tr("viewSticker")}
@@ -921,6 +980,27 @@ function GroupOption({
       <span className="truncate">{name}</span>
       {on && <span className="ml-auto text-brand">✓</span>}
     </button>
+  );
+}
+
+/** Gold enough to read as a star, and used nowhere else on this page. */
+const STAR_ON = "#B07C1E";
+
+function StarIcon({ filled = false }: { filled?: boolean }) {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m12 3.6 2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8Z" />
+    </svg>
   );
 }
 
