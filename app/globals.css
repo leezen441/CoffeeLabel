@@ -728,3 +728,53 @@ body {
     outline-offset: 0;
   }
 }
+
+/* ---- thermal layout: one colour, one strength, a small label ---- */
+
+/*
+ * A thermal printer burns a dot or it does not, so anything part-strength
+ * comes out as a dither pattern or as nothing. These rules trade every tint
+ * for a solid shape, and make the type bigger relative to the label: a 50 mm
+ * roll is half the width the rest of the design is drawn for, and `--u` is
+ * what every size on the sticker is a multiple of. The auto-fit still shrinks
+ * the block if that leaves too much to fit.
+ */
+.cl-frame.cl-mono {
+  --u: calc(var(--lw) / 58);
+}
+
+.cl-mono .cl-rest-window {
+  opacity: 1;
+}
+
+/* A ring, not a disc: a solid dot this small closes up into a blob. */
+.cl-mono .cl-note-dot {
+  background: transparent;
+  border: calc(0.45 * var(--u)) solid var(--cl-ink);
+}
+
+.cl-mono .cl-placeholder {
+  color: var(--cl-muted);
+}
+
+/*
+ * Height, not width, is what runs out on a 30 mm label, and the auto-fit
+ * shrinks the whole block until it fits — so every millimetre the name takes
+ * is one the dates and the origin do not get. The name gives some back, and
+ * the rows that have to stay readable on a burnt dot grid take it.
+ */
+.cl-mono .cl-name {
+  font-size: calc(5 * var(--u) * var(--name-fit, 1));
+}
+
+.cl-mono .cl-rest-label {
+  font-size: calc(2.5 * var(--u));
+}
+
+.cl-mono .cl-rest-value {
+  font-size: calc(2.9 * var(--u));
+}
+
+.cl-mono .cl-foot {
+  font-size: calc(3 * var(--u));
+}

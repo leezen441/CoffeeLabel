@@ -6,7 +6,7 @@ import Sticker from "./Sticker";
 import LangToggle from "./LangToggle";
 import { type MsgKey, makeT, sizeHint, sizeName, useLang } from "@/lib/i18n";
 import * as store from "@/lib/store";
-import { saveStickerImage } from "@/lib/saveImage";
+import { exactFor, saveStickerImage } from "@/lib/saveImage";
 import { useOrigin } from "@/lib/useOrigin";
 import {
   type CoffeeLabel,
@@ -67,7 +67,11 @@ export default function PrintView({ id }: { id: string }) {
     if (!node || !label) return;
     setSaving(true);
     try {
-      const how = await saveStickerImage(node, labelTitle(label));
+      const how = await saveStickerImage(
+        node,
+        labelTitle(label),
+        exactFor(label, labelSize(label, which)),
+      );
       if (how === "downloaded") {
         // On a phone the share sheet handles it; on desktop say where it went.
         console.info("Label saved as PNG");
@@ -412,6 +416,7 @@ export default function PrintView({ id }: { id: string }) {
                 <option value="full">{tr("layoutFull")}</option>
                 <option value="ribbon">{tr("layoutRibbon")}</option>
                 <option value="compact">{tr("layoutCompact")}</option>
+                <option value="thermal">{tr("layoutThermal")}</option>
               </select>
             </label>
             <label className="field">

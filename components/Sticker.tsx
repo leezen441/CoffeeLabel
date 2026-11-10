@@ -6,6 +6,7 @@ import {
   type CoffeeLabel,
   ROAST_LEVELS,
   type Palette,
+  MONO_PALETTE,
   paletteFor,
   addDays,
   bestBefore,
@@ -223,10 +224,20 @@ export default function Sticker({
   const fitRef = useRef<HTMLDivElement>(null);
   const [qr, setQr] = useState<string>("");
 
-  const theme: Palette = paletteFor(label);
+  const layout = label.layout;
+  /** A thermal printer burns one colour at one strength — see MONO_PALETTE. */
+  const mono = layout === "thermal";
+  /**
+   * A thermal roll is about half the width the rest of the design is drawn
+   * for. Everything still fits, but only by shrinking the type until none of
+   * it can be read, so this layout gives up the two blocks the bag itself
+   * already carries — the tasting notes and the altitude — and spends the
+   * room on the name, the dates and the origin.
+   */
+  const showNotes = !mono;
+  const theme: Palette = mono ? MONO_PALETTE : paletteFor(label);
   const size = labelSize(label, variant);
   const roast = ROAST_LEVELS[label.roastLevel] ?? ROAST_LEVELS[3];
-  const layout = label.layout;
   const brewOnly = variant === "brew";
   const beansOnly = variant === "beans";
 
@@ -409,6 +420,7 @@ export default function Sticker({
   // Altitude is kept out of the joined line — it gets a line of its own.
   const originBits = [label.variety, processText(label), label.origin].filter(Boolean);
   const altitude = (label.altitude ?? "").trim();
+  const altitudeShown = mono ? "" : altitude;
   const brews = label.brews.filter((b) => b.name.trim() || brewHasDetail(b));
   /** Names with no recipe behind them are a suggestion, not a guide. */
   const anyDetail = brews.some(brewHasDetail);
@@ -435,7 +447,7 @@ export default function Sticker({
   return (
     <div
       ref={frameRef}
-      className={`cl-frame ${className}`}
+      className={`cl-frame ${mono ? "cl-mono " : ""}${className}`}
       style={
         {
           "--lw": `${size.w}mm`,
@@ -466,9 +478,10 @@ export default function Sticker({
 
         <h1 className="cl-name">{ph(label.coffeeName, "Coffee name")}</h1>
 
-        {!brewOnly && (originBits.length > 0 || altitude || preview) && (
+        {!brewOnly && (originBits.length > 0 || altitudeShown || preview) && (
+
           <div className="cl-origin">
-            {originBits.length === 0 && !altitude && preview && (
+            {originBits.length === 0 && !altitudeShown && preview && (
               <span className="cl-placeholder">Variety · Process · Origin</span>
             )}
             {label.variety && (
@@ -489,20 +502,25 @@ export default function Sticker({
                 <b>{label.origin}</b>
               </span>
             )}
-            {altitude && (
+            {altitudeShown && (
               <span className="cl-origin-item cl-altitude">
                 <OriginIcon kind="altitude" />
-                <b>{altitude}</b>
+                <b>{altitudeShown}</b>
               </span>
             )}
           </div>
         )}
 
-        {!brewOnly && label.tastingNotes.length > 0 && (
+        {!brewOnly && showNotes && label.tastingNotes.length > 0 && (
           <div className="cl-notes">
             {label.tastingNotes.map((note) => (
               <span key={note} className="cl-note">
-                <span className="cl-note-dot" style={{ background: flavorColor(note) }} />
+                <span
+                  className="cl-note-dot"
+                  // In black and white every flavour would be the same dot, so
+                  // the stylesheet gives it one shape and no colour is set.
+                  style={mono ? undefined : { background: flavorColor(note) }}
+                />
                 {note}
               </span>
             ))}
@@ -667,7 +685,7 @@ export default function Sticker({
                     Roasted <b>{formatDate(label.roastDate)}</b>
                   </span>
                 )}
-                {bb && (
+                {bb && !mono && (
                   <span>
                     Best before <b>{formatDate(bb)}</b>
                   </span>

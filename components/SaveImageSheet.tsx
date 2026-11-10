@@ -79,12 +79,15 @@ type Shot =
 export default function SaveImageSheet({
   node,
   name,
+  exact,
   onClose,
 }: {
   /** the sticker element, at its true size — not the scaled wrapper */
   node: HTMLElement;
   /** the coffee's name, for the file name */
   name: string;
+  /** from exactFor(): the printer's own pixel size, when it is drawn for one */
+  exact?: { mm: { w: number; h: number }; dpi: number };
   onClose: () => void;
 }) {
   const tr = makeT(useLang());
@@ -95,7 +98,7 @@ export default function SaveImageSheet({
     let live = true;
     let url = "";
     // The same renderer as Save image in the viewer and on the print page.
-    stickerToPng(node)
+    stickerToPng(node, 4, exact)
       .then((blob) => {
         url = URL.createObjectURL(blob);
         if (live) setShot({ state: "ready", url, blob });
@@ -107,7 +110,7 @@ export default function SaveImageSheet({
       live = false;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [node]);
+  }, [node, exact]);
 
   const save = () => {
     if (shot.state !== "ready") return;

@@ -13,6 +13,7 @@ import SaveImageSheet, { noCallout, useLongPress } from "./SaveImageSheet";
 import StickerViewer from "./StickerViewer";
 import { makeT, useLang } from "@/lib/i18n";
 import * as store from "@/lib/store";
+import { exactFor } from "@/lib/saveImage";
 import { useOrigin } from "@/lib/useOrigin";
 import {
   type BrewMethod,
@@ -389,6 +390,7 @@ export default function BrewGuide({
         <SaveImageSheet
           node={saving}
           name={labelTitle(label)}
+          exact={exactFor(label, labelSize(label, "beans"))}
           onClose={() => setSaving(null)}
         />
       )}

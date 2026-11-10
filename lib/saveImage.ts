@@ -56,6 +56,13 @@ export async function stickerToPng(
   el: HTMLElement,
   /** multiplier over the on-screen size — 4 is roughly 300 dpi at label size */
   scale = 4,
+  /**
+   * The sticker's real size in millimetres, with the dots per inch to render
+   * it at. Given both, the PNG comes out at exactly the pixel count that
+   * printer wants for that label, instead of a multiple of the CSS size that
+   * the printer's own app would then have to resample. `scale` is ignored.
+   */
+  exact?: { mm: { w: number; h: number }; dpi: number },
 ): Promise<Blob> {
   const width = el.offsetWidth;
   const height = el.offsetHeight;
@@ -84,8 +91,14 @@ export async function stickerToPng(
   );
 
   const canvas = document.createElement("canvas");
-  canvas.width = Math.round(width * scale);
-  canvas.height = Math.round(height * scale);
+  if (exact) {
+    const px = (mm: number) => Math.round((mm / 25.4) * exact.dpi);
+    canvas.width = px(exact.mm.w);
+    canvas.height = px(exact.mm.h);
+  } else {
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
+  }
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas is unavailable");
   // Paint white underneath so transparent edges don't come out black.
@@ -103,8 +116,23 @@ export async function stickerToPng(
 export async function saveStickerImage(
   el: HTMLElement,
   coffeeName: string,
+  exact?: { mm: { w: number; h: number }; dpi: number },
 ): Promise<SaveResult> {
-  return deliverPng(await stickerToPng(el), coffeeName);
+  return deliverPng(await stickerToPng(el, 4, exact), coffeeName);
+}
+
+/** Dots per inch of the printer a layout is drawn for. */
+export const THERMAL_DPI = 300;
+
+/**
+ * How to rasterise this label: at the printer's own resolution when it is
+ * drawn for one, and at the usual multiple of the screen size otherwise.
+ */
+export function exactFor(
+  label: { layout: string },
+  mm: { w: number; h: number },
+): { mm: { w: number; h: number }; dpi: number } | undefined {
+  return label.layout === "thermal" ? { mm, dpi: THERMAL_DPI } : undefined;
 }
 
 /** Hands a picture already made to the user: share sheet on a phone, else a download. */

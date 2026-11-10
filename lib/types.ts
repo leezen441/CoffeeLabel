@@ -312,11 +312,12 @@ export type SizeId =
   | "100x70"
   | "90x60"
   | "80x50"
+  | "50x30"
   | "70x40"
   | "60x60"
   | "a6"
   | "custom";
-export type LayoutId = "full" | "ribbon" | "compact";
+export type LayoutId = "full" | "ribbon" | "compact" | "thermal";
 
 export const MAX_PROCESSES = 6;
 
@@ -669,6 +670,21 @@ export const ROAST_PALETTES: Record<RoastLevel, Palette> = {
 };
 
 /** Every surface that paints a label goes through this, so none can drift. */
+/**
+ * For a thermal label printer. Those print one colour at one strength — a pixel
+ * is burnt or it is not — so every tint in a roast palette lands as either
+ * solid black or nothing. Printing pure black on white from the start is what
+ * the paper can actually hold.
+ */
+export const MONO_PALETTE: Palette = {
+  ink: "#000000",
+  accent: "#000000",
+  bean: "#000000",
+  paper: "#FFFFFF",
+  muted: "#000000",
+  rule: "#000000",
+};
+
 export function paletteFor(label: { roastLevel: RoastLevel }): Palette {
   return ROAST_PALETTES[label.roastLevel] ?? ROAST_PALETTES[3];
 }
@@ -691,6 +707,12 @@ export const SIZES: Record<SizeId, { name: string; w: number; h: number; hint: s
   "100x70": { name: "100 × 70 mm", w: 100, h: 70, hint: "Bag label — fits all brew steps" },
   "90x60": { name: "90 × 60 mm", w: 90, h: 60, hint: "Standard sticker sheet" },
   "80x50": { name: "80 × 50 mm", w: 80, h: 50, hint: "Thermal label printer" },
+  "50x30": {
+    name: "50 × 30 mm",
+    w: 50,
+    h: 30,
+    hint: "NIIMBOT B2 Pro roll — pick the Thermal layout with it",
+  },
   "70x40": { name: "70 × 40 mm", w: 70, h: 40, hint: "Small — use Compact layout" },
   "60x60": { name: "60 × 60 mm", w: 60, h: 60, hint: "Square — use Compact layout" },
   a6: { name: "A6 card (105 × 148 mm)", w: 105, h: 148, hint: "Brew card for the counter" },

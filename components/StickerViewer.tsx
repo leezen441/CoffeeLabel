@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useBackClosesSheet } from "./BackToHome";
 import { makeT, useLang } from "@/lib/i18n";
 import Sticker from "./Sticker";
-import { saveStickerImage } from "@/lib/saveImage";
+import { exactFor, saveStickerImage } from "@/lib/saveImage";
 import { type CoffeeLabel, labelSize, labelTitle } from "@/lib/types";
 
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -58,7 +58,7 @@ export default function StickerViewer({
     if (!node) return;
     setSaving(true);
     try {
-      await saveStickerImage(node, labelTitle(label));
+      await saveStickerImage(node, labelTitle(label), exactFor(label, labelSize(label)));
     } catch (err) {
       alert(`Could not save the image: ${String(err)}`);
     } finally {
