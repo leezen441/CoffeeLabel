@@ -225,8 +225,14 @@ export default function Sticker({
   const [qr, setQr] = useState<string>("");
 
   const layout = label.layout;
-  /** A thermal printer burns one colour at one strength — see MONO_PALETTE. */
-  const mono = layout === "thermal";
+  /**
+   * A thermal printer burns one colour at one strength — see MONO_PALETTE.
+   * Only what is printed or exported is drawn that way. On screen the label
+   * stays in its roast colours: the Thermal layout says how this bag is
+   * printed, and the library has no reason to go grey because of it. `live`
+   * already draws exactly that line everywhere else on the sticker.
+   */
+  const mono = layout === "thermal" && !live;
   /**
    * A thermal roll is about half the width the rest of the design is drawn
    * for. Everything still fits, but only by shrinking the type until none of
