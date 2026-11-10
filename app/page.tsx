@@ -580,6 +580,11 @@ export default function LibraryPage() {
                   preview
                   // The card is about the bag; the recipe has its own sticker.
                   variant="beans"
+                  // Fill the card whatever the label's real size. Capped at
+                  // real size, a 50 x 30 mm sticker sat in the corner of the
+                  // card with a third of the width blank beside it, too small
+                  // to read — and the card is a thumbnail, not a proof.
+                  maxScale={Infinity}
                   qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
                 />
               );

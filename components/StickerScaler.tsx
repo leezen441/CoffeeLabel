@@ -10,6 +10,10 @@ const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayout
  * Renders a sticker at its true physical size, then scales the whole thing down
  * to fit the available width. Screen-only — the print pages use <Sticker> raw so
  * the millimetre dimensions reach the printer untouched.
+ *
+ * `maxScale` caps how far it may be enlarged, and defaults to its real size.
+ * Pass Infinity where the sticker should fill the space it is given however
+ * small the label is: a thumbnail is not a proof of the print.
  */
 export default function StickerScaler({
   label,
