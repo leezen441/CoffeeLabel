@@ -161,10 +161,11 @@ export default function BrewGuide({
           </p>
           <LangToggle tone={theme} />
         </div>
-        {/* Capped at the sticker's own width and centred, so it is shown at
-            real size on a wide screen and the peak line under it lines up
-            with its right edge rather than the column's. */}
-        <div className="mx-auto" style={{ maxWidth: `${labelSize(label, "beans").w}mm` }}>
+        {/* Full width of the column. Held to its real size instead, a small
+            label — a 50 x 30 mm thermal one, say — came out too small to read
+            without opening the viewer, which is what this block is here to
+            save you. */}
+        <div>
           {/* Press and hold to save the sticker as a picture. */}
           <div
             ref={stickerRef}
@@ -175,6 +176,7 @@ export default function BrewGuide({
             <StickerScaler
               label={label}
               variant="beans"
+              maxScale={Infinity}
               qrUrl={origin ? `${origin}/b/${label.id}` : undefined}
             />
           </div>
