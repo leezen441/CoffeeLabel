@@ -6,7 +6,13 @@ import Sticker from "./Sticker";
 import LangToggle from "./LangToggle";
 import { type MsgKey, makeT, sizeHint, sizeName, useLang } from "@/lib/i18n";
 import * as store from "@/lib/store";
-import { exactFor, saveStickerImage } from "@/lib/saveImage";
+import {
+  canCopyImages,
+  copyPngToClipboard,
+  exactFor,
+  saveStickerImage,
+  stickerToPng,
+} from "@/lib/saveImage";
 import { useOrigin } from "@/lib/useOrigin";
 import {
   type CoffeeLabel,
@@ -61,6 +67,21 @@ export default function PrintView({ id }: { id: string }) {
   /** an unscaled, guide-free copy of the sticker, rendered only for PNG export */
   const exportRef = useRef<HTMLDivElement>(null);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  function copyImage() {
+    const node = exportRef.current?.firstElementChild as HTMLElement | null;
+    if (!node || !label) return;
+    // Not awaited before the write: see copyPngToClipboard.
+    copyPngToClipboard(
+      stickerToPng(node, 4, exactFor(label, labelSize(label, which))),
+    )
+      .then(() => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => alert(tr("copyFailed")));
+  }
 
   async function saveImage() {
     const node = exportRef.current?.firstElementChild as HTMLElement | null;
@@ -367,6 +388,11 @@ export default function PrintView({ id }: { id: string }) {
           <button className="btn" onClick={saveImage} disabled={saving}>
             {saving ? tr("rendering") : tr("saveImage")}
           </button>
+          {canCopyImages() && (
+            <button className="btn" onClick={copyImage}>
+              {copied ? tr("copiedImage") : tr("copyImage")}
+            </button>
+          )}
           <button className="btn btn-primary" onClick={() => window.print()}>
             {tr("print")}
           </button>

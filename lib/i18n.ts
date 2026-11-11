@@ -94,6 +94,9 @@ const DICT = {
   del: { en: "Delete", th: "ลบ" },
   brewGuide: { en: "Brew guide", th: "วิธีชง" },
   close: { en: "Close", th: "ปิด" },
+  copyImage: { en: "Copy", th: "คัดลอก" },
+  copiedImage: { en: "Copied", th: "คัดลอกแล้ว" },
+  copyFailed: { en: "Could not copy the image.", th: "คัดลอกรูปไม่สำเร็จ" },
   makingImage: { en: "Making the picture…", th: "กำลังสร้างรูป…" },
   imageFailed: { en: "Couldn't make the picture.", th: "สร้างรูปไม่สำเร็จ" },
   holdToSave: {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { deliverPng, stickerToPng } from "@/lib/saveImage";
+import { canCopyImages, copyPngToClipboard, deliverPng, stickerToPng } from "@/lib/saveImage";
 import { useBackClosesSheet } from "./BackToHome";
 import { makeT, useLang } from "@/lib/i18n";
 
@@ -112,6 +112,17 @@ export default function SaveImageSheet({
     };
   }, [node, exact]);
 
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    if (shot.state !== "ready") return;
+    copyPngToClipboard(shot.blob)
+      .then(() => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => alert(tr("copyFailed")));
+  };
+
   const save = () => {
     if (shot.state !== "ready") return;
     deliverPng(shot.blob, name).catch((err) =>
@@ -156,6 +167,15 @@ export default function SaveImageSheet({
           <button className="btn btn-ghost flex-1" onClick={dismiss}>
             {tr("close")}
           </button>
+          {canCopyImages() && (
+            <button
+              className="btn btn-ghost flex-1"
+              onClick={copy}
+              disabled={shot.state !== "ready"}
+            >
+              {copied ? tr("copiedImage") : tr("copyImage")}
+            </button>
+          )}
           <button
             className="btn btn-primary flex-1"
             onClick={save}

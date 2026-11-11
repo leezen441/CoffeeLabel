@@ -5,7 +5,13 @@ import Link from "next/link";
 import { useBackClosesSheet } from "./BackToHome";
 import { makeT, useLang } from "@/lib/i18n";
 import Sticker from "./Sticker";
-import { exactFor, saveStickerImage } from "@/lib/saveImage";
+import {
+  canCopyImages,
+  copyPngToClipboard,
+  exactFor,
+  saveStickerImage,
+  stickerToPng,
+} from "@/lib/saveImage";
 import { type CoffeeLabel, labelSize, labelTitle } from "@/lib/types";
 
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -49,7 +55,20 @@ export default function StickerViewer({
   /** mirrors the gesture refs for rendering — the transition is off mid-gesture */
   const [dragging, setDragging] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+
+  function copyImage() {
+    const node = exportRef.current?.firstElementChild as HTMLElement | null;
+    if (!node) return;
+    // Not awaited before the write: see copyPngToClipboard.
+    copyPngToClipboard(stickerToPng(node, 4, exactFor(label, labelSize(label))))
+      .then(() => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => alert(tr("copyFailed")));
+  }
 
   async function saveImage() {
     // Export the offscreen copy, not what's on screen: a saved image is an
@@ -289,6 +308,14 @@ export default function StickerViewer({
         >
           {saving ? tr("rendering") : tr("saveImage")}
         </button>
+        {canCopyImages() && (
+          <button
+            onClick={copyImage}
+            className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20"
+          >
+            {copied ? tr("copiedImage") : tr("copyImage")}
+          </button>
+        )}
         {brewGuideLink && (
           <Link
             href={`/b/${label.id}`}

@@ -121,6 +121,27 @@ export async function saveStickerImage(
   return deliverPng(await stickerToPng(el, 4, exact), coffeeName);
 }
 
+/** Whether this browser can put an image on the clipboard at all. */
+export function canCopyImages(): boolean {
+  return (
+    typeof ClipboardItem !== "undefined" &&
+    typeof navigator !== "undefined" &&
+    typeof navigator.clipboard?.write === "function"
+  );
+}
+
+/**
+ * Puts the sticker on the clipboard, ready to paste into a chat or a document.
+ *
+ * Takes the PNG as a promise rather than a finished blob on purpose: Safari
+ * only allows a clipboard write inside the gesture that asked for it, and
+ * rendering the sticker first would end that gesture. Building the
+ * ClipboardItem from the promise keeps the write inside it.
+ */
+export async function copyPngToClipboard(png: Blob | Promise<Blob>): Promise<void> {
+  await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
+}
+
 /** Dots per inch of the printer a layout is drawn for. */
 export const THERMAL_DPI = 300;
 
