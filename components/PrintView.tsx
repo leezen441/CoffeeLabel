@@ -44,7 +44,9 @@ export default function PrintView({ id }: { id: string }) {
   /** Set once a setting is changed here, so a late refresh cannot undo it. */
   const touched = useRef(false);
   const [missing, setMissing] = useState(false);
-  const [sheet, setSheet] = useState<SheetId>("a4");
+  // One sticker per page on a label printer, and the bag sticker alone: the
+  // pair these two default to is what gets printed here now.
+  const [sheet, setSheet] = useState<SheetId>("exact");
   /** null = not run yet, a number = how many stickers the last run resized */
   const [resized, setResized] = useState<number | null>(null);
   const [resizing, setResizing] = useState(false);
@@ -53,7 +55,7 @@ export default function PrintView({ id }: { id: string }) {
   const [gap, setGap] = useState(4);
   const [guides, setGuides] = useState(true);
   /** "both" prints the bag sticker and the recipe sticker, one after the other. */
-  const [variant, setVariant] = useState<"both" | "beans" | "brew" | "full">("both");
+  const [variant, setVariant] = useState<"both" | "beans" | "brew" | "full">("beans");
   /** which of the two stickers the size controls are editing */
   const [which, setWhich] = useState<"beans" | "brew">("beans");
   const origin = useOrigin();
